@@ -55,7 +55,7 @@ export const APP_ROUTES_CONFIG: RouteNavigationConfig[] = [
     path: '/faculties',
     label: 'Faculties',
     iconName: 'GraduationCap',
-    requiredRoles: ['ADMIN', 'DEAN'],
+    requiredRoles: ['ADMIN'],
     showInNav: true,
   },
   {

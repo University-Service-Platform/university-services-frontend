@@ -3,3 +3,4 @@ export * from './authService';
 export * from './profileService';
 export * from './roleService';
 export * from './accountStatusService';
+export * from './facultyService';

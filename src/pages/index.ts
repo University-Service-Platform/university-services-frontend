@@ -4,3 +4,5 @@ export * from './UnauthorizedPage';
 export * from './ProfilePage';
 export * from './RolesPage';
 export * from './AccountInactivePage';
+export * from './FacultiesPage';
+
