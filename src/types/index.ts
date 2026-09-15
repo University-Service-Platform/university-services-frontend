@@ -35,6 +35,20 @@ export interface Faculty {
   updatedAt?: string;
 }
 
+/**
+ * UNCONFIRMED PLACEHOLDER INTEGRATION BOUNDARY PENDING OFFICIAL BACKEND DTO CONTRACT:
+ * The official backend Service Unit DTO schema is not yet documented in the repository.
+ * The fields below represent an unconfirmed placeholder UI/service boundary subject to change upon official contract.
+ */
+export interface ServiceUnit {
+  id: string;
+  name: string;
+  code: string;
+  description?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
 export interface NavItem {
   label: string;
   path: string;
