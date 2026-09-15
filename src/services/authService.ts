@@ -1,6 +1,12 @@
 import { apiFetch } from './apiClient';
 import type { UserProfile } from '@/types';
 
+/**
+ * UNCONFIRMED PLACEHOLDER INTEGRATION BOUNDARY TYPES PENDING OFFICIAL BACKEND CONTRACT:
+ * The official backend authentication DTO schemas (request body, response body, token format)
+ * are not yet documented in the repository. The interfaces below serve as a temporary internal
+ * integration boundary that MUST be updated once the official backend OpenAPI/Swagger contract is delivered.
+ */
 export interface LoginCredentials {
   identifier: string;
   password?: string;
@@ -8,7 +14,7 @@ export interface LoginCredentials {
 }
 
 export interface AuthResponse {
-  success: boolean;
+  success?: boolean;
   message?: string;
   user?: UserProfile;
   token?: string;
@@ -23,11 +29,15 @@ export interface AuthResult {
 }
 
 /**
- * Clean authentication service interface connecting to backend API endpoint.
- * Isolated boundary for authentication operations.
+ * UNCONFIRMED PLACEHOLDER INTEGRATION BOUNDARY PENDING OFFICIAL BACKEND CONTRACT:
+ * The official backend login/authentication API contract is not yet documented in the repository.
+ * The endpoint constant and payload structures below serve as a placeholder integration boundary
+ * that will be updated once the official backend OpenAPI/Swagger authentication specification is provided.
  */
+export const AUTH_LOGIN_API_ENDPOINT = import.meta.env.VITE_AUTH_LOGIN_API_ENDPOINT || '/auth/login';
+
 export async function loginUser(credentials: LoginCredentials): Promise<AuthResult> {
-  const response = await apiFetch<AuthResponse>('/auth/login', {
+  const response = await apiFetch<AuthResponse>(AUTH_LOGIN_API_ENDPOINT, {
     method: 'POST',
     body: JSON.stringify({
       username: credentials.identifier,

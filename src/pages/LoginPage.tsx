@@ -6,6 +6,11 @@ import { loginUser } from '@/services/authService';
 import { useAuth } from '@/auth';
 import './LoginPage.css';
 
+/**
+ * UNCONFIRMED PLACEHOLDER INTEGRATION BOUNDARY PENDING OFFICIAL BACKEND CONTRACT:
+ * The official backend Login API contract is not yet documented in the repository.
+ * The login form connects to the authentication service integration boundary and handles real backend responses.
+ */
 export const LoginPage: React.FC = () => {
   const navigate = useNavigate();
   const { setAuthUser } = useAuth();
