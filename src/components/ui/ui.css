@@ -131,16 +131,52 @@
   box-shadow: 0 0 0 3px var(--color-focus-ring);
 }
 
-.form-input::placeholder {
-  color: var(--color-neutral-muted);
+.input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
 }
 
-.form-input-error, .form-select-error {
-  border-color: var(--color-danger);
+.input-left-icon, .input-right-icon {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-neutral);
+  pointer-events: none;
 }
 
-.form-input-error:focus, .form-select-error:focus {
-  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.25);
+.input-left-icon {
+  left: 0.75rem;
+}
+
+.input-right-icon {
+  right: 0.75rem;
+  pointer-events: auto;
+}
+
+.input-right-icon button {
+  background: none;
+  border: none;
+  color: var(--color-neutral);
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.input-right-icon button:hover {
+  color: var(--color-neutral-dark);
+}
+
+.form-input.has-left-icon {
+  padding-left: 2.5rem;
+}
+
+.form-input.has-right-icon {
+  padding-right: 2.5rem;
 }
 
 .form-error-text {
