@@ -2,13 +2,8 @@ import React from 'react';
 import { Routes, Route } from 'react-router-dom';
 import { AppShell } from '@/components/layout';
 import { HomePage, LoginPage } from '@/pages';
-import type { NavItem } from '@/types';
-
-// Foundation navigation items
-const defaultNavItems: NavItem[] = [
-  { label: 'Home', path: '/' },
-  { label: 'Login', path: '/auth' },
-];
+import { ProtectedRoute } from './ProtectedRoute';
+import { APP_ROUTES_CONFIG } from '@/config/navigationConfig';
 
 export const AppRoutes: React.FC = () => {
   return (
@@ -16,13 +11,27 @@ export const AppRoutes: React.FC = () => {
       {/* Standalone Authentication Route */}
       <Route path="/auth" element={<LoginPage />} />
 
-      {/* Main Application Shell Routes */}
+      {/* Main Application Shell with Role-Aware Route Protection */}
       <Route
         path="/*"
         element={
-          <AppShell navItems={defaultNavItems} pageTitle="University Services Platform">
+          <AppShell pageTitle="University Services Platform">
             <Routes>
-              <Route path="/" element={<HomePage />} />
+              {APP_ROUTES_CONFIG.map((routeConfig) => (
+                <Route
+                  key={routeConfig.id}
+                  path={routeConfig.path === '/' ? '' : routeConfig.path.replace('/', '')}
+                  element={
+                    <ProtectedRoute
+                      isPublic={routeConfig.isPublic}
+                      requiredRoles={routeConfig.requiredRoles}
+                      requiredPermissions={routeConfig.requiredPermissions}
+                    >
+                      <HomePage />
+                    </ProtectedRoute>
+                  }
+                />
+              ))}
               <Route path="*" element={<HomePage />} />
             </Routes>
           </AppShell>

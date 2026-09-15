@@ -1,6 +1,17 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { GraduationCap, X } from 'lucide-react';
+import {
+  GraduationCap,
+  X,
+  LayoutDashboard,
+  User,
+  Users,
+  Shield,
+  Building2,
+  Layers,
+} from 'lucide-react';
+import { useAuth } from '@/auth';
+import { getAuthorizedNavItems } from '@/config/navigationConfig';
 import type { NavItem } from '@/types';
 import { cn } from '@/utils';
 import './layout.css';
@@ -12,12 +23,38 @@ export interface SidebarProps {
   brandTitle?: string;
 }
 
+const renderNavIcon = (iconName?: string) => {
+  switch (iconName) {
+    case 'LayoutDashboard':
+      return <LayoutDashboard size={18} aria-hidden="true" />;
+    case 'User':
+      return <User size={18} aria-hidden="true" />;
+    case 'Users':
+      return <Users size={18} aria-hidden="true" />;
+    case 'Shield':
+      return <Shield size={18} aria-hidden="true" />;
+    case 'GraduationCap':
+      return <GraduationCap size={18} aria-hidden="true" />;
+    case 'Building2':
+      return <Building2 size={18} aria-hidden="true" />;
+    case 'Layers':
+      return <Layers size={18} aria-hidden="true" />;
+    default:
+      return <GraduationCap size={18} aria-hidden="true" />;
+  }
+};
+
 export const Sidebar: React.FC<SidebarProps> = ({
-  navItems = [],
+  navItems: propNavItems,
   isOpen = false,
   onClose,
   brandTitle = 'University Platform',
 }) => {
+  const { isAuthorized, isAuthenticated } = useAuth();
+
+  // Dynamically compute visible nav items based on authorization state if not explicitly passed
+  const navItems = propNavItems ?? getAuthorizedNavItems(isAuthorized, isAuthenticated);
+
   return (
     <>
       {/* Mobile backdrop */}
@@ -52,6 +89,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               onClick={onClose}
               className={({ isActive }) => cn('sidebar-nav-item', isActive && 'active')}
             >
+              {renderNavIcon(item.icon)}
               <span>{item.label}</span>
               {item.badge && <span className="sidebar-nav-badge">{item.badge}</span>}
             </NavLink>

@@ -14,7 +14,7 @@ export interface AppShellProps {
 
 export const AppShell: React.FC<AppShellProps> = ({
   children,
-  navItems = [],
+  navItems,
   pageTitle,
   userName,
   userRole,

@@ -1,10 +1,15 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { User, Lock, Eye, EyeOff, ArrowRight, GraduationCap, AlertCircle, Globe } from 'lucide-react';
 import { Button, Input } from '@/components/ui';
 import { loginUser } from '@/services/authService';
+import { useAuth } from '@/auth';
 import './LoginPage.css';
 
 export const LoginPage: React.FC = () => {
+  const navigate = useNavigate();
+  const { setAuthUser } = useAuth();
+
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
@@ -45,11 +50,12 @@ export const LoginPage: React.FC = () => {
         rememberMe,
       });
 
-      if (!result.success) {
+      if (result.success && result.user) {
+        setAuthUser(result.user);
+        navigate('/');
+      } else {
         setFormError(result.message || 'Authentication failed. Please check your credentials.');
       }
-      // Note: No fake success or mock redirect logic is introduced.
-      // Connection to actual backend auth endpoint will handle real token/role redirection when available.
     } catch {
       setFormError('An unexpected authentication error occurred. Please try again.');
     } finally {
