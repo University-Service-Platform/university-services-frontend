@@ -3,6 +3,7 @@
  */
 
 export type UserRole = 'ADMIN' | 'STAFF' | 'STUDENT' | 'DEAN' | 'HOD' | 'GUEST';
+export type AccountStatus = 'ACTIVE' | 'INACTIVE' | 'PENDING' | 'SUSPENDED';
 
 export interface UserProfile {
   id: string;
@@ -13,6 +14,11 @@ export interface UserProfile {
   facultyId?: string;
   departmentId?: string;
   serviceUnitId?: string;
+  facultyName?: string;
+  departmentName?: string;
+  serviceUnitName?: string;
+  accountStatus?: AccountStatus;
+  phone?: string;
 }
 
 export interface NavItem {

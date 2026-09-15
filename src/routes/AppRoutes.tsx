@@ -1,9 +1,18 @@
 import React from 'react';
 import { Routes, Route } from 'react-router-dom';
 import { AppShell } from '@/components/layout';
-import { HomePage, LoginPage } from '@/pages';
+import { HomePage, LoginPage, ProfilePage } from '@/pages';
 import { ProtectedRoute } from './ProtectedRoute';
 import { APP_ROUTES_CONFIG } from '@/config/navigationConfig';
+
+const renderRoutePage = (path: string) => {
+  switch (path) {
+    case '/profile':
+      return <ProfilePage />;
+    default:
+      return <HomePage />;
+  }
+};
 
 export const AppRoutes: React.FC = () => {
   return (
@@ -27,7 +36,7 @@ export const AppRoutes: React.FC = () => {
                       requiredRoles={routeConfig.requiredRoles}
                       requiredPermissions={routeConfig.requiredPermissions}
                     >
-                      <HomePage />
+                      {renderRoutePage(routeConfig.path)}
                     </ProtectedRoute>
                   }
                 />
