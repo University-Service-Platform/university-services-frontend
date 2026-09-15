@@ -1,10 +1,13 @@
-import type { UserProfile, UserRole } from '@/types';
+import type { UserProfile, UserRole, AccountStatus } from '@/types';
 
 export interface AuthState {
   isAuthenticated: boolean;
   user: UserProfile | null;
   roles: UserRole[];
   permissions: string[];
+  accountStatus: AccountStatus | null;
+  isAccountActive: boolean;
+  isAccountInactive: boolean;
   isLoading: boolean;
   error: string | null;
 }

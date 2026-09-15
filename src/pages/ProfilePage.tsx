@@ -178,7 +178,7 @@ export const ProfilePage: React.FC = () => {
 
   const userInitials = `${currentProfile.firstName?.[0] || 'U'}${currentProfile.lastName?.[0] || ''}`;
   const primaryRole = currentProfile.roles && currentProfile.roles.length > 0 ? currentProfile.roles[0] : 'GUEST';
-  const statusVariant = currentProfile.accountStatus === 'INACTIVE' || currentProfile.accountStatus === 'SUSPENDED' ? 'danger' : currentProfile.accountStatus === 'PENDING' ? 'warning' : 'success';
+  const statusVariant = currentProfile.accountStatus === 'ACTIVE' ? 'success' : 'danger';
 
   return (
     <div className="profile-container">

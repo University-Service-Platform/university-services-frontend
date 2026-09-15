@@ -3,7 +3,7 @@
  */
 
 export type UserRole = 'ADMIN' | 'STAFF' | 'STUDENT' | 'DEAN' | 'HOD' | 'GUEST';
-export type AccountStatus = 'ACTIVE' | 'INACTIVE' | 'PENDING' | 'SUSPENDED';
+export type AccountStatus = 'ACTIVE' | 'INACTIVE';
 
 export interface UserProfile {
   id: string;

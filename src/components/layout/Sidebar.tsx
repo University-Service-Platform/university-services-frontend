@@ -50,10 +50,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onClose,
   brandTitle = 'University Platform',
 }) => {
-  const { isAuthorized, isAuthenticated } = useAuth();
+  const { isAuthorized, isAuthenticated, isAccountInactive } = useAuth();
 
-  // Dynamically compute visible nav items based on authorization state if not explicitly passed
-  const navItems = propNavItems ?? getAuthorizedNavItems(isAuthorized, isAuthenticated);
+  // Dynamically compute visible nav items based on authorization and account status
+  const navItems = propNavItems ?? getAuthorizedNavItems(isAuthorized, isAuthenticated, isAccountInactive);
 
   return (
     <>

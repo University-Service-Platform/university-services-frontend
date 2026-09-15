@@ -2,7 +2,7 @@ import React from 'react';
 import { Navigate, Outlet } from 'react-router-dom';
 import { useAuth } from '@/auth';
 import { LoadingState } from '@/components/ui';
-import { UnauthorizedPage } from '@/pages';
+import { UnauthorizedPage, AccountInactivePage } from '@/pages';
 import type { UserRole } from '@/types';
 
 export interface ProtectedRouteProps {
@@ -18,14 +18,14 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   isPublic = false,
   children,
 }) => {
-  const { isAuthenticated, isLoading, isAuthorized } = useAuth();
+  const { isAuthenticated, isAccountInactive, isLoading, isAuthorized } = useAuth();
 
-  // 1. Loading state verification
+  // 1. Loading state verification (Must not bypass protected access until status is resolved)
   if (isLoading) {
     return (
       <LoadingState
         title="Verifying Authorization..."
-        description="Please wait while your access permissions are checked."
+        description="Please wait while your account status & access permissions are checked."
       />
     );
   }
@@ -40,7 +40,12 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     return <Navigate to="/auth" replace />;
   }
 
-  // 4. Authorized access check
+  // 4. Inactive Account Status check -> Render AccountInactivePage
+  if (isAccountInactive) {
+    return <AccountInactivePage />;
+  }
+
+  // 5. Role/Permission Authorized access check
   const authorized = isAuthorized(requiredRoles, requiredPermissions);
 
   if (!authorized) {

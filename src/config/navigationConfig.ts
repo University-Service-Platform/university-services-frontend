@@ -77,12 +77,22 @@ export const APP_ROUTES_CONFIG: RouteNavigationConfig[] = [
 ];
 
 /**
- * Utility function to filter navigation items based on authorization state.
+ * Utility function to filter navigation items based on authorization and account status.
  */
 export function getAuthorizedNavItems(
   isAuthorizedFn: (requiredRoles?: UserRole[], requiredPermissions?: string[]) => boolean,
-  isAuthenticated: boolean
+  isAuthenticated: boolean,
+  isAccountInactive?: boolean
 ): NavItem[] {
+  if (isAccountInactive) {
+    // Inactive users do not receive protected platform service navigation
+    return APP_ROUTES_CONFIG.filter((route) => route.isPublic && route.showInNav).map((route) => ({
+      label: route.label,
+      path: route.path,
+      icon: route.iconName,
+    }));
+  }
+
   return APP_ROUTES_CONFIG.filter((route) => {
     if (!route.showInNav) return false;
     if (route.isPublic) return true;
