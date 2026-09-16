@@ -28,7 +28,7 @@ export const ProfilePage: React.FC = () => {
   const [lastName, setLastName] = useState<string>('');
   const [email, setEmail] = useState<string>('');
   const [phone, setPhone] = useState<string>('');
-  const [fieldErrors, setFieldErrors] = useState<{ firstName?: string; lastName?: string; email?: string }>({});
+  const [fieldErrors, setFieldErrors] = useState<{ firstName?: string; lastName?: string; email?: string; phone?: string }>({});
 
   const handleRetry = useCallback(() => {
     setIsLoading(true);
@@ -70,6 +70,7 @@ export const ProfilePage: React.FC = () => {
       setEmail(currentProfile.email || '');
       setPhone(currentProfile.phone || '');
     }
+    setFieldErrors({});
     setSaveSuccess(false);
     setSaveError(null);
     setIsEditing(true);
@@ -82,7 +83,7 @@ export const ProfilePage: React.FC = () => {
   };
 
   const validateForm = (): boolean => {
-    const errors: { firstName?: string; lastName?: string; email?: string } = {};
+    const errors: { firstName?: string; lastName?: string; email?: string; phone?: string } = {};
 
     if (!firstName.trim()) {
       errors.firstName = 'First name is required.';
@@ -95,6 +96,10 @@ export const ProfilePage: React.FC = () => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!email.trim() || !emailRegex.test(email.trim())) {
       errors.email = 'A valid email address is required.';
+    }
+
+    if (phone.trim() && !/^[+()0-9\s-]{7,20}$/.test(phone.trim())) {
+      errors.phone = 'Please enter a valid phone number (e.g. +94 71 234 5678).';
     }
 
     setFieldErrors(errors);
@@ -112,26 +117,38 @@ export const ProfilePage: React.FC = () => {
 
     setIsSaving(true);
 
+    // Permitted payload: Strictly limited to editable fields (firstName, lastName, email, phone)
     const payload = {
       firstName: firstName.trim(),
       lastName: lastName.trim(),
       email: email.trim(),
-      phone: phone.trim(),
+      phone: phone.trim() || undefined,
     };
 
     const result = await updateProfile(payload);
 
-    if (result.success && result.data) {
-      setFetchedProfile(result.data);
-      setAuthUser(result.data);
+    if (result.success && result.data && currentProfile) {
+      const updatedProfile: UserProfile = {
+        ...currentProfile,
+        ...result.data,
+        firstName: result.data.firstName || payload.firstName,
+        lastName: result.data.lastName || payload.lastName,
+        email: result.data.email || payload.email,
+        phone: result.data.phone !== undefined ? result.data.phone : payload.phone,
+      };
+
+      setFetchedProfile(updatedProfile);
+      setAuthUser(updatedProfile);
       setSaveSuccess(true);
       setIsEditing(false);
     } else {
-      setSaveError(result.message || 'Failed to update profile. Please try again.');
+      // Keep user in edit mode and preserve entered values on failure
+      setSaveError(result.message || 'Failed to update profile. Unable to connect to backend profile service.');
     }
 
     setIsSaving(false);
   };
+
 
   // 1. Loading State
   if (isLoading) {
@@ -277,7 +294,12 @@ export const ProfilePage: React.FC = () => {
                   id="firstName"
                   label="First Name"
                   value={firstName}
-                  onChange={(e) => setFirstName(e.target.value)}
+                  onChange={(e) => {
+                    setFirstName(e.target.value);
+                    if (fieldErrors.firstName) {
+                      setFieldErrors((prev) => ({ ...prev, firstName: undefined }));
+                    }
+                  }}
                   error={fieldErrors.firstName}
                   disabled={isSaving}
                   required
@@ -287,7 +309,12 @@ export const ProfilePage: React.FC = () => {
                   id="lastName"
                   label="Last Name"
                   value={lastName}
-                  onChange={(e) => setLastName(e.target.value)}
+                  onChange={(e) => {
+                    setLastName(e.target.value);
+                    if (fieldErrors.lastName) {
+                      setFieldErrors((prev) => ({ ...prev, lastName: undefined }));
+                    }
+                  }}
                   error={fieldErrors.lastName}
                   disabled={isSaving}
                   required
@@ -298,7 +325,12 @@ export const ProfilePage: React.FC = () => {
                   label="Email Address"
                   type="email"
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={(e) => {
+                    setEmail(e.target.value);
+                    if (fieldErrors.email) {
+                      setFieldErrors((prev) => ({ ...prev, email: undefined }));
+                    }
+                  }}
                   error={fieldErrors.email}
                   disabled={isSaving}
                   required
@@ -310,10 +342,17 @@ export const ProfilePage: React.FC = () => {
                   type="tel"
                   placeholder="+94 7X XXX XXXX"
                   value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
+                  onChange={(e) => {
+                    setPhone(e.target.value);
+                    if (fieldErrors.phone) {
+                      setFieldErrors((prev) => ({ ...prev, phone: undefined }));
+                    }
+                  }}
+                  error={fieldErrors.phone}
                   disabled={isSaving}
                 />
               </div>
+
             ) : (
               <div className="profile-grid">
                 <div className="profile-field-item">
