@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { GraduationCap, Plus, Edit2, Trash2, AlertCircle, CheckCircle, RefreshCw } from 'lucide-react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { GraduationCap, Plus, Edit2, Trash2, AlertCircle, CheckCircle, RefreshCw, Search } from 'lucide-react';
 import {
   getFaculties,
   createFaculty,
@@ -30,6 +30,9 @@ export const FacultiesPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
 
+  // Search & Filter State
+  const [searchQuery, setSearchQuery] = useState<string>('');
+
   // Form Modal State (Create / Edit)
   const [isFormModalOpen, setIsFormModalOpen] = useState<boolean>(false);
   const [editingFaculty, setEditingFaculty] = useState<Faculty | null>(null);
@@ -43,6 +46,7 @@ export const FacultiesPage: React.FC = () => {
   // Delete Modal State
   const [deletingFaculty, setDeletingFaculty] = useState<Faculty | null>(null);
   const [isDeleting, setIsDeleting] = useState<boolean>(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   // Status Banners
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -75,6 +79,18 @@ export const FacultiesPage: React.FC = () => {
       isMounted = false;
     };
   }, []);
+
+  // Filter loaded faculties by search query (name or code)
+  const filteredFaculties = useMemo(() => {
+    if (!searchQuery.trim()) return faculties;
+    const query = searchQuery.toLowerCase().trim();
+    return faculties.filter(
+      (f) =>
+        f.name.toLowerCase().includes(query) ||
+        f.code.toLowerCase().includes(query) ||
+        (f.description && f.description.toLowerCase().includes(query))
+    );
+  }, [faculties, searchQuery]);
 
   const openCreateModal = () => {
     setEditingFaculty(null);
@@ -152,6 +168,7 @@ export const FacultiesPage: React.FC = () => {
     if (!deletingFaculty) return;
 
     setIsDeleting(true);
+    setDeleteError(null);
     setSuccessMessage(null);
 
     const result = await deleteFaculty(deletingFaculty.id);
@@ -161,7 +178,7 @@ export const FacultiesPage: React.FC = () => {
       setDeletingFaculty(null);
       fetchFacultiesData();
     } else {
-      setSaveError(result.message || 'Failed to delete faculty.');
+      setDeleteError(result.message || 'Failed to delete faculty. Unable to connect to backend.');
     }
 
     setIsDeleting(false);
@@ -196,6 +213,23 @@ export const FacultiesPage: React.FC = () => {
         </div>
       </Card>
 
+      {/* Search & Filter Bar */}
+      {faculties.length > 0 && (
+        <Card className="faculties-controls-card" style={{ padding: '1rem 1.5rem' }}>
+          <div className="faculties-search-bar" style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+            <div className="faculties-search-input" style={{ flex: 1 }}>
+              <Input
+                id="faculty-search-input"
+                placeholder="Search faculties by name, code, or description..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                leftIcon={<Search size={18} />}
+              />
+            </div>
+          </div>
+        </Card>
+      )}
+
       {/* Content Area: Loading / Empty / Loaded States */}
       {isLoading ? (
         <LoadingState
@@ -204,7 +238,7 @@ export const FacultiesPage: React.FC = () => {
         />
       ) : faculties.length > 0 ? (
         <div className="faculties-grid">
-          {faculties.map((faculty) => (
+          {filteredFaculties.map((faculty) => (
             <Card key={faculty.id} className="faculty-card">
               <CardBody>
                 <div className="faculty-card-header">
@@ -232,7 +266,10 @@ export const FacultiesPage: React.FC = () => {
                     size="sm"
                     className="btn-danger"
                     icon={<Trash2 size={16} />}
-                    onClick={() => setDeletingFaculty(faculty)}
+                    onClick={() => {
+                      setDeleteError(null);
+                      setDeletingFaculty(faculty);
+                    }}
                   >
                     Delete
                   </Button>
@@ -363,9 +400,17 @@ export const FacultiesPage: React.FC = () => {
           </>
         }
       >
-        <p style={{ color: 'var(--color-neutral)', lineHeight: '1.6' }}>
-          Are you sure you want to delete <strong>{deletingFaculty?.name}</strong>? This action cannot be undone.
-        </p>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          {deleteError && (
+            <div className="faculties-alert faculties-alert-error" role="alert">
+              <AlertCircle size={18} />
+              <span>{deleteError}</span>
+            </div>
+          )}
+          <p style={{ color: 'var(--color-neutral)', lineHeight: '1.6' }}>
+            Are you sure you want to delete <strong>{deletingFaculty?.name}</strong>? This action cannot be undone.
+          </p>
+        </div>
       </Modal>
     </div>
   );
