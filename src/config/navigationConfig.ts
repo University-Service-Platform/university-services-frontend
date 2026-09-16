@@ -43,6 +43,15 @@ export const APP_ROUTES_CONFIG: RouteNavigationConfig[] = [
     showInNav: true,
   },
   {
+    id: 'account-status',
+    path: '/users/account-status',
+    label: 'Account Status',
+    iconName: 'UserCheck',
+    requiredRoles: ['ADMIN', 'STAFF'],
+    showInNav: true,
+  },
+
+  {
     id: 'roles',
     path: '/roles',
     label: 'Roles',

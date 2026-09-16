@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { Users, Plus, Edit2, Trash2, AlertCircle, CheckCircle, RefreshCw, Search, Mail, Phone } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Users, Plus, Edit2, Trash2, AlertCircle, CheckCircle, RefreshCw, Search, Mail, Phone, UserCheck } from 'lucide-react';
+
 import {
   getUsers,
   createUser,
@@ -240,13 +242,21 @@ export const UsersPage: React.FC = () => {
               Manage university user accounts, credentials, and access directory.
             </p>
           </div>
-          <Button
-            variant="primary"
-            icon={<Plus size={16} />}
-            onClick={openCreateModal}
-          >
-            Add User
-          </Button>
+          <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+            <Link to="/users/account-status" style={{ textDecoration: 'none' }}>
+              <Button variant="outline" icon={<UserCheck size={16} />}>
+                Manage Account Status
+              </Button>
+            </Link>
+            <Button
+              variant="primary"
+              icon={<Plus size={16} />}
+              onClick={openCreateModal}
+            >
+              Add User
+            </Button>
+          </div>
+
         </div>
       </Card>
 

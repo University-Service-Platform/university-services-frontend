@@ -6,6 +6,7 @@ import {
   LayoutDashboard,
   User,
   Users,
+  UserCheck,
   Shield,
   Building2,
   Layers,
@@ -31,6 +32,8 @@ const renderNavIcon = (iconName?: string) => {
       return <User size={18} aria-hidden="true" />;
     case 'Users':
       return <Users size={18} aria-hidden="true" />;
+    case 'UserCheck':
+      return <UserCheck size={18} aria-hidden="true" />;
     case 'Shield':
       return <Shield size={18} aria-hidden="true" />;
     case 'GraduationCap':
@@ -43,6 +46,7 @@ const renderNavIcon = (iconName?: string) => {
       return <GraduationCap size={18} aria-hidden="true" />;
   }
 };
+
 
 export const Sidebar: React.FC<SidebarProps> = ({
   navItems: propNavItems,
