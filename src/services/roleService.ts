@@ -1,6 +1,10 @@
 import { apiFetch } from './apiClient';
 import type { UserRole } from '@/types';
 
+/**
+ * UNCONFIRMED PLACEHOLDER INTEGRATION BOUNDARY PENDING OFFICIAL BACKEND CONTRACT:
+ * These fields represent internal placeholder UI/service integration payload structures and NOT confirmed backend DTO fields.
+ */
 export interface RoleAssignmentPayload {
   userId: string;
   role: UserRole;
@@ -8,6 +12,10 @@ export interface RoleAssignmentPayload {
   serviceUnitId?: string;
 }
 
+/**
+ * UNCONFIRMED PLACEHOLDER INTEGRATION BOUNDARY PENDING OFFICIAL BACKEND CONTRACT:
+ * These fields represent internal placeholder UI/service integration types and NOT confirmed backend DTO fields.
+ */
 export interface SystemRoleDefinition {
   id: string;
   name: string;
@@ -17,6 +25,7 @@ export interface SystemRoleDefinition {
   userCount?: number;
 }
 
+
 export interface RoleServiceResult<T = unknown> {
   success: boolean;
   data?: T;
@@ -24,7 +33,7 @@ export interface RoleServiceResult<T = unknown> {
 }
 
 /**
- * UNCONFIRMED INTEGRATION BOUNDARY:
+ * UNCONFIRMED PLACEHOLDER INTEGRATION BOUNDARY PENDING OFFICIAL BACKEND CONTRACT:
  * Official backend API contract for role management and user-role assignment endpoints is not yet documented in the repository.
  * The endpoint constants below serve as placeholder integration boundaries that will be updated
  * once the official backend OpenAPI/Swagger specification is provided by the backend team.
@@ -32,6 +41,10 @@ export interface RoleServiceResult<T = unknown> {
 export const ROLES_API_ENDPOINT = import.meta.env.VITE_ROLES_API_ENDPOINT || '/roles';
 export const ROLE_ASSIGNMENT_API_ENDPOINT = import.meta.env.VITE_ROLE_ASSIGNMENT_API_ENDPOINT || '/roles/assign';
 
+/**
+ * UNCONFIRMED PLACEHOLDER INTEGRATION BOUNDARY PENDING OFFICIAL BACKEND CONTRACT:
+ * Fetch system role definitions from backend endpoint boundary.
+ */
 export async function getRoles(): Promise<RoleServiceResult<SystemRoleDefinition[]>> {
   const response = await apiFetch<SystemRoleDefinition[]>(ROLES_API_ENDPOINT, {
     method: 'GET',
@@ -50,6 +63,10 @@ export async function getRoles(): Promise<RoleServiceResult<SystemRoleDefinition
   };
 }
 
+/**
+ * UNCONFIRMED PLACEHOLDER INTEGRATION BOUNDARY PENDING OFFICIAL BACKEND CONTRACT:
+ * Assign user role endpoint boundary.
+ */
 export async function assignUserRole(payload: RoleAssignmentPayload): Promise<RoleServiceResult<null>> {
   const response = await apiFetch<null>(ROLE_ASSIGNMENT_API_ENDPOINT, {
     method: 'POST',
@@ -68,3 +85,4 @@ export async function assignUserRole(payload: RoleAssignmentPayload): Promise<Ro
     message: 'User role assigned successfully.',
   };
 }
+
