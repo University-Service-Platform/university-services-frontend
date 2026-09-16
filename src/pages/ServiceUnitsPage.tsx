@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { Layers, Plus, Edit2, Trash2, AlertCircle, CheckCircle, RefreshCw } from 'lucide-react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { Layers, Plus, Edit2, Trash2, AlertCircle, CheckCircle, RefreshCw, Search } from 'lucide-react';
 import {
   getServiceUnits,
   createServiceUnit,
@@ -30,6 +30,9 @@ export const ServiceUnitsPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
 
+  // Search & Filter State
+  const [searchQuery, setSearchQuery] = useState<string>('');
+
   // Form Modal State (Create / Edit)
   const [isFormModalOpen, setIsFormModalOpen] = useState<boolean>(false);
   const [editingUnit, setEditingUnit] = useState<ServiceUnit | null>(null);
@@ -43,6 +46,7 @@ export const ServiceUnitsPage: React.FC = () => {
   // Delete Modal State
   const [deletingUnit, setDeletingUnit] = useState<ServiceUnit | null>(null);
   const [isDeleting, setIsDeleting] = useState<boolean>(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   // Status Banners
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -75,6 +79,18 @@ export const ServiceUnitsPage: React.FC = () => {
       isMounted = false;
     };
   }, []);
+
+  // Filter loaded service units by search query (name, code, or description)
+  const filteredServiceUnits = useMemo(() => {
+    if (!searchQuery.trim()) return serviceUnits;
+    const query = searchQuery.toLowerCase().trim();
+    return serviceUnits.filter(
+      (unit) =>
+        unit.name.toLowerCase().includes(query) ||
+        unit.code.toLowerCase().includes(query) ||
+        (unit.description && unit.description.toLowerCase().includes(query))
+    );
+  }, [serviceUnits, searchQuery]);
 
   const openCreateModal = () => {
     setEditingUnit(null);
@@ -152,6 +168,7 @@ export const ServiceUnitsPage: React.FC = () => {
     if (!deletingUnit) return;
 
     setIsDeleting(true);
+    setDeleteError(null);
     setSuccessMessage(null);
 
     const result = await deleteServiceUnit(deletingUnit.id);
@@ -161,7 +178,7 @@ export const ServiceUnitsPage: React.FC = () => {
       setDeletingUnit(null);
       fetchServiceUnitsData();
     } else {
-      setSaveError(result.message || 'Failed to delete service unit.');
+      setDeleteError(result.message || 'Failed to delete service unit. Unable to connect to backend.');
     }
 
     setIsDeleting(false);
@@ -196,6 +213,23 @@ export const ServiceUnitsPage: React.FC = () => {
         </div>
       </Card>
 
+      {/* Search & Filter Bar */}
+      {serviceUnits.length > 0 && (
+        <Card className="service-units-controls-card" style={{ padding: '1rem 1.5rem' }}>
+          <div className="service-units-search-bar" style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+            <div className="service-units-search-input" style={{ flex: 1 }}>
+              <Input
+                id="service-unit-search-input"
+                placeholder="Search service units by name, code, or description..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                leftIcon={<Search size={18} />}
+              />
+            </div>
+          </div>
+        </Card>
+      )}
+
       {/* Content Area: Loading / Empty / Loaded States */}
       {isLoading ? (
         <LoadingState
@@ -204,7 +238,7 @@ export const ServiceUnitsPage: React.FC = () => {
         />
       ) : serviceUnits.length > 0 ? (
         <div className="service-units-grid">
-          {serviceUnits.map((unit) => (
+          {filteredServiceUnits.map((unit) => (
             <Card key={unit.id} className="service-unit-card">
               <CardBody>
                 <div className="service-unit-card-header">
@@ -232,7 +266,10 @@ export const ServiceUnitsPage: React.FC = () => {
                     size="sm"
                     className="btn-danger"
                     icon={<Trash2 size={16} />}
-                    onClick={() => setDeletingUnit(unit)}
+                    onClick={() => {
+                      setDeleteError(null);
+                      setDeletingUnit(unit);
+                    }}
                   >
                     Delete
                   </Button>
@@ -363,9 +400,17 @@ export const ServiceUnitsPage: React.FC = () => {
           </>
         }
       >
-        <p style={{ color: 'var(--color-neutral)', lineHeight: '1.6' }}>
-          Are you sure you want to delete <strong>{deletingUnit?.name}</strong>? This action cannot be undone.
-        </p>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          {deleteError && (
+            <div className="service-units-alert service-units-alert-error" role="alert">
+              <AlertCircle size={18} />
+              <span>{deleteError}</span>
+            </div>
+          )}
+          <p style={{ color: 'var(--color-neutral)', lineHeight: '1.6' }}>
+            Are you sure you want to delete <strong>{deletingUnit?.name}</strong>? This action cannot be undone.
+          </p>
+        </div>
       </Modal>
     </div>
   );
