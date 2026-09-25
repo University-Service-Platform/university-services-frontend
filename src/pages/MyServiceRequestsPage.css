@@ -1,0 +1,176 @@
+/* My Service Requests Page Layout */
+
+.my-requests-container {
+  max-width: 64rem;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.my-requests-header-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.5rem 2rem;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.my-requests-header-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.my-requests-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--color-neutral-heading);
+}
+
+.my-requests-subtitle {
+  font-size: 0.875rem;
+  color: var(--color-neutral);
+}
+
+/* Controls card: Filter Tabs & Search Bar */
+.my-requests-controls-card {
+  padding: 1rem 1.5rem;
+}
+
+.my-requests-controls-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+@media (min-width: 768px) {
+  .my-requests-controls-container {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+}
+
+.my-requests-filter-tabs {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  overflow-x: auto;
+  padding-bottom: 0.25rem;
+}
+
+.filter-tab-btn {
+  padding: 0.5rem 1rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  background-color: transparent;
+  color: var(--color-neutral);
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+  white-space: nowrap;
+}
+
+.filter-tab-btn:hover {
+  background-color: var(--color-surface-hover, rgba(255, 255, 255, 0.05));
+  color: var(--color-neutral-heading);
+}
+
+.filter-tab-btn.active {
+  background-color: var(--color-primary);
+  border-color: var(--color-primary);
+  color: #ffffff;
+  font-weight: 600;
+}
+
+.my-requests-search-input {
+  flex: 1;
+  min-width: 240px;
+  max-width: 400px;
+}
+
+/* Service Requests Grid */
+.my-requests-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1.25rem;
+}
+
+.request-card {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.request-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 0.75rem;
+  gap: 0.5rem;
+}
+
+.request-card-identity {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.request-card-id {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--color-primary, #3b82f6);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.request-card-title {
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--color-neutral-heading);
+  line-height: 1.35;
+}
+
+.request-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  color: var(--color-neutral);
+  margin-bottom: 1rem;
+  flex: 1;
+}
+
+.request-meta-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.request-card-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--color-border);
+}
+
+@media (max-width: 768px) {
+  .my-requests-header-card {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 1.25rem;
+  }
+
+  .my-requests-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .my-requests-search-input {
+    max-width: 100%;
+  }
+}

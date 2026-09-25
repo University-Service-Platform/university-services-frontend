@@ -83,6 +83,14 @@ export const APP_ROUTES_CONFIG: RouteNavigationConfig[] = [
     requiredRoles: ['ADMIN', 'STAFF'],
     showInNav: true,
   },
+  {
+    id: 'my-service-requests',
+    path: '/requests/my',
+    label: 'My Requests',
+    iconName: 'ClipboardList',
+    requiredRoles: ['STUDENT', 'STAFF'],
+    showInNav: true,
+  },
 ];
 
 /**
