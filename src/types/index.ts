@@ -49,6 +49,21 @@ export interface ServiceUnit {
   updatedAt?: string;
 }
 
+/**
+ * UNCONFIRMED PLACEHOLDER INTEGRATION BOUNDARY PENDING OFFICIAL BACKEND DTO CONTRACT:
+ * The official backend Service Request DTO schema is not yet documented in the repository.
+ * The fields below represent an unconfirmed placeholder UI/service boundary subject to change upon official contract.
+ */
+export type ServiceRequestStatus = 'NEW' | 'IN_PROGRESS' | 'ASSIGNED' | 'RESOLVED' | 'CLOSED' | 'REJECTED';
+
+export interface ServiceRequest {
+  id: string;
+  title: string;
+  category: string;
+  submittedDate: string;
+  status: ServiceRequestStatus;
+}
+
 export interface NavItem {
   label: string;
   path: string;

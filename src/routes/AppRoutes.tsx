@@ -1,7 +1,7 @@
 import React from 'react';
 import { Routes, Route } from 'react-router-dom';
 import { AppShell } from '@/components/layout';
-import { HomePage, LoginPage, ProfilePage, RolesPage, FacultiesPage, ServiceUnitsPage, UsersPage, AccountStatusPage } from '@/pages';
+import { HomePage, LoginPage, ProfilePage, RolesPage, FacultiesPage, ServiceUnitsPage, UsersPage, AccountStatusPage, MyServiceRequestsPage } from '@/pages';
 import { ProtectedRoute } from './ProtectedRoute';
 import { APP_ROUTES_CONFIG } from '@/config/navigationConfig';
 
@@ -19,6 +19,8 @@ const renderRoutePage = (path: string) => {
       return <FacultiesPage />;
     case '/service-units':
       return <ServiceUnitsPage />;
+    case '/requests/my':
+      return <MyServiceRequestsPage />;
     default:
       return <HomePage />;
   }
