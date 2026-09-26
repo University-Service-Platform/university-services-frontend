@@ -12,6 +12,7 @@ import {
   formatDateTime,
   formatRelative,
   notificationLink,
+  notificationPriority,
 } from '@/components/group8';
 import {
   fetchNotifications,
@@ -135,15 +136,24 @@ export const NotificationsPage: React.FC = () => {
               <li key={notification.id}>
                 <button
                   type="button"
-                  className={cn('g8-notification', !notification.read && 'unread')}
+                  className={cn(
+                    'g8-notification',
+                    !notification.read && 'unread',
+                    notificationPriority(notification) === 'high' && 'important'
+                  )}
                   onClick={() => openNotification(notification)}
-                  aria-label={`${notification.read ? '' : 'Unread: '}${notification.title}. ${notification.message}`}
+                  aria-label={`${notificationPriority(notification) === 'high' ? 'Important. ' : ''}${notification.read ? '' : 'Unread: '}${notification.title}. ${notification.message}`}
                 >
                   <span className={cn('g8-notification-icon', `source-${notification.source.toLowerCase()}`)}>
                     <NotificationIcon notification={notification} />
                   </span>
                   <span className="g8-notification-body">
-                    <span className="g8-notification-title">{notification.title}</span>
+                    <span className="g8-notification-title">
+                      {notification.title}
+                      {notificationPriority(notification) === 'high' && (
+                        <span className="g8-important-badge">Important</span>
+                      )}
+                    </span>
                     <span className="g8-notification-message">{notification.message}</span>
                     <span className="g8-notification-meta">
                       {NOTIFICATION_SOURCE_LABEL[notification.source]} ·{' '}

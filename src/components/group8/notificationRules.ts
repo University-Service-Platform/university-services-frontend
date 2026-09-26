@@ -1,4 +1,13 @@
-import type { AppNotification, NotificationSource } from '@/types';
+import type { AppNotification, NotificationSource, NotificationType } from '@/types';
+
+export type NotificationPriority = 'high' | 'normal';
+
+/** Changes that cancel something the user planned around are shown as important. */
+const HIGH_PRIORITY_TYPES: NotificationType[] = ['EVENT_CANCELLED', 'REGISTRATION_CANCELLED'];
+
+export function notificationPriority(notification: AppNotification): NotificationPriority {
+  return HIGH_PRIORITY_TYPES.includes(notification.type) ? 'high' : 'normal';
+}
 
 export const NOTIFICATION_SOURCE_LABEL: Record<NotificationSource, string> = {
   GROUP8_EVENTS: 'Events',

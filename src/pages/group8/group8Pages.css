@@ -798,3 +798,28 @@
     flex: 1 1 auto;
   }
 }
+
+/* Notification priority & read state */
+.g8-notification.important {
+  box-shadow: inset 3px 0 0 var(--color-warning);
+}
+
+.g8-notification:not(.unread) .g8-notification-title,
+.g8-notification:not(.unread) .g8-notification-message {
+  color: var(--color-neutral);
+  font-weight: 500;
+}
+
+.g8-important-badge {
+  display: inline-block;
+  margin-left: 0.5rem;
+  padding: 0.0625rem 0.5rem;
+  border-radius: var(--radius-full);
+  background: var(--color-warning-bg);
+  color: var(--color-warning-text);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  vertical-align: middle;
+}
