@@ -38,9 +38,10 @@ export const EventOrganizerPanel: React.FC<EventOrganizerPanelProps> = ({ event,
   }, [event.id]);
 
   useEffect(() => {
+    // Refetch when the event status or registration count changes (e.g. after registering on this page).
     // eslint-disable-next-line react-hooks/set-state-in-effect -- data fetch when the event changes
     void loadSummary();
-  }, [loadSummary, event.status]);
+  }, [loadSummary, event.status, event.confirmedCount]);
 
   const handlePublish = async () => {
     setIsPublishing(true);
