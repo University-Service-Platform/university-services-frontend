@@ -1,8 +1,9 @@
-import React, { useEffect } from 'react';
-import { Info } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Info, LogIn } from 'lucide-react';
 import { useAuth } from '@/auth';
-import { Card } from '@/components/ui';
-import { setG8DemoIdentity } from '@/services/group8/g8Api';
+import { Button, Card, Modal } from '@/components/ui';
+import { G8_SESSION_EXPIRED_EVENT, setG8DemoIdentity } from '@/services/group8/g8Api';
 import './group8.css';
 
 /**
@@ -10,13 +11,52 @@ import './group8.css';
  * demo fallback apply the signed-in user's roles to synthetic data.
  */
 export const Group8Page: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
+  const [sessionExpired, setSessionExpired] = useState(false);
 
   useEffect(() => {
     setG8DemoIdentity(user);
   }, [user]);
 
-  return <div className="g8-page">{children}</div>;
+  // Any Group 8 call answered with 401 means the session is no longer valid.
+  useEffect(() => {
+    const onExpired = () => setSessionExpired(true);
+    window.addEventListener(G8_SESSION_EXPIRED_EVENT, onExpired);
+    return () => window.removeEventListener(G8_SESSION_EXPIRED_EVENT, onExpired);
+  }, []);
+
+  const signInAgain = () => {
+    setSessionExpired(false);
+    logout();
+    navigate('/auth', { replace: true });
+  };
+
+  return (
+    <div className="g8-page">
+      {children}
+      <Modal
+        isOpen={sessionExpired}
+        onClose={() => setSessionExpired(false)}
+        title="Your session has expired"
+        footer={
+          <div className="g8-form-footer">
+            <Button variant="ghost" onClick={() => setSessionExpired(false)}>
+              Stay on this page
+            </Button>
+            <Button icon={<LogIn size={16} />} onClick={signInAgain}>
+              Sign in again
+            </Button>
+          </div>
+        }
+      >
+        <p className="g8-modal-text">
+          For your security you were signed out. Nothing you submitted after this point was saved. Sign in again to
+          continue - unsaved form input on this page will be lost.
+        </p>
+      </Modal>
+    </div>
+  );
 };
 
 export interface G8PageHeaderProps {
