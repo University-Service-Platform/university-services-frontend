@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Bell, CheckCheck, RefreshCw } from 'lucide-react';
-import { Button, Card, EmptyState, ErrorState, LoadingState } from '@/components/ui';
+import { Button, Card, EmptyState, ErrorState, LoadingState, Select } from '@/components/ui';
 import {
   DemoDataNotice,
   G8Alert,
@@ -23,7 +23,7 @@ import {
   useAppDispatch,
   useAppSelector,
 } from '@/store';
-import type { AppNotification } from '@/types';
+import type { AppNotification, NotificationSource } from '@/types';
 import { cn } from '@/utils';
 import './group8Pages.css';
 
@@ -35,15 +35,27 @@ export const NotificationsPage: React.FC = () => {
   const { items, status, error, isDemo } = useAppSelector(selectNotifications);
   const unreadCount = useAppSelector(selectUnreadCount);
   const [filter, setFilter] = useState<Filter>('ALL');
+  const [source, setSource] = useState<'' | NotificationSource>('');
 
   useEffect(() => {
     void dispatch(fetchNotifications());
   }, [dispatch]);
 
   const visible = useMemo(
-    () => (filter === 'UNREAD' ? items.filter((notification) => !notification.read) : items),
-    [items, filter]
+    () =>
+      items.filter(
+        (notification) => (filter === 'ALL' || !notification.read) && (!source || notification.source === source)
+      ),
+    [items, filter, source]
   );
+
+  const sourceOptions = [
+    { value: '', label: 'All sources' },
+    ...(Object.keys(NOTIFICATION_SOURCE_LABEL) as NotificationSource[]).map((key) => ({
+      value: key,
+      label: NOTIFICATION_SOURCE_LABEL[key],
+    })),
+  ];
 
   const openNotification = (notification: AppNotification) => {
     if (!notification.read) void dispatch(markNotificationAsRead(notification.id));
@@ -108,6 +120,12 @@ export const NotificationsPage: React.FC = () => {
               Unread ({unreadCount})
             </button>
           </div>
+          <Select
+            label="Source"
+            options={sourceOptions}
+            value={source}
+            onChange={(e) => setSource(e.target.value as '' | NotificationSource)}
+          />
         </div>
       </Card>
 
@@ -122,11 +140,19 @@ export const NotificationsPage: React.FC = () => {
       ) : visible.length === 0 ? (
         <EmptyState
           icon={<Bell className="state-icon" />}
-          title={filter === 'UNREAD' ? "You're all caught up" : 'No notifications yet'}
+          title={
+            source
+              ? `No ${filter === 'UNREAD' ? 'unread ' : ''}${NOTIFICATION_SOURCE_LABEL[source]} notifications`
+              : filter === 'UNREAD'
+                ? "You're all caught up"
+                : 'No notifications yet'
+          }
           description={
-            filter === 'UNREAD'
-              ? 'There are no unread notifications.'
-              : 'Registration confirmations, event changes and announcements will appear here.'
+            source
+              ? 'Try another source or show all sources.'
+              : filter === 'UNREAD'
+                ? 'There are no unread notifications.'
+                : 'Registration confirmations, event changes and announcements will appear here.'
           }
         />
       ) : (
