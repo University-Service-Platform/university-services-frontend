@@ -62,52 +62,62 @@ export const EngagementDashboardPage: React.FC = () => {
           <Card>
             <CardHeader title="Event participation" subtitle="Confirmed registrations as a share of capacity." />
             <CardBody>
-              <HorizontalBars
-                ariaLabel="Event participation by event"
-                data={summary.eventParticipation.map((event) => ({
-                  key: event.eventId,
-                  label: event.title,
-                  value: event.confirmed,
-                  max: event.capacity,
-                  valueLabel: `${event.confirmed}/${event.capacity} (${Math.round((event.confirmed / Math.max(event.capacity, 1)) * 100)}%)`,
-                }))}
-              />
+              {summary.eventParticipation.length === 0 ? (
+                <p className="g8-muted">No published events yet - participation appears once events open for registration.</p>
+              ) : (
+                <HorizontalBars
+                  ariaLabel="Event participation by event"
+                  data={summary.eventParticipation.map((event) => ({
+                    key: event.eventId,
+                    label: event.title,
+                    value: event.confirmed,
+                    max: event.capacity,
+                    valueLabel: `${event.confirmed}/${event.capacity} (${Math.round((event.confirmed / Math.max(event.capacity, 1)) * 100)}%)`,
+                  }))}
+                />
+              )}
             </CardBody>
           </Card>
 
           <Card>
             <CardHeader title="Announcement reach" subtitle="How many targeted recipients have read each announcement." />
-            <div className="g8-table-wrap">
-              <table className="g8-table">
-                <caption className="g8-sr-only">Announcement reach</caption>
-                <thead>
-                  <tr>
-                    <th scope="col">Announcement</th>
-                    <th scope="col">Audience</th>
-                    <th scope="col" className="g8-num">
-                      Recipients
-                    </th>
-                    <th scope="col" className="g8-num">
-                      Read
-                    </th>
-                    <th scope="col" className="g8-num">
-                      Read rate
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {summary.announcementReach.map((item) => (
-                    <tr key={item.announcementId}>
-                      <td>{item.title}</td>
-                      <td className="g8-muted">{item.audienceLabel}</td>
-                      <td className="g8-num">{item.recipients.toLocaleString()}</td>
-                      <td className="g8-num">{item.readCount.toLocaleString()}</td>
-                      <td className="g8-num">{Math.round((item.readCount / Math.max(item.recipients, 1)) * 100)}%</td>
+            {summary.announcementReach.length === 0 ? (
+              <CardBody>
+                <p className="g8-muted">No announcements published yet - reach is measured once an announcement goes out.</p>
+              </CardBody>
+            ) : (
+              <div className="g8-table-wrap">
+                <table className="g8-table">
+                  <caption className="g8-sr-only">Announcement reach</caption>
+                  <thead>
+                    <tr>
+                      <th scope="col">Announcement</th>
+                      <th scope="col">Audience</th>
+                      <th scope="col" className="g8-num">
+                        Recipients
+                      </th>
+                      <th scope="col" className="g8-num">
+                        Read
+                      </th>
+                      <th scope="col" className="g8-num">
+                        Read rate
+                      </th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody>
+                    {summary.announcementReach.map((item) => (
+                      <tr key={item.announcementId}>
+                        <td>{item.title}</td>
+                        <td className="g8-muted">{item.audienceLabel}</td>
+                        <td className="g8-num">{item.recipients.toLocaleString()}</td>
+                        <td className="g8-num">{item.readCount.toLocaleString()}</td>
+                        <td className="g8-num">{Math.round((item.readCount / Math.max(item.recipients, 1)) * 100)}%</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </Card>
         </>
       )}
