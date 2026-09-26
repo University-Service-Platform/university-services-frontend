@@ -82,7 +82,8 @@ export const NotificationsPage: React.FC = () => {
 
       <DemoDataNotice show={isDemo} />
 
-      {error && status !== 'failed' && <G8Alert tone="danger">{error}</G8Alert>}
+      {/* Show errors inline whenever notifications are still on screen (e.g. a failed refresh). */}
+      {error && (status !== 'failed' || items.length > 0) && <G8Alert tone="danger">{error}</G8Alert>}
 
       <Card>
         <div className="g8-toolbar">
