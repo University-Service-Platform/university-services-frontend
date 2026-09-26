@@ -12,7 +12,7 @@ the shared mapping in `src/services/group8/g8Api.ts` (400 validation, 401 sessio
 | Empty | Shared `EmptyState` with a reason and, where useful, a next action (e.g. "Browse events") |
 | Success | Green `G8Alert` status message; lists update in place |
 | Validation error (400) | Field-level messages next to inputs plus a summary alert (moving focus to the first invalid field: pending USMG8-71) |
-| Session expired (401) | Message "Your session has expired. Please sign in again." (dialog with **Sign in again**: pending USMG8-191) |
+| Session expired (401) | "Your session has expired" dialog with **Sign in again** (USMG8-191) |
 | Forbidden (403) | Route: shared `UnauthorizedPage`. Action: the backend's reason (e.g. "not eligible for this event") in a red alert |
 | Not found (404) | `ErrorState` "Event unavailable" / "Could not open feedback form" with a back link |
 | Conflict (409) | Backend reason in an alert (capacity reached, registration closed, already registered, already submitted); data is refreshed |
