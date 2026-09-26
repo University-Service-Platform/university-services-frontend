@@ -412,3 +412,72 @@
   font-size: 0.8125rem;
   color: var(--color-neutral);
 }
+
+/* Announcement composer */
+.g8-audience-types {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.g8-audience-type {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 0.875rem 1rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  transition: border-color var(--transition-fast), background var(--transition-fast);
+}
+
+.g8-audience-type:hover {
+  background: var(--color-surface-hover);
+}
+
+.g8-audience-type.active {
+  border-color: var(--color-primary);
+  background: var(--color-primary-light);
+}
+
+.g8-audience-type input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.g8-audience-type:focus-within {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+.g8-audience-type-label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--color-neutral-heading);
+}
+
+.g8-audience-type-hint {
+  font-size: 0.75rem;
+  color: var(--color-neutral);
+}
+
+.g8-audience-preview {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  margin-top: 1rem;
+  padding: 0.875rem 1rem;
+  border-radius: var(--radius-lg);
+  background: var(--color-surface-hover);
+  font-size: 0.875rem;
+  color: var(--color-neutral-heading);
+}
+
+.g8-audience-preview svg {
+  color: var(--color-primary);
+  flex-shrink: 0;
+  margin-top: 0.125rem;
+}

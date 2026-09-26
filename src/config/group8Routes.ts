@@ -62,4 +62,12 @@ export const GROUP8_ROUTES_CONFIG: RouteNavigationConfig[] = [
     iconName: 'Megaphone',
     showInNav: true,
   },
+  {
+    id: 'g8-announcement-create',
+    path: '/announcements/new',
+    label: 'New Announcement',
+    iconName: 'Megaphone',
+    requiredRoles: G8_ANNOUNCER_ROLES,
+    showInNav: false,
+  },
 ];
