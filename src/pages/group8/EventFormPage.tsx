@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, CalendarPlus, CheckCircle2, Globe, MapPin, XCircle } from 'lucide-react';
 import { Button, Card, CardBody, CardFooter, CardHeader, ErrorState, Input, LoadingState } from '@/components/ui';
@@ -126,6 +126,7 @@ export const EventFormPage: React.FC = () => {
   const [venueCheck, setVenueCheck] = useState<VenueValidationResult | null>(null);
   const [venueCheckError, setVenueCheckError] = useState<string | null>(null);
   const [isCheckingVenue, setIsCheckingVenue] = useState(false);
+  const formRef = useRef<HTMLFormElement>(null);
 
   useEffect(() => {
     if (!eventId) return;
@@ -204,8 +205,13 @@ export const EventFormPage: React.FC = () => {
     const found = validate(form);
     setErrors(found);
     if (Object.keys(found).length > 0) {
-      setSubmitError('Please correct the highlighted fields.');
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      setSubmitError(`Please correct ${Object.keys(found).length === 1 ? 'the highlighted field' : `the ${Object.keys(found).length} highlighted fields`}.`);
+      // Move focus to the first invalid field once the error states have rendered.
+      requestAnimationFrame(() => {
+        const firstInvalid = formRef.current?.querySelector<HTMLElement>('[aria-invalid="true"]');
+        firstInvalid?.focus();
+        firstInvalid?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      });
       return;
     }
 
@@ -271,7 +277,7 @@ export const EventFormPage: React.FC = () => {
         </G8Alert>
       )}
 
-      <form onSubmit={handleSubmit} noValidate className="g8-form">
+      <form ref={formRef} onSubmit={handleSubmit} noValidate className="g8-form">
         <Card>
           <CardHeader title="Event details" />
           <CardBody>
