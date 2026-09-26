@@ -111,14 +111,25 @@ export async function g8Request<T>(endpoint: string, options: G8RequestOptions<T
     body: body === undefined ? undefined : JSON.stringify(body),
   });
 
-  if (!response.error && response.status >= 200 && response.status < 300) {
+  const succeeded = !response.error && response.status >= 200 && response.status < 300;
+  // A GET that "succeeds" without a JSON body was answered by an SPA/static fallback
+  // (e.g. index.html), not by a Group 8 service - treat the route as not served.
+  const servedByFallback = succeeded && method === 'GET' && response.data === undefined;
+
+  if (succeeded && !servedByFallback) {
     return g8Ok(response.data as T);
   }
 
-  if (demo && G8_DEMO_MODE_ENABLED && isGatewayUnreachable(response.status, response.error)) {
+  const unreachable = servedByFallback || isGatewayUnreachable(response.status, response.error);
+
+  if (demo && G8_DEMO_MODE_ENABLED && unreachable) {
     // Simulated latency keeps loading states visible during UI review.
     await new Promise((resolve) => setTimeout(resolve, 250));
     return demo();
+  }
+
+  if (servedByFallback) {
+    return g8Fail<T>(404, 'This Group 8 service route is not registered on the API Gateway.');
   }
 
   const genericError = !response.error || response.error === 'API Request Failed';
