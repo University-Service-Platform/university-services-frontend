@@ -11,7 +11,7 @@ the shared mapping in `src/services/group8/g8Api.ts` (400 validation, 401 sessio
 | Loading | Shared `LoadingState` with a screen-specific title; buttons show a spinner and are disabled while submitting |
 | Empty | Shared `EmptyState` with a reason and, where useful, a next action (e.g. "Browse events") |
 | Success | Green `G8Alert` status message; lists update in place |
-| Validation error (400) | Field-level messages next to inputs plus a summary alert (moving focus to the first invalid field: pending USMG8-71) |
+| Validation error (400) | Field-level messages next to inputs plus a summary alert; focus moves to the first invalid field (event form, USMG8-71) |
 | Session expired (401) | "Your session has expired" dialog with **Sign in again** (USMG8-191) |
 | Forbidden (403) | Route: shared `UnauthorizedPage`. Action: the backend's reason (e.g. "not eligible for this event") in a red alert |
 | Not found (404) | `ErrorState` "Event unavailable" / "Could not open feedback form" with a back link |
@@ -29,9 +29,9 @@ the shared mapping in `src/services/group8/g8Api.ts` (400 validation, 401 sessio
 | Organizer tools | "Loading registrations..." | "No registrations yet" (draft vs published wording) | Publish blocked by venue validation; cancel requires a reason |
 | My Registrations | "Loading your registrations..." | Per tab, with "Browse events" | Cancellation deadline passed; event cancelled by organizer; completed |
 | Announcements | "Loading announcements..." | "No announcements" | Draft vs published (manage view) |
-| New announcement | - | - | Directory unavailable -> type IDs; recipient estimate (publish confirmation: pending USMG8-157) |
+| New announcement | - | - | Directory unavailable -> type IDs; recipient estimate; publish confirmation with audience and reach (USMG8-157) |
 | Notifications | "Loading notifications..." | "You're all caught up" / "No notifications yet" | Unread highlight and count; optimistic read with rollback |
 | Feedback center | "Loading your activities..." | "Nothing to review yet" | Ready / not yet available (with Group 7 status reason) / submitted |
 | Feedback form | "Checking eligibility..." | - | Not completed, rejected, already submitted, Group 7 unavailable |
 | Feedback summary | "Loading feedback summaries..." | "No feedback yet" | - |
-| Engagement dashboard | "Loading engagement data..." | Dashboard error state (per-section empty states: pending USMG8-196) | - |
+| Engagement dashboard | "Loading engagement data..." | Per section: no events / no announcements yet (USMG8-196) | - |
