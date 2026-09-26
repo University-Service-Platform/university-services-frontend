@@ -55,4 +55,11 @@ export const GROUP8_ROUTES_CONFIG: RouteNavigationConfig[] = [
     iconName: 'Ticket',
     showInNav: true,
   },
+  {
+    id: 'g8-announcements',
+    path: '/announcements',
+    label: 'Announcements',
+    iconName: 'Megaphone',
+    showInNav: true,
+  },
 ];

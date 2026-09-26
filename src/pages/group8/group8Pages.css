@@ -370,3 +370,45 @@
 .g8-cell-actions .g8-small {
   margin-top: 0.25rem;
 }
+
+/* Announcements */
+.g8-announcement-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.g8-announcement {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+}
+
+.g8-announcement-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.g8-announcement-title {
+  font-size: 1.0625rem;
+  font-weight: 600;
+  color: var(--color-neutral-heading);
+}
+
+.g8-announcement-content {
+  font-size: 0.9375rem;
+  line-height: 1.6;
+  color: var(--color-neutral-heading);
+  white-space: pre-line;
+}
+
+.g8-announcement-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8125rem;
+  color: var(--color-neutral);
+}
