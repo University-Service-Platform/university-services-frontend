@@ -70,4 +70,11 @@ export const GROUP8_ROUTES_CONFIG: RouteNavigationConfig[] = [
     requiredRoles: G8_ANNOUNCER_ROLES,
     showInNav: false,
   },
+  {
+    id: 'g8-notifications',
+    path: '/notifications',
+    label: 'Notifications',
+    iconName: 'Bell',
+    showInNav: true,
+  },
 ];

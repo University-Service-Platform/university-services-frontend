@@ -481,3 +481,106 @@
   flex-shrink: 0;
   margin-top: 0.125rem;
 }
+
+/* Notification center */
+.g8-notification-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.g8-notification-list li + li {
+  border-top: 1px solid var(--color-border);
+}
+
+.g8-notification {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.875rem;
+  width: 100%;
+  padding: 1rem 1.25rem;
+  background: none;
+  border: none;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+  transition: background var(--transition-fast);
+}
+
+.g8-notification:hover {
+  background: var(--color-surface-hover);
+}
+
+.g8-notification:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: -2px;
+}
+
+.g8-notification.unread {
+  background: var(--color-primary-light);
+}
+
+.g8-notification.unread:hover {
+  background: #e0ecff;
+}
+
+.g8-notification-icon {
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: var(--radius-full);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  background: var(--color-surface-hover);
+  color: var(--color-neutral);
+}
+
+.g8-notification-icon.source-group8_events {
+  background: var(--color-secondary-light);
+  color: var(--color-secondary);
+}
+
+.g8-notification-icon.source-group8_comms {
+  background: var(--color-info-bg);
+  color: var(--color-info-text);
+}
+
+.g8-notification-icon.source-group6,
+.g8-notification-icon.source-group7 {
+  background: var(--color-warning-bg);
+  color: var(--color-warning-text);
+}
+
+.g8-notification-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.g8-notification-title {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--color-neutral-heading);
+}
+
+.g8-notification-message {
+  font-size: 0.875rem;
+  color: var(--color-neutral-heading);
+}
+
+.g8-notification-meta {
+  font-size: 0.75rem;
+  color: var(--color-neutral);
+}
+
+.g8-unread-dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: var(--radius-full);
+  background: var(--color-primary);
+  flex-shrink: 0;
+  margin-top: 0.375rem;
+}

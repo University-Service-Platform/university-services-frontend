@@ -1,6 +1,7 @@
 import { configureStore } from '@reduxjs/toolkit';
 import { useDispatch, useSelector } from 'react-redux';
 import { activityReducer } from './activitySlice';
+import { notificationsReducer } from './notificationsSlice';
 
 /**
  * Shared Redux Store
@@ -12,6 +13,7 @@ import { activityReducer } from './activitySlice';
  */
 const rootReducer = {
   activity: activityReducer,
+  notifications: notificationsReducer,
 };
 
 export const store = configureStore({
@@ -24,3 +26,4 @@ export type AppDispatch = typeof store.dispatch;
 export const useAppDispatch = useDispatch.withTypes<AppDispatch>();
 export const useAppSelector = useSelector.withTypes<RootState>();
 export * from './activitySlice';
+export * from './notificationsSlice';
