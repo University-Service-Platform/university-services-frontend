@@ -85,6 +85,14 @@ export const GROUP8_ROUTES_CONFIG: RouteNavigationConfig[] = [
     showInNav: true,
   },
   {
+    id: 'g8-feedback-summary',
+    path: '/feedback/summary',
+    label: 'Feedback Summary',
+    iconName: 'BarChart3',
+    requiredRoles: G8_INSIGHT_ROLES,
+    showInNav: false,
+  },
+  {
     id: 'g8-feedback-form',
     path: '/feedback/:activityType/:activityId',
     label: 'Give Feedback',

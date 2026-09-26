@@ -7,6 +7,7 @@ import {
   EventsPage,
   FeedbackFormPage,
   FeedbackPage,
+  FeedbackSummaryPage,
   MyRegistrationsPage,
   NotificationsPage,
 } from '@/pages/group8';
@@ -25,6 +26,7 @@ const GROUP8_ROUTE_ELEMENTS: Record<string, () => React.ReactElement> = {
   '/announcements/new': () => <AnnouncementFormPage />,
   '/notifications': () => <NotificationsPage />,
   '/feedback': () => <FeedbackPage />,
+  '/feedback/summary': () => <FeedbackSummaryPage />,
   '/feedback/:activityType/:activityId': () => <FeedbackFormPage />,
 };
 

@@ -7,3 +7,4 @@ export * from './AnnouncementFormPage';
 export * from './NotificationsPage';
 export * from './FeedbackPage';
 export * from './FeedbackFormPage';
+export * from './FeedbackSummaryPage';
