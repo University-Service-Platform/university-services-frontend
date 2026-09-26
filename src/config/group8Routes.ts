@@ -84,4 +84,11 @@ export const GROUP8_ROUTES_CONFIG: RouteNavigationConfig[] = [
     iconName: 'MessageSquareText',
     showInNav: true,
   },
+  {
+    id: 'g8-feedback-form',
+    path: '/feedback/:activityType/:activityId',
+    label: 'Give Feedback',
+    iconName: 'MessageSquareText',
+    showInNav: false,
+  },
 ];

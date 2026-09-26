@@ -649,3 +649,70 @@
   font-size: 0.8125rem;
   color: var(--color-warning-text);
 }
+
+/* Feedback form */
+.g8-question-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.g8-question {
+  border: none;
+  padding: 0;
+  margin: 0;
+}
+
+.g8-question .g8-segmented {
+  margin-bottom: 0.25rem;
+}
+
+.g8-required {
+  color: var(--color-danger);
+}
+
+.g8-rating {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  margin-top: 0.25rem;
+}
+
+.g8-rating-option {
+  position: relative;
+  cursor: pointer;
+  color: var(--color-border-strong);
+  padding: 0.125rem;
+  border-radius: var(--radius-md);
+  transition: color var(--transition-fast), transform var(--transition-fast);
+}
+
+.g8-rating-option:hover {
+  transform: scale(1.08);
+}
+
+.g8-rating-option input {
+  position: absolute;
+  opacity: 0;
+  width: 1px;
+  height: 1px;
+}
+
+.g8-rating-option:focus-within {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 1px;
+}
+
+.g8-rating-option.filled {
+  color: var(--color-warning);
+}
+
+.g8-rating-option.filled svg {
+  fill: currentColor;
+}
+
+.g8-rating-text {
+  margin-left: 0.5rem;
+  font-size: 0.8125rem;
+  color: var(--color-neutral);
+}

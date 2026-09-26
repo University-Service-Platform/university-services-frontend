@@ -6,3 +6,4 @@ export * from './AnnouncementsPage';
 export * from './AnnouncementFormPage';
 export * from './NotificationsPage';
 export * from './FeedbackPage';
+export * from './FeedbackFormPage';
