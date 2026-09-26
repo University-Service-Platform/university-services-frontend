@@ -77,4 +77,11 @@ export const GROUP8_ROUTES_CONFIG: RouteNavigationConfig[] = [
     iconName: 'Bell',
     showInNav: true,
   },
+  {
+    id: 'g8-feedback',
+    path: '/feedback',
+    label: 'Feedback',
+    iconName: 'MessageSquareText',
+    showInNav: true,
+  },
 ];

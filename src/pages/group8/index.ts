@@ -5,3 +5,4 @@ export * from './MyRegistrationsPage';
 export * from './AnnouncementsPage';
 export * from './AnnouncementFormPage';
 export * from './NotificationsPage';
+export * from './FeedbackPage';

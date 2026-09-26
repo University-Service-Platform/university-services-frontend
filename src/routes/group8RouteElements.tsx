@@ -1,5 +1,14 @@
 import type React from 'react';
-import { AnnouncementFormPage, AnnouncementsPage, EventDetailPage, EventFormPage, EventsPage, MyRegistrationsPage, NotificationsPage } from '@/pages/group8';
+import {
+  AnnouncementFormPage,
+  AnnouncementsPage,
+  EventDetailPage,
+  EventFormPage,
+  EventsPage,
+  FeedbackPage,
+  MyRegistrationsPage,
+  NotificationsPage,
+} from '@/pages/group8';
 
 /**
  * Group 8 route path -> page element. Paths must match GROUP8_ROUTES_CONFIG.
@@ -14,6 +23,7 @@ const GROUP8_ROUTE_ELEMENTS: Record<string, () => React.ReactElement> = {
   '/announcements': () => <AnnouncementsPage />,
   '/announcements/new': () => <AnnouncementFormPage />,
   '/notifications': () => <NotificationsPage />,
+  '/feedback': () => <FeedbackPage />,
 };
 
 export function renderGroup8Page(path: string): React.ReactElement | null {
