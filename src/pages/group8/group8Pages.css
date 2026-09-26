@@ -1,0 +1,80 @@
+/* Group 8 page styles - events & registrations */
+
+.g8-event-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1.25rem;
+}
+
+.g8-event-card {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.g8-event-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+  height: 100%;
+}
+
+.g8-event-card-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.g8-reg-pill {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.g8-reg-pill.open {
+  color: var(--color-success-text);
+}
+
+.g8-reg-pill.closed {
+  color: var(--color-neutral);
+}
+
+.g8-event-title {
+  font-size: 1.0625rem;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.g8-event-title a {
+  color: var(--color-neutral-heading);
+  text-decoration: none;
+}
+
+.g8-event-title a:hover {
+  color: var(--color-primary);
+  text-decoration: underline;
+}
+
+.g8-event-desc {
+  font-size: 0.875rem;
+  color: var(--color-neutral);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.g8-event-reason {
+  font-size: 0.8125rem;
+  color: var(--color-warning-text);
+}
+
+.g8-event-card-actions {
+  margin-top: auto;
+}
+
+.g8-event-card-actions a {
+  text-decoration: none;
+}
