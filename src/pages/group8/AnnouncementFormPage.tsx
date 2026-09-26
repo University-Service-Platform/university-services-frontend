@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Megaphone, Users } from 'lucide-react';
-import { Button, Card, CardBody, CardFooter, CardHeader, Input } from '@/components/ui';
+import { Button, Card, CardBody, CardFooter, CardHeader, Input, Modal } from '@/components/ui';
 import {
   DemoDataNotice,
   G8Alert,
@@ -59,6 +59,7 @@ export const AnnouncementFormPage: React.FC = () => {
   const [previewError, setPreviewError] = useState<string | null>(null);
   const [isDemo, setIsDemo] = useState(false);
   const [savingMode, setSavingMode] = useState<'draft' | 'publish' | null>(null);
+  const [isConfirmOpen, setIsConfirmOpen] = useState(false);
 
   // Directory options come from Group 5; if unavailable, authors can type IDs instead.
   useEffect(() => {
@@ -151,12 +152,23 @@ export const AnnouncementFormPage: React.FC = () => {
     setSavingMode(publishNow ? 'publish' : 'draft');
     const result = await createAnnouncement({ title: title.trim(), content: content.trim(), audience, publishNow });
     setSavingMode(null);
+    setIsConfirmOpen(false);
     if (result.ok) {
       if (publishNow) dispatch(userActivityRecorded());
       navigate('/announcements');
       return;
     }
     setSubmitError(result.message);
+  };
+
+  /** Publishing notifies the whole audience, so the author confirms reach first. */
+  const requestPublish = () => {
+    setSubmitError(null);
+    if (!validate() || !audience) {
+      setSubmitError('Please fix the highlighted fields.');
+      return;
+    }
+    setIsConfirmOpen(true);
   };
 
   return (
@@ -186,7 +198,7 @@ export const AnnouncementFormPage: React.FC = () => {
         noValidate
         onSubmit={(e) => {
           e.preventDefault();
-          void submit(true);
+          requestPublish();
         }}
       >
         <Card>
@@ -315,6 +327,29 @@ export const AnnouncementFormPage: React.FC = () => {
           </CardFooter>
         </Card>
       </form>
+
+      <Modal
+        isOpen={isConfirmOpen}
+        onClose={() => setIsConfirmOpen(false)}
+        title="Publish this announcement?"
+        footer={
+          <div className="g8-form-footer">
+            <Button variant="ghost" onClick={() => setIsConfirmOpen(false)}>
+              Keep editing
+            </Button>
+            <Button onClick={() => submit(true)} isLoading={savingMode === 'publish'}>
+              Publish and notify
+            </Button>
+          </div>
+        }
+      >
+        <p className="g8-modal-text">
+          <strong>{title.trim()}</strong> will be visible to{' '}
+          <strong>{audience ? describeAudience(audience) : 'the selected audience'}</strong>
+          {preview ? ` (about ${preview.estimatedRecipients.toLocaleString()} people)` : ''}, and each of them receives an
+          in-app notification. Published announcements cannot be unpublished from this screen.
+        </p>
+      </Modal>
     </Group8Page>
   );
 };
