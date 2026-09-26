@@ -1,4 +1,4 @@
-import type { UniversityEvent } from '@/types';
+import type { UniversityEvent, UserRole } from '@/types';
 import { formatDateTime } from './format';
 
 /**
@@ -33,10 +33,19 @@ export function getRegistrationAvailability(event: UniversityEvent, now = Date.n
   return { open: true, reason: `Registration open until ${formatDateTime(event.registrationClosesAt)}.` };
 }
 
+export const ROLE_LABELS: Record<UserRole, string> = {
+  ADMIN: 'Administrator',
+  STAFF: 'Staff',
+  STUDENT: 'Student',
+  DEAN: 'Dean',
+  HOD: 'Head of Department',
+  GUEST: 'Guest',
+};
+
 export function describeEligibility(event: UniversityEvent): string {
   const { roles, facultyIds, departmentIds } = event.eligibility;
   const parts: string[] = [];
-  if (roles.length) parts.push(`Roles: ${roles.map((role) => role.charAt(0) + role.slice(1).toLowerCase()).join(', ')}`);
+  if (roles.length) parts.push(`Roles: ${roles.map((role) => ROLE_LABELS[role]).join(', ')}`);
   if (facultyIds.length) parts.push(`Faculties: ${facultyIds.join(', ')}`);
   if (departmentIds.length) parts.push(`Departments: ${departmentIds.join(', ')}`);
   return parts.length ? parts.join(' · ') : 'Open to all university members';
