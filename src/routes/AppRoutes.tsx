@@ -4,6 +4,7 @@ import { AppShell } from '@/components/layout';
 import { HomePage, LoginPage, ProfilePage, RolesPage, FacultiesPage, ServiceUnitsPage, UsersPage, AccountStatusPage } from '@/pages';
 import { ProtectedRoute } from './ProtectedRoute';
 import { APP_ROUTES_CONFIG } from '@/config/navigationConfig';
+import { renderGroup8Page } from './group8RouteElements';
 
 const renderRoutePage = (path: string) => {
   switch (path) {
@@ -20,7 +21,7 @@ const renderRoutePage = (path: string) => {
     case '/service-units':
       return <ServiceUnitsPage />;
     default:
-      return <HomePage />;
+      return renderGroup8Page(path) ?? <HomePage />;
   }
 };
 

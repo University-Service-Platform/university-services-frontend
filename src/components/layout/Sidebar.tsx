@@ -10,6 +10,12 @@ import {
   Shield,
   Building2,
   Layers,
+  CalendarDays,
+  Ticket,
+  Megaphone,
+  Bell,
+  MessageSquareText,
+  BarChart3,
 } from 'lucide-react';
 import { useAuth } from '@/auth';
 import { getAuthorizedNavItems } from '@/config/navigationConfig';
@@ -42,6 +48,18 @@ const renderNavIcon = (iconName?: string) => {
       return <Building2 size={18} aria-hidden="true" />;
     case 'Layers':
       return <Layers size={18} aria-hidden="true" />;
+    case 'CalendarDays':
+      return <CalendarDays size={18} aria-hidden="true" />;
+    case 'Ticket':
+      return <Ticket size={18} aria-hidden="true" />;
+    case 'Megaphone':
+      return <Megaphone size={18} aria-hidden="true" />;
+    case 'Bell':
+      return <Bell size={18} aria-hidden="true" />;
+    case 'MessageSquareText':
+      return <MessageSquareText size={18} aria-hidden="true" />;
+    case 'BarChart3':
+      return <BarChart3 size={18} aria-hidden="true" />;
     default:
       return <GraduationCap size={18} aria-hidden="true" />;
   }
