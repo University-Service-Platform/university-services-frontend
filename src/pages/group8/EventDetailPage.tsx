@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Link, useLocation, useParams } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import { ArrowLeft, CalendarClock, CalendarDays, Clock, Globe, MapPin, ShieldCheck } from 'lucide-react';
 import { useAuth } from '@/auth';
 import { Button, Card, CardBody, CardHeader, ErrorState, LoadingState } from '@/components/ui';
@@ -13,6 +13,7 @@ import {
   RegistrationStatusBadge,
   describeEligibility,
   formatDateTime,
+  useFlashMessage,
   getRegistrationAvailability,
   type G8AlertTone,
 } from '@/components/group8';
@@ -30,8 +31,7 @@ interface Feedback {
 
 export const EventDetailPage: React.FC = () => {
   const { eventId = '' } = useParams();
-  const location = useLocation();
-  const flash = (location.state as { flash?: string } | null)?.flash;
+  const flash = useFlashMessage();
   const { hasRole } = useAuth();
   const dispatch = useAppDispatch();
   const isOrganizer = hasRole(G8_ORGANIZER_ROLES);

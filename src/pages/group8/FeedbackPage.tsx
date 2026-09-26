@@ -1,9 +1,9 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { BarChart3, CalendarDays, CheckCircle2, Clock, MessageSquareText, Wrench } from 'lucide-react';
 import { useAuth } from '@/auth';
 import { Badge, Button, Card, CardBody, CardHeader, EmptyState, ErrorState, LoadingState } from '@/components/ui';
-import { DemoDataNotice, G8Alert, G8PageHeader, Group8Page, formatDate } from '@/components/group8';
+import { DemoDataNotice, G8Alert, G8PageHeader, Group8Page, formatDate, useFlashMessage } from '@/components/group8';
 import { G8_INSIGHT_ROLES } from '@/config/group8Routes';
 import { getMyFeedbackActivities } from '@/services/group8';
 import type { FeedbackActivity } from '@/types';
@@ -16,15 +16,14 @@ const activityKindLabel = (activity: FeedbackActivity) => (activity.activityType
 
 export const FeedbackPage: React.FC = () => {
   const { hasRole } = useAuth();
-  const location = useLocation();
-  const flash = (location.state as { flash?: string } | null)?.flash;
+  const flash = useFlashMessage();
   const canViewSummaries = hasRole(G8_INSIGHT_ROLES);
 
   const [activities, setActivities] = useState<FeedbackActivity[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isDemo, setIsDemo] = useState(false);
-  const [message, setMessage] = useState<string | null>(flash ?? null);
+  const [message, setMessage] = useState<string | null>(flash);
 
   const load = useCallback(async () => {
     setIsLoading(true);
