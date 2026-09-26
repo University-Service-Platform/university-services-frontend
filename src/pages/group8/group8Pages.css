@@ -349,3 +349,24 @@
   margin-bottom: 1rem;
   line-height: 1.5;
 }
+
+/* My registrations */
+.g8-table-link {
+  font-weight: 600;
+  color: var(--color-neutral-heading);
+  text-decoration: none;
+}
+
+.g8-table-link:hover {
+  color: var(--color-primary);
+  text-decoration: underline;
+}
+
+.g8-cell-actions {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.g8-cell-actions .g8-small {
+  margin-top: 0.25rem;
+}
