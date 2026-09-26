@@ -2,6 +2,7 @@ import type React from 'react';
 import {
   AnnouncementFormPage,
   AnnouncementsPage,
+  EngagementDashboardPage,
   EventDetailPage,
   EventFormPage,
   EventsPage,
@@ -27,6 +28,7 @@ const GROUP8_ROUTE_ELEMENTS: Record<string, () => React.ReactElement> = {
   '/notifications': () => <NotificationsPage />,
   '/feedback': () => <FeedbackPage />,
   '/feedback/summary': () => <FeedbackSummaryPage />,
+  '/engagement-dashboard': () => <EngagementDashboardPage />,
   '/feedback/:activityType/:activityId': () => <FeedbackFormPage />,
 };
 

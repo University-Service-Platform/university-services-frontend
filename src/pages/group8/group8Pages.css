@@ -756,3 +756,8 @@
   color: var(--color-neutral-heading);
   font-style: italic;
 }
+
+.g8-num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}

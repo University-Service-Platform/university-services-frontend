@@ -8,3 +8,4 @@ export * from './NotificationsPage';
 export * from './FeedbackPage';
 export * from './FeedbackFormPage';
 export * from './FeedbackSummaryPage';
+export * from './EngagementDashboardPage';

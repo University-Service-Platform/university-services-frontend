@@ -32,9 +32,11 @@ export const HorizontalBars: React.FC<{ data: BarDatum[]; ariaLabel: string }> =
         const width = scale > 0 ? Math.min(datum.value / scale, 1) * 100 : 0;
         const text = datum.valueLabel ?? String(datum.value);
         return (
-          <li key={datum.key} className="g8-bar-row" title={`${datum.label}: ${text}`}>
-            <span className="g8-bar-label">{datum.label}</span>
-            <span className="g8-bar-track" aria-hidden="true">
+          <li key={datum.key} className="g8-bar-row">
+            <span className="g8-bar-label" title={datum.label}>
+              {datum.label}
+            </span>
+            <span className="g8-bar-track" aria-hidden="true" title={`${datum.label}: ${text}`}>
               <span className="g8-bar-fill" style={{ width: `${width}%` }} />
             </span>
             <span className="g8-bar-value">{text}</span>

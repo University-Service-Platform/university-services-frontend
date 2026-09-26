@@ -99,4 +99,12 @@ export const GROUP8_ROUTES_CONFIG: RouteNavigationConfig[] = [
     iconName: 'MessageSquareText',
     showInNav: false,
   },
+  {
+    id: 'g8-engagement-dashboard',
+    path: '/engagement-dashboard',
+    label: 'Engagement',
+    iconName: 'BarChart3',
+    requiredRoles: G8_INSIGHT_ROLES,
+    showInNav: true,
+  },
 ];
