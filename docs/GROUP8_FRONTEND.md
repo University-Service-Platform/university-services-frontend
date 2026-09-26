@@ -101,6 +101,19 @@ UI can be reviewed before the services are deployed. Pages then show a visible "
 demo data" notice. Real backend responses (400/401/403/409/503...) are never replaced.
 Only synthetic data is used (BR8-12).
 
+## Deployment checklist
+
+1. Copy `.env.example` to `.env` and set `VITE_API_BASE_URL` to the gateway used by that
+   environment. Vite bakes `VITE_*` values in at build time, so rebuild after changing them.
+2. Set `VITE_G8_DEMO_MODE=false` for integrated and deployed builds, so an unreachable Group 8
+   service shows an error instead of demo data.
+3. `npm ci && npm run build`, then serve `dist/` with an SPA fallback (all unknown paths return
+   `index.html`) so deep links such as `/events/EVT-1001` load the app.
+4. Smoke test through the gateway: `/events` loads without the demo notice, registering returns a
+   real registration, and the notification bell updates.
+5. Expired or missing sessions (401 from any Group 8 call) open a "session expired" dialog with a
+   sign-in action.
+
 ## Shared state (Redux)
 
 - `activity` - a revision counter bumped after register / cancel / publish / feedback; the
