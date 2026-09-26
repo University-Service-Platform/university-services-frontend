@@ -147,11 +147,21 @@ export const FeedbackFormPage: React.FC = () => {
 
     if (result.ok) {
       dispatch(userActivityRecorded());
-      navigate('/feedback', { state: { flash: 'Thank you! Your feedback has been recorded.' } });
+      const activityLabel = type === 'EVENT' ? `event ${activityId}` : `service request ${activityId}`;
+      navigate('/feedback', { state: { flash: `Thank you! Your feedback on ${activityLabel} has been recorded.` } });
       return;
     }
     setSubmitError(result.message);
   };
+
+  const isAnswered = (question: FeedbackQuestion) => {
+    const answer = answers[question.id];
+    if (question.type === 'RATING') return Boolean(answer?.rating);
+    if (question.type === 'YES_NO') return answer?.yesNo !== undefined;
+    return Boolean(answer?.text?.trim());
+  };
+  const requiredQuestions = form?.questions.filter((question) => question.required) ?? [];
+  const answeredRequired = requiredQuestions.filter(isAnswered).length;
 
   const backLink = (
     <div>
@@ -199,7 +209,18 @@ export const FeedbackFormPage: React.FC = () => {
 
       <form onSubmit={handleSubmit} noValidate>
         <Card>
-          <CardHeader title="Your feedback" subtitle="Questions marked * are required." />
+          <CardHeader
+            title="Your feedback"
+            subtitle="Questions marked * are required."
+            action={
+              <span
+                className={cn('g8-progress-pill', answeredRequired === requiredQuestions.length && 'complete')}
+                aria-live="polite"
+              >
+                Answered {answeredRequired} of {requiredQuestions.length} required
+              </span>
+            }
+          />
           <CardBody className="g8-question-list">
             {form.questions.map((question) => {
               const answer = answers[question.id];

@@ -16,3 +16,19 @@
   outline: 2px solid var(--color-focus-ring);
   outline-offset: 1px;
 }
+
+.g8-progress-pill {
+  display: inline-block;
+  padding: 0.25rem 0.75rem;
+  border-radius: var(--radius-full);
+  background: var(--color-surface-hover);
+  color: var(--color-neutral-heading);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.g8-progress-pill.complete {
+  background: var(--color-success-bg);
+  color: var(--color-success-text);
+}
