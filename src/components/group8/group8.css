@@ -273,8 +273,41 @@
     padding: 1.25rem;
   }
 
+  .g8-header-actions {
+    width: 100%;
+  }
+
+  .g8-header-actions > *,
+  .g8-header-actions a .btn {
+    flex: 1;
+    width: 100%;
+  }
+
   .g8-toolbar {
     padding: 1rem;
+  }
+
+  /* Filter tabs scroll sideways instead of wrapping into several rows. */
+  .g8-tabs {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    width: 100%;
+    padding-bottom: 0.25rem;
+    scrollbar-width: thin;
+  }
+
+  .g8-tab {
+    flex-shrink: 0;
+  }
+
+  .g8-bars {
+    grid-template-columns: fit-content(7rem) minmax(3rem, 1fr) auto;
+    column-gap: 0.5rem;
+  }
+
+  .g8-table th,
+  .g8-table td {
+    padding: 0.75rem;
   }
 }
 

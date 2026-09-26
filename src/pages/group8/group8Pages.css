@@ -761,3 +761,40 @@
   text-align: right;
   font-variant-numeric: tabular-nums;
 }
+
+/* Phone widths */
+@media (max-width: 640px) {
+  .g8-event-grid,
+  .g8-summary-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .g8-cell-actions {
+    white-space: normal;
+    text-align: left;
+  }
+
+  .g8-activity {
+    flex-wrap: wrap;
+  }
+
+  .g8-activity > a {
+    width: 100%;
+  }
+
+  .g8-activity > a .btn {
+    width: 100%;
+  }
+
+  .g8-audience-types {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .g8-form-footer {
+    flex-wrap: wrap;
+  }
+
+  .g8-form-footer > * {
+    flex: 1 1 auto;
+  }
+}
