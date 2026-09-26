@@ -93,6 +93,17 @@ export function getG8DemoIdentity(): UserProfile | null {
 }
 
 /* ------------------------------------------------------------------ */
+/* Session expiry                                                      */
+/* ------------------------------------------------------------------ */
+
+/** Window event fired when any Group 8 call is rejected with 401 (expired or missing session). */
+export const G8_SESSION_EXPIRED_EVENT = 'g8:session-expired';
+
+function notifySessionExpired(): void {
+  window.dispatchEvent(new CustomEvent(G8_SESSION_EXPIRED_EVENT));
+}
+
+/* ------------------------------------------------------------------ */
 /* Request helper                                                      */
 /* ------------------------------------------------------------------ */
 
@@ -126,6 +137,10 @@ export async function g8Request<T>(endpoint: string, options: G8RequestOptions<T
     // Simulated latency keeps loading states visible during UI review.
     await new Promise((resolve) => setTimeout(resolve, 250));
     return demo();
+  }
+
+  if (response.status === 401) {
+    notifySessionExpired();
   }
 
   if (servedByFallback) {
