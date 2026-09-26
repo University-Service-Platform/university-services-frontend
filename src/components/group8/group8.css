@@ -410,3 +410,44 @@
   font-variant-numeric: tabular-nums;
   text-align: right;
 }
+
+/* ------------------------------------------------------------------
+   Readability for projector / demo environments (USMG8-216)
+   Projectors lose contrast and small text first: no Group 8 text below
+   12px, secondary text one step darker, data bars thicker.
+   ------------------------------------------------------------------ */
+.g8-page {
+  --g8-text-secondary: #475569;
+}
+
+.g8-page .g8-muted,
+.g8-page .g8-subtitle,
+.g8-page .g8-meta,
+.g8-page .g8-capacity-label,
+.g8-page .g8-stat-label,
+.g8-page .g8-bar-value,
+.g8-page .g8-notification-meta,
+.g8-page .g8-announcement-meta,
+.g8-page .g8-event-desc {
+  color: var(--g8-text-secondary);
+}
+
+.g8-page .g8-reg-pill,
+.g8-page .g8-important-badge {
+  font-size: 0.75rem;
+}
+
+.g8-page .g8-small,
+.g8-page .g8-capacity-label,
+.g8-page .g8-stat-label,
+.g8-page .g8-notification-meta {
+  font-size: 0.8125rem;
+}
+
+.g8-page .g8-capacity-track {
+  height: 0.625rem;
+}
+
+.g8-page .g8-bar-track {
+  height: 0.75rem;
+}
