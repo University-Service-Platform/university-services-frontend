@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useLocation, useParams } from 'react-router-dom';
 import { ArrowLeft, CalendarClock, CalendarDays, Clock, Globe, MapPin, ShieldCheck } from 'lucide-react';
 import { useAuth } from '@/auth';
 import { Button, Card, CardBody, CardHeader, ErrorState, LoadingState } from '@/components/ui';
@@ -20,6 +20,7 @@ import { G8_ORGANIZER_ROLES } from '@/config/group8Routes';
 import { getEvent, getMyRegistrations, registerForEvent } from '@/services/group8';
 import { useAppDispatch, userActivityRecorded } from '@/store';
 import type { Registration, UniversityEvent } from '@/types';
+import { EventOrganizerPanel } from './EventOrganizerPanel';
 import './group8Pages.css';
 
 interface Feedback {
@@ -29,6 +30,8 @@ interface Feedback {
 
 export const EventDetailPage: React.FC = () => {
   const { eventId = '' } = useParams();
+  const location = useLocation();
+  const flash = (location.state as { flash?: string } | null)?.flash;
   const { hasRole } = useAuth();
   const dispatch = useAppDispatch();
   const isOrganizer = hasRole(G8_ORGANIZER_ROLES);
@@ -39,7 +42,7 @@ export const EventDetailPage: React.FC = () => {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [isDemo, setIsDemo] = useState(false);
   const [isRegistering, setIsRegistering] = useState(false);
-  const [feedback, setFeedback] = useState<Feedback | null>(null);
+  const [feedback, setFeedback] = useState<Feedback | null>(flash ? { tone: 'success', message: flash } : null);
 
   const load = useCallback(async () => {
     setIsLoading(true);
@@ -231,6 +234,8 @@ export const EventDetailPage: React.FC = () => {
           </CardBody>
         </Card>
       </div>
+
+      {isOrganizer && <EventOrganizerPanel event={event} onEventChanged={setEvent} />}
     </Group8Page>
   );
 };

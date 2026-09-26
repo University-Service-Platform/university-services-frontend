@@ -488,7 +488,9 @@ export function getRegistrationSummary(eventId: string): Promise<G8Result<Regist
           capacity: event.capacity,
           confirmed: event.confirmedCount,
           waitlisted: 0,
-          cancelled: event.status === 'CANCELLED' ? 3 : 1,
+          cancelled: demoRegistrations.filter(
+            (registration) => registration.eventId === eventId && registration.status === 'CANCELLED'
+          ).length,
           registrants,
         },
         true

@@ -205,6 +205,7 @@ export const EventFormPage: React.FC = () => {
     setErrors(found);
     if (Object.keys(found).length > 0) {
       setSubmitError('Please correct the highlighted fields.');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
 
@@ -220,6 +221,7 @@ export const EventFormPage: React.FC = () => {
       return;
     }
     setSubmitError(result.message);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const venueCapacityWarning =
