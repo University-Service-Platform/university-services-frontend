@@ -122,6 +122,8 @@ export const EventFormPage: React.FC = () => {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  // Cancelled/completed events are read-only (the backend rejects edits with 409 as well).
+  const [lockedReason, setLockedReason] = useState<string | null>(null);
   const [isDemo, setIsDemo] = useState(false);
   const [venueCheck, setVenueCheck] = useState<VenueValidationResult | null>(null);
   const [venueCheckError, setVenueCheckError] = useState<string | null>(null);
@@ -151,7 +153,7 @@ export const EventFormPage: React.FC = () => {
           departmentIds: event.eligibility.departmentIds.join(', '),
         });
         if (event.status === 'CANCELLED' || event.status === 'COMPLETED') {
-          setSubmitError(`This event is ${event.status.toLowerCase()} and can no longer be edited.`);
+          setLockedReason(`This event is ${event.status.toLowerCase()} and can no longer be edited.`);
         }
       } else {
         setLoadError(result.message);
@@ -201,6 +203,7 @@ export const EventFormPage: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (lockedReason) return;
     setSubmitError(null);
     const found = validate(form);
     setErrors(found);
@@ -270,6 +273,8 @@ export const EventFormPage: React.FC = () => {
       />
 
       <DemoDataNotice show={isDemo} />
+
+      {lockedReason && <G8Alert tone="warning">{lockedReason}</G8Alert>}
 
       {submitError && (
         <G8Alert tone="danger" onDismiss={() => setSubmitError(null)}>
@@ -457,7 +462,7 @@ export const EventFormPage: React.FC = () => {
                 Cancel
               </Button>
             </Link>
-            <Button type="submit" isLoading={isSaving}>
+            <Button type="submit" isLoading={isSaving} disabled={Boolean(lockedReason)}>
               {isEdit ? 'Save changes' : 'Save as draft'}
             </Button>
           </CardFooter>
