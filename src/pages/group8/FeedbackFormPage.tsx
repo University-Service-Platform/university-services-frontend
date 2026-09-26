@@ -8,13 +8,14 @@ import { useAppDispatch, userActivityRecorded } from '@/store';
 import type { ActivityType, FeedbackAnswer, FeedbackForm, FeedbackQuestion } from '@/types';
 import { cn } from '@/utils';
 import './group8Pages.css';
+import './FeedbackFormPage.css';
 
 const RATING_LABELS = ['Very poor', 'Poor', 'Average', 'Good', 'Excellent'];
 
 const RatingInput: React.FC<{
   question: FeedbackQuestion;
   value?: number;
-  onChange: (value: number) => void;
+  onChange: (value: number | undefined) => void;
   error?: string;
 }> = ({ question, value, onChange, error }) => (
   <fieldset className="g8-question" aria-describedby={error ? `${question.id}-error` : undefined}>
@@ -36,9 +37,14 @@ const RatingInput: React.FC<{
           <Star size={26} aria-hidden="true" />
         </label>
       ))}
-      <span className="g8-rating-text" aria-hidden="true">
-        {value ? RATING_LABELS[value - 1] : 'Select a rating'}
+      <span className="g8-rating-text" aria-live="polite">
+        {value ? `${value} of 5 - ${RATING_LABELS[value - 1]}` : 'Select a rating'}
       </span>
+      {value !== undefined && (
+        <button type="button" className="g8-rating-clear" onClick={() => onChange(undefined)}>
+          Clear
+        </button>
+      )}
     </div>
     {error && (
       <span id={`${question.id}-error`} className="form-error-text" role="alert">
