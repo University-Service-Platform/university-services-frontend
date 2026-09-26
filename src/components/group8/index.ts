@@ -4,5 +4,6 @@ export * from './announcementBits';
 export * from './announcementRules';
 export * from './eventRules';
 export * from './format';
+export * from './NotificationBell';
 export * from './notificationBits';
 export * from './notificationRules';

@@ -289,3 +289,45 @@
   white-space: nowrap;
   border: 0;
 }
+
+/* Header notification bell */
+.g8-bell {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  margin-right: 0.75rem;
+  border-radius: var(--radius-full);
+  color: var(--color-neutral);
+  transition: background var(--transition-fast), color var(--transition-fast);
+}
+
+.g8-bell:hover {
+  background: var(--color-surface-hover);
+  color: var(--color-primary);
+}
+
+.g8-bell:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+.g8-bell-badge {
+  position: absolute;
+  top: 0;
+  right: -0.125rem;
+  min-width: 0.875rem;
+  height: 0.875rem;
+  padding: 0 0.1875rem;
+  border-radius: var(--radius-full);
+  background: var(--color-danger);
+  color: #ffffff;
+  font-size: 0.625rem;
+  font-weight: 700;
+  line-height: 0.875rem;
+  text-align: center;
+  border: 2px solid var(--color-surface);
+  box-sizing: content-box;
+}

@@ -8,6 +8,7 @@ import type {
   VenueValidationResult,
 } from '@/types';
 import { g8Fail, g8Ok, g8Request, getG8DemoIdentity, nextDemoId, toQuery, type G8Result } from './g8Api';
+import { recordDemoNotification } from './communicationService';
 
 /**
  * event-service client (Group 8)
@@ -369,6 +370,13 @@ export function cancelEvent(eventId: string, reason: string): Promise<G8Result<U
           registration.status = 'CANCELLED';
           registration.eventStatus = 'CANCELLED';
           registration.cancelledAt = new Date().toISOString();
+          recordDemoNotification({
+            type: 'EVENT_CANCELLED',
+            title: 'Event cancelled',
+            message: `"${event.title}" was cancelled by the organizer: ${reason}`,
+            source: 'GROUP8_EVENTS',
+            referenceId: event.id,
+          });
         });
       event.confirmedCount = 0;
       return g8Ok({ ...event }, true);
@@ -435,6 +443,13 @@ export function registerForEvent(eventId: string): Promise<G8Result<Registration
         registeredAt: new Date().toISOString(),
       };
       demoRegistrations.unshift(registration);
+      recordDemoNotification({
+        type: 'REGISTRATION_CONFIRMED',
+        title: 'Registration confirmed',
+        message: `You are registered for "${event.title}".`,
+        source: 'GROUP8_EVENTS',
+        referenceId: event.id,
+      });
       return g8Ok({ ...registration }, true);
     },
   });
@@ -460,6 +475,13 @@ export function cancelRegistration(registrationId: string): Promise<G8Result<Reg
       registration.cancelledAt = new Date().toISOString();
       const event = findDemoEvent(registration.eventId);
       if (event) event.confirmedCount = Math.max(0, event.confirmedCount - 1);
+      recordDemoNotification({
+        type: 'REGISTRATION_CANCELLED',
+        title: 'Registration cancelled',
+        message: `Your registration for "${registration.eventTitle}" was cancelled and your place released.`,
+        source: 'GROUP8_EVENTS',
+        referenceId: registration.eventId,
+      });
       return g8Ok({ ...registration }, true);
     },
   });
