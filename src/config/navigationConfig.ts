@@ -83,6 +83,22 @@ export const APP_ROUTES_CONFIG: RouteNavigationConfig[] = [
     requiredRoles: ['ADMIN', 'STAFF'],
     showInNav: true,
   },
+  {
+    id: 'my-requests',
+    path: '/requests/my',
+    label: 'My requests',
+    iconName: 'FileText',
+    requiredRoles: ['STUDENT', 'STAFF', 'ADMIN', 'DEAN', 'HOD'],
+    showInNav: true,
+  },
+  {
+    id: 'new-request',
+    path: '/requests/new',
+    label: 'New request',
+    iconName: 'PlusCircle',
+    requiredRoles: ['STUDENT', 'STAFF', 'ADMIN', 'DEAN', 'HOD'],
+    showInNav: true,
+  },
 ];
 
 /**

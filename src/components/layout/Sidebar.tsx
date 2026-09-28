@@ -10,6 +10,8 @@ import {
   Shield,
   Building2,
   Layers,
+  FileText,
+  PlusCircle,
 } from 'lucide-react';
 import { useAuth } from '@/auth';
 import { getAuthorizedNavItems } from '@/config/navigationConfig';
@@ -42,6 +44,10 @@ const renderNavIcon = (iconName?: string) => {
       return <Building2 size={18} aria-hidden="true" />;
     case 'Layers':
       return <Layers size={18} aria-hidden="true" />;
+    case 'FileText':
+      return <FileText size={18} aria-hidden="true" />;
+    case 'PlusCircle':
+      return <PlusCircle size={18} aria-hidden="true" />;
     default:
       return <GraduationCap size={18} aria-hidden="true" />;
   }

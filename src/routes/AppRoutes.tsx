@@ -1,7 +1,20 @@
 import React from 'react';
 import { Routes, Route } from 'react-router-dom';
 import { AppShell } from '@/components/layout';
-import { HomePage, LoginPage, ProfilePage, RolesPage, FacultiesPage, ServiceUnitsPage, UsersPage, AccountStatusPage } from '@/pages';
+import {
+  HomePage,
+  LoginPage,
+  ProfilePage,
+  RolesPage,
+  FacultiesPage,
+  ServiceUnitsPage,
+  UsersPage,
+  AccountStatusPage,
+  MyServiceRequestsPage,
+  CreateServiceRequestPage,
+  RequestDetailsPage,
+  ServiceRequestTimelinePage,
+} from '@/pages';
 import { ProtectedRoute } from './ProtectedRoute';
 import { APP_ROUTES_CONFIG } from '@/config/navigationConfig';
 
@@ -19,6 +32,11 @@ const renderRoutePage = (path: string) => {
       return <FacultiesPage />;
     case '/service-units':
       return <ServiceUnitsPage />;
+    case '/requests/my':
+    case '/my-requests':
+      return <MyServiceRequestsPage />;
+    case '/requests/new':
+      return <CreateServiceRequestPage />;
     default:
       return <HomePage />;
   }
@@ -52,6 +70,46 @@ export const AppRoutes: React.FC = () => {
                   }
                 />
               ))}
+              <Route
+                path="requests/new"
+                element={
+                  <ProtectedRoute requiredRoles={['STUDENT', 'STAFF', 'ADMIN', 'DEAN', 'HOD']}>
+                    <CreateServiceRequestPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="requests/my"
+                element={
+                  <ProtectedRoute requiredRoles={['STUDENT', 'STAFF', 'ADMIN', 'DEAN', 'HOD']}>
+                    <MyServiceRequestsPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="my-requests"
+                element={
+                  <ProtectedRoute requiredRoles={['STUDENT', 'STAFF', 'ADMIN', 'DEAN', 'HOD']}>
+                    <MyServiceRequestsPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="requests/:id"
+                element={
+                  <ProtectedRoute requiredRoles={['STUDENT', 'STAFF', 'ADMIN', 'DEAN', 'HOD']}>
+                    <RequestDetailsPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="requests/:id/timeline"
+                element={
+                  <ProtectedRoute requiredRoles={['STUDENT', 'STAFF']}>
+                    <ServiceRequestTimelinePage />
+                  </ProtectedRoute>
+                }
+              />
               <Route path="*" element={<HomePage />} />
             </Routes>
           </AppShell>
