@@ -24,7 +24,8 @@ import './AccountStatusPage.css';
  * Interface controls and service interactions serve strictly as an integration boundary ready for official backend endpoints.
  */
 export const AccountStatusPage: React.FC = () => {
-  const { user: currentUser, setAuthUser } = useAuth();
+  const { user: currentUser, setAuthUser, isAuthorized } = useAuth();
+  const canManageStatus = isAuthorized(['ADMIN', 'STAFF']);
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
@@ -277,28 +278,30 @@ export const AccountStatusPage: React.FC = () => {
                       )}
                     </div>
 
-                    <div className="account-status-card-actions">
-                      {isActive ? (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="btn-deactivate"
-                          icon={<UserX size={16} />}
-                          onClick={() => openConfirmation(userItem, 'INACTIVE')}
-                        >
-                          Deactivate
-                        </Button>
-                      ) : (
-                        <Button
-                          variant="primary"
-                          size="sm"
-                          icon={<UserCheck size={16} />}
-                          onClick={() => openConfirmation(userItem, 'ACTIVE')}
-                        >
-                          Activate
-                        </Button>
-                      )}
-                    </div>
+                    {canManageStatus && (
+                      <div className="account-status-card-actions">
+                        {isActive ? (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="btn-deactivate"
+                            icon={<UserX size={16} />}
+                            onClick={() => openConfirmation(userItem, 'INACTIVE')}
+                          >
+                            Deactivate
+                          </Button>
+                        ) : (
+                          <Button
+                            variant="primary"
+                            size="sm"
+                            icon={<UserCheck size={16} />}
+                            onClick={() => openConfirmation(userItem, 'ACTIVE')}
+                          >
+                            Activate
+                          </Button>
+                        )}
+                      </div>
+                    )}
                   </CardBody>
                 </Card>
               );

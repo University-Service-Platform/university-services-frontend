@@ -8,6 +8,7 @@ import {
   type FacultyCreatePayload,
 } from '@/services/facultyService';
 import type { Faculty } from '@/types';
+import { useAuth } from '@/auth';
 import {
   Card,
   CardBody,
@@ -26,6 +27,9 @@ import './FacultiesPage.css';
  * Form fields and API interactions serve strictly as an integration boundary ready for official backend endpoints.
  */
 export const FacultiesPage: React.FC = () => {
+  const { isAuthorized } = useAuth();
+  const canManageFaculties = isAuthorized(['ADMIN']);
+
   const [faculties, setFaculties] = useState<Faculty[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
@@ -203,13 +207,15 @@ export const FacultiesPage: React.FC = () => {
               Manage university faculties, organizational codes, and university directory structure.
             </p>
           </div>
-          <Button
-            variant="primary"
-            icon={<Plus size={16} />}
-            onClick={openCreateModal}
-          >
-            Add Faculty
-          </Button>
+          {canManageFaculties && (
+            <Button
+              variant="primary"
+              icon={<Plus size={16} />}
+              onClick={openCreateModal}
+            >
+              Add Faculty
+            </Button>
+          )}
         </div>
       </Card>
 
@@ -252,28 +258,30 @@ export const FacultiesPage: React.FC = () => {
                     </p>
                   )}
                 </div>
-                <div className="faculty-card-actions">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    icon={<Edit2 size={16} />}
-                    onClick={() => openEditModal(faculty)}
-                  >
-                    Edit
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="btn-danger"
-                    icon={<Trash2 size={16} />}
-                    onClick={() => {
-                      setDeleteError(null);
-                      setDeletingFaculty(faculty);
-                    }}
-                  >
-                    Delete
-                  </Button>
-                </div>
+                {canManageFaculties && (
+                  <div className="faculty-card-actions">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      icon={<Edit2 size={16} />}
+                      onClick={() => openEditModal(faculty)}
+                    >
+                      Edit
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="btn-danger"
+                      icon={<Trash2 size={16} />}
+                      onClick={() => {
+                        setDeleteError(null);
+                        setDeletingFaculty(faculty);
+                      }}
+                    >
+                      Delete
+                    </Button>
+                  </div>
+                )}
               </CardBody>
             </Card>
           ))}

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { Users, Plus, Edit2, Trash2, AlertCircle, CheckCircle, RefreshCw, Search, Mail, Phone, UserCheck } from 'lucide-react';
 
+import { useAuth } from '@/auth';
 import {
   getUsers,
   createUser,
@@ -30,6 +31,10 @@ import './UsersPage.css';
  * Form fields and API interactions serve strictly as an integration boundary ready for official backend endpoints.
  */
 export const UsersPage: React.FC = () => {
+  const { isAuthorized, hasRole } = useAuth();
+  const canManageUsers = isAuthorized(['ADMIN', 'STAFF']);
+  const canDeleteUsers = hasRole('ADMIN');
+
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
@@ -242,20 +247,22 @@ export const UsersPage: React.FC = () => {
               Manage university user accounts, credentials, and access directory.
             </p>
           </div>
-          <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
-            <Link to="/users/account-status" style={{ textDecoration: 'none' }}>
-              <Button variant="outline" icon={<UserCheck size={16} />}>
-                Manage Account Status
+          {canManageUsers && (
+            <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+              <Link to="/users/account-status" style={{ textDecoration: 'none' }}>
+                <Button variant="outline" icon={<UserCheck size={16} />}>
+                  Manage Account Status
+                </Button>
+              </Link>
+              <Button
+                variant="primary"
+                icon={<Plus size={16} />}
+                onClick={openCreateModal}
+              >
+                Add User
               </Button>
-            </Link>
-            <Button
-              variant="primary"
-              icon={<Plus size={16} />}
-              onClick={openCreateModal}
-            >
-              Add User
-            </Button>
-          </div>
+            </div>
+          )}
 
         </div>
       </Card>
@@ -313,25 +320,31 @@ export const UsersPage: React.FC = () => {
                   )}
                 </div>
 
-                <div className="user-card-actions">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    icon={<Edit2 size={16} />}
-                    onClick={() => openEditModal(user)}
-                  >
-                    Edit
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="btn-danger"
-                    icon={<Trash2 size={16} />}
-                    onClick={() => setDeletingUser(user)}
-                  >
-                    Delete
-                  </Button>
-                </div>
+                {(canManageUsers || canDeleteUsers) && (
+                  <div className="user-card-actions">
+                    {canManageUsers && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        icon={<Edit2 size={16} />}
+                        onClick={() => openEditModal(user)}
+                      >
+                        Edit
+                      </Button>
+                    )}
+                    {canDeleteUsers && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="btn-danger"
+                        icon={<Trash2 size={16} />}
+                        onClick={() => setDeletingUser(user)}
+                      >
+                        Delete
+                      </Button>
+                    )}
+                  </div>
+                )}
               </CardBody>
             </Card>
           ))}

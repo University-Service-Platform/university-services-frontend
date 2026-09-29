@@ -8,6 +8,7 @@ import {
   type ServiceUnitCreatePayload,
 } from '@/services/serviceUnitService';
 import type { ServiceUnit } from '@/types';
+import { useAuth } from '@/auth';
 import {
   Card,
   CardBody,
@@ -26,6 +27,9 @@ import './ServiceUnitsPage.css';
  * Form fields and API interactions serve strictly as an integration boundary ready for official backend endpoints.
  */
 export const ServiceUnitsPage: React.FC = () => {
+  const { isAuthorized } = useAuth();
+  const canManageServiceUnits = isAuthorized(['ADMIN', 'STAFF']);
+
   const [serviceUnits, setServiceUnits] = useState<ServiceUnit[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
@@ -203,13 +207,15 @@ export const ServiceUnitsPage: React.FC = () => {
               Manage university administrative, academic support, and operational service units.
             </p>
           </div>
-          <Button
-            variant="primary"
-            icon={<Plus size={16} />}
-            onClick={openCreateModal}
-          >
-            Add Service Unit
-          </Button>
+          {canManageServiceUnits && (
+            <Button
+              variant="primary"
+              icon={<Plus size={16} />}
+              onClick={openCreateModal}
+            >
+              Add Service Unit
+            </Button>
+          )}
         </div>
       </Card>
 
@@ -252,28 +258,30 @@ export const ServiceUnitsPage: React.FC = () => {
                     </p>
                   )}
                 </div>
-                <div className="service-unit-card-actions">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    icon={<Edit2 size={16} />}
-                    onClick={() => openEditModal(unit)}
-                  >
-                    Edit
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="btn-danger"
-                    icon={<Trash2 size={16} />}
-                    onClick={() => {
-                      setDeleteError(null);
-                      setDeletingUnit(unit);
-                    }}
-                  >
-                    Delete
-                  </Button>
-                </div>
+                {canManageServiceUnits && (
+                  <div className="service-unit-card-actions">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      icon={<Edit2 size={16} />}
+                      onClick={() => openEditModal(unit)}
+                    >
+                      Edit
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="btn-danger"
+                      icon={<Trash2 size={16} />}
+                      onClick={() => {
+                        setDeleteError(null);
+                        setDeletingUnit(unit);
+                      }}
+                    >
+                      Delete
+                    </Button>
+                  </div>
+                )}
               </CardBody>
             </Card>
           ))}
