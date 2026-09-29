@@ -3,6 +3,11 @@ import type {
   ServiceRequest,
   CreateServiceRequestRequest,
   ConfirmRequest,
+  TriageRequestPayload,
+  RejectRequestPayload,
+  EscalateRequestPayload,
+  SummaryGroupByDimension,
+  ServiceRequestSummaryResponse,
   RequestCategory,
   RequestStatus,
 } from '@/types';
@@ -159,3 +164,133 @@ export async function confirmAndCloseServiceRequest(
     message: `Service request ${response.data.requestId} confirmed and closed successfully.`,
   };
 }
+
+/**
+ * PATCH /api/service-requests/{id}/triage
+ * Service Desk Officer triages, classifies, prioritizes, and assigns responsible unit to a request.
+ */
+export async function triageServiceRequest(
+  id: string,
+  payload: TriageRequestPayload
+): Promise<ServiceRequestServiceResult<ServiceRequest>> {
+  const endpoint = `${SERVICE_REQUESTS_API_ENDPOINT}/${encodeURIComponent(id)}/triage`;
+
+  const response = await apiFetch<ServiceRequest>(endpoint, {
+    method: 'PATCH',
+    body: JSON.stringify({
+      category: payload.category,
+      priority: payload.priority,
+      responsibleServiceUnit: payload.responsibleServiceUnit,
+    }),
+  });
+
+  if (response.error || !response.data) {
+    return {
+      success: false,
+      status: response.status,
+      message: response.error || 'Failed to triage service request.',
+    };
+  }
+
+  return {
+    success: true,
+    status: response.status,
+    data: response.data,
+    message: `Service request ${response.data.requestId} triaged successfully.`,
+  };
+}
+
+/**
+ * PATCH /api/service-requests/{id}/reject
+ * Service Desk Officer rejects a service request with mandatory rejection reason.
+ */
+export async function rejectServiceRequest(
+  id: string,
+  payload: RejectRequestPayload
+): Promise<ServiceRequestServiceResult<ServiceRequest>> {
+  const endpoint = `${SERVICE_REQUESTS_API_ENDPOINT}/${encodeURIComponent(id)}/reject`;
+
+  const response = await apiFetch<ServiceRequest>(endpoint, {
+    method: 'PATCH',
+    body: JSON.stringify({
+      rejectionReason: payload.rejectionReason,
+    }),
+  });
+
+  if (response.error || !response.data) {
+    return {
+      success: false,
+      status: response.status,
+      message: response.error || 'Failed to reject service request.',
+    };
+  }
+
+  return {
+    success: true,
+    status: response.status,
+    data: response.data,
+    message: `Service request ${response.data.requestId} rejected successfully.`,
+  };
+}
+
+/**
+ * PATCH /api/service-requests/{id}/escalate
+ * Service Desk Officer escalates a service request to a new responsible service unit.
+ */
+export async function escalateServiceRequest(
+  id: string,
+  payload: EscalateRequestPayload
+): Promise<ServiceRequestServiceResult<ServiceRequest>> {
+  const endpoint = `${SERVICE_REQUESTS_API_ENDPOINT}/${encodeURIComponent(id)}/escalate`;
+
+  const response = await apiFetch<ServiceRequest>(endpoint, {
+    method: 'PATCH',
+    body: JSON.stringify({
+      responsibleServiceUnit: payload.responsibleServiceUnit,
+    }),
+  });
+
+  if (response.error || !response.data) {
+    return {
+      success: false,
+      status: response.status,
+      message: response.error || 'Failed to escalate service request.',
+    };
+  }
+
+  return {
+    success: true,
+    status: response.status,
+    data: response.data,
+    message: `Service request ${response.data.requestId} escalated successfully.`,
+  };
+}
+
+/**
+ * GET /api/service-requests/summary?groupBy={dimension}
+ * Retrieves summary aggregation count of service requests grouped by status, category, priority, etc.
+ */
+export async function getServiceRequestSummary(
+  groupBy: SummaryGroupByDimension = 'status'
+): Promise<ServiceRequestServiceResult<ServiceRequestSummaryResponse>> {
+  const endpoint = `${SERVICE_REQUESTS_API_ENDPOINT}/summary?groupBy=${encodeURIComponent(groupBy)}`;
+
+  const response = await apiFetch<ServiceRequestSummaryResponse>(endpoint, {
+    method: 'GET',
+  });
+
+  if (response.error || !response.data) {
+    return {
+      success: false,
+      status: response.status,
+      message: response.error || 'Failed to fetch service request summary.',
+    };
+  }
+
+  return {
+    success: true,
+    status: response.status,
+    data: response.data,
+  };
+}
+

@@ -1,0 +1,145 @@
+.dashboard-page-container {
+  padding: 1.5rem;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.dashboard-controls-card {
+  margin-top: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.controls-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 1.5rem;
+}
+
+.dimension-selector {
+  flex: 1;
+  max-width: 360px;
+}
+
+.total-summary-badge {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  padding: 0.5rem 1rem;
+  background-color: #EFF6FF;
+  border-radius: 8px;
+  border: 1px solid #BFDBFE;
+}
+
+.total-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: #1E40AF;
+}
+
+.total-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #1E3A8A;
+}
+
+.metrics-cards-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 1.25rem;
+  margin-bottom: 1.5rem;
+}
+
+.metric-tile-card {
+  border-left: 4px solid #2563EB;
+}
+
+.tile-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.tile-title {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #4B5563;
+}
+
+.tile-icon {
+  color: #2563EB;
+}
+
+.tile-value {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: #111827;
+  margin-bottom: 0.75rem;
+}
+
+.tile-bar-wrap {
+  height: 6px;
+  background-color: #E5E7EB;
+  border-radius: 3px;
+  overflow: hidden;
+  margin-bottom: 0.5rem;
+}
+
+.tile-bar-fill {
+  height: 100%;
+  background-color: #2563EB;
+  transition: width 0.3s ease;
+}
+
+.tile-footer {
+  font-size: 0.75rem;
+  color: #6B7280;
+}
+
+.breakdown-heading {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #111827;
+  margin: 0 0 1rem 0;
+}
+
+.breakdown-table {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid #E5E7EB;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.table-row {
+  display: flex;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid #E5E7EB;
+  font-size: 0.875rem;
+}
+
+.table-row:last-child {
+  border-bottom: none;
+}
+
+.table-head {
+  background-color: #F9FAFB;
+  font-weight: 600;
+  color: #374151;
+}
+
+.cell-key {
+  flex: 2;
+}
+
+.cell-count {
+  flex: 1;
+  text-align: right;
+}
+
+.cell-pct {
+  flex: 1;
+  text-align: right;
+}

@@ -14,6 +14,11 @@ import {
   CreateServiceRequestPage,
   RequestDetailsPage,
   ServiceRequestTimelinePage,
+  TriagePage,
+  ServiceDashboardPage,
+  WorkOrdersPage,
+  AssignmentsPage,
+  TechnicianPage,
 } from '@/pages';
 import { ProtectedRoute } from './ProtectedRoute';
 import { APP_ROUTES_CONFIG } from '@/config/navigationConfig';
@@ -37,6 +42,16 @@ const renderRoutePage = (path: string) => {
       return <MyServiceRequestsPage />;
     case '/requests/new':
       return <CreateServiceRequestPage />;
+    case '/triage':
+      return <TriagePage />;
+    case '/service-dashboard':
+      return <ServiceDashboardPage />;
+    case '/work-orders':
+      return <WorkOrdersPage />;
+    case '/assignments':
+      return <AssignmentsPage />;
+    case '/technician':
+      return <TechnicianPage />;
     default:
       return <HomePage />;
   }
@@ -73,7 +88,7 @@ export const AppRoutes: React.FC = () => {
               <Route
                 path="requests/new"
                 element={
-                  <ProtectedRoute requiredRoles={['STUDENT', 'STAFF', 'ADMIN', 'DEAN', 'HOD']}>
+                  <ProtectedRoute requiredRoles={['STUDENT', 'ACADEMIC_STAFF', 'ADMIN_STAFF', 'STAFF', 'ADMIN', 'DEAN', 'HOD']}>
                     <CreateServiceRequestPage />
                   </ProtectedRoute>
                 }
@@ -81,7 +96,7 @@ export const AppRoutes: React.FC = () => {
               <Route
                 path="requests/my"
                 element={
-                  <ProtectedRoute requiredRoles={['STUDENT', 'STAFF', 'ADMIN', 'DEAN', 'HOD']}>
+                  <ProtectedRoute requiredRoles={['STUDENT', 'ACADEMIC_STAFF', 'ADMIN_STAFF', 'STAFF', 'ADMIN', 'DEAN', 'HOD']}>
                     <MyServiceRequestsPage />
                   </ProtectedRoute>
                 }
@@ -89,7 +104,7 @@ export const AppRoutes: React.FC = () => {
               <Route
                 path="my-requests"
                 element={
-                  <ProtectedRoute requiredRoles={['STUDENT', 'STAFF', 'ADMIN', 'DEAN', 'HOD']}>
+                  <ProtectedRoute requiredRoles={['STUDENT', 'ACADEMIC_STAFF', 'ADMIN_STAFF', 'STAFF', 'ADMIN', 'DEAN', 'HOD']}>
                     <MyServiceRequestsPage />
                   </ProtectedRoute>
                 }
@@ -97,7 +112,7 @@ export const AppRoutes: React.FC = () => {
               <Route
                 path="requests/:id"
                 element={
-                  <ProtectedRoute requiredRoles={['STUDENT', 'STAFF', 'ADMIN', 'DEAN', 'HOD']}>
+                  <ProtectedRoute requiredRoles={['STUDENT', 'ACADEMIC_STAFF', 'ADMIN_STAFF', 'STAFF', 'ADMIN', 'DEAN', 'HOD']}>
                     <RequestDetailsPage />
                   </ProtectedRoute>
                 }
@@ -105,8 +120,48 @@ export const AppRoutes: React.FC = () => {
               <Route
                 path="requests/:id/timeline"
                 element={
-                  <ProtectedRoute requiredRoles={['STUDENT', 'STAFF']}>
+                  <ProtectedRoute requiredRoles={['STUDENT', 'ACADEMIC_STAFF', 'ADMIN_STAFF', 'STAFF', 'ADMIN']}>
                     <ServiceRequestTimelinePage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="triage"
+                element={
+                  <ProtectedRoute requiredRoles={['SERVICE_DESK_OFFICER', 'ADMIN_STAFF', 'ADMIN', 'STAFF']}>
+                    <TriagePage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="service-dashboard"
+                element={
+                  <ProtectedRoute requiredRoles={['SERVICE_DESK_OFFICER', 'ADMIN_STAFF', 'ADMIN', 'STAFF']}>
+                    <ServiceDashboardPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="work-orders"
+                element={
+                  <ProtectedRoute requiredRoles={['SERVICE_DESK_OFFICER', 'TECHNICIAN', 'ADMIN_STAFF', 'ADMIN', 'STAFF']}>
+                    <WorkOrdersPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="assignments"
+                element={
+                  <ProtectedRoute requiredRoles={['SERVICE_DESK_OFFICER', 'ADMIN_STAFF', 'ADMIN', 'STAFF']}>
+                    <AssignmentsPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="technician"
+                element={
+                  <ProtectedRoute requiredRoles={['TECHNICIAN', 'ADMIN_STAFF', 'ADMIN', 'STAFF']}>
+                    <TechnicianPage />
                   </ProtectedRoute>
                 }
               />
@@ -118,3 +173,4 @@ export const AppRoutes: React.FC = () => {
     </Routes>
   );
 };
+

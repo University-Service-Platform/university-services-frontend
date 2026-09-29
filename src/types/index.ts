@@ -2,7 +2,19 @@
  * Core Types for University Services Management Platform Foundation
  */
 
-export type UserRole = 'ADMIN' | 'STAFF' | 'STUDENT' | 'DEAN' | 'HOD' | 'GUEST';
+export type UserRole =
+  | 'STUDENT'
+  | 'ACADEMIC_STAFF'
+  | 'ADMIN_STAFF'
+  | 'SERVICE_DESK_OFFICER'
+  | 'TECHNICIAN'
+  | 'SERVICE'
+  | 'ADMIN'
+  | 'STAFF'
+  | 'DEAN'
+  | 'HOD'
+  | 'GUEST';
+
 export type AccountStatus = 'ACTIVE' | 'INACTIVE';
 
 export interface UserProfile {
@@ -108,6 +120,30 @@ export interface ConfirmRequest {
   confirmationFeedback: string;
 }
 
+export interface TriageRequestPayload {
+  category: RequestCategory;
+  priority: RequestPriority;
+  responsibleServiceUnit: string;
+}
+
+export interface RejectRequestPayload {
+  rejectionReason: string;
+}
+
+export interface EscalateRequestPayload {
+  responsibleServiceUnit: string;
+}
+
+export type SummaryGroupByDimension =
+  | 'status'
+  | 'category'
+  | 'priority'
+  | 'location'
+  | 'responsibleServiceUnit'
+  | 'unit';
+
+export type ServiceRequestSummaryResponse = Record<string, number>;
+
 export interface NavItem {
   label: string;
   path: string;
@@ -119,3 +155,4 @@ export interface NavItem {
 export type VariantType = 'primary' | 'secondary' | 'tertiary' | 'outline' | 'ghost' | 'danger';
 export type SizeType = 'sm' | 'md' | 'lg';
 export type StatusType = 'success' | 'warning' | 'danger' | 'info' | 'neutral';
+
