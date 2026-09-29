@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '@/auth';
 import { formatRole } from '@/utils';
 import { Button } from '@/components/ui';
+import { NotificationBell } from '@/components/group8/NotificationBell';
 import './layout.css';
 
 export interface HeaderProps {
@@ -41,6 +42,7 @@ export const Header: React.FC<HeaderProps> = ({
       </div>
 
       <div className="header-right">
+        {isAuthenticated && <NotificationBell />}
         {isAuthenticated ? (
           <div className="user-profile-summary">
             <div className="avatar-placeholder" aria-hidden="true">
