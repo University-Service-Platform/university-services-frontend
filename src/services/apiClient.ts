@@ -71,8 +71,13 @@ export async function apiFetch<T>(
 
     if (!response.ok) {
       const errObj = data as { message?: string; error?: string } | undefined;
+      const rawError = errObj?.message || errObj?.error;
+      let error = rawError || response.statusText || 'API Request Failed';
+      if (status === 403 && (!rawError || rawError === 'Forbidden' || response.statusText === 'Forbidden')) {
+        error = 'You are not authorized to perform this action.';
+      }
       return {
-        error: errObj?.message || errObj?.error || response.statusText || 'API Request Failed',
+        error,
         status,
       };
     }

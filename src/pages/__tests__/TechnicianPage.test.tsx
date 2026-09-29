@@ -4,6 +4,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { TechnicianPage } from '../TechnicianPage';
 import * as workOrderService from '@/services/workOrderService';
 
+import type { WorkOrder } from '@/types';
+
 vi.mock('@/auth', () => ({
   useAuth: () => ({
     user: { id: 'TECH-001', email: 'tech@univ.edu', roles: ['TECHNICIAN'] },
@@ -13,7 +15,7 @@ vi.mock('@/auth', () => ({
 
 vi.mock('@/services/workOrderService');
 
-const mockAssignedOrders = [
+const mockAssignedOrders: WorkOrder[] = [
   {
     workOrderId: 'WO-2026-0001',
     requestId: 'REQ-101',
@@ -140,5 +142,32 @@ describe('TechnicianPage Component', () => {
         resolution: 'Fixed outlet wiring',
       });
     });
+  });
+
+  it('prevents updating work orders assigned to a different technician', async () => {
+    const unassignedToSelfOrder = [
+      {
+        ...mockAssignedOrders[0],
+        workOrderId: 'WO-2026-9999',
+        assignedTechnicianId: 'TECH-OTHER',
+      },
+    ];
+    vi.spyOn(workOrderService, 'getWorkOrders').mockResolvedValue({
+      success: true,
+      data: unassignedToSelfOrder as any,
+    });
+
+    render(<TechnicianPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('WO-2026-9999')).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /Start Work/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText(/You are not authorized to update work orders assigned to another technician/i)).toBeInTheDocument();
+    });
+    expect(workOrderService.startWorkOrder).not.toHaveBeenCalled();
   });
 });

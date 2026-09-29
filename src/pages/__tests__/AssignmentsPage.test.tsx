@@ -1,14 +1,11 @@
-import React from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { WorkOrdersPage } from '../WorkOrdersPage';
+import { AssignmentsPage } from '../AssignmentsPage';
 import * as workOrderService from '@/services/workOrderService';
-
-import type { WorkOrder } from '@/types';
 
 vi.mock('@/services/workOrderService');
 
-const mockWorkOrders: WorkOrder[] = [
+const mockWorkOrders = [
   {
     workOrderId: 'WO-2026-0001',
     requestId: 'REQ-101',
@@ -20,7 +17,7 @@ const mockWorkOrders: WorkOrder[] = [
   },
 ];
 
-describe('WorkOrdersPage Component', () => {
+describe('AssignmentsPage Component', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -30,49 +27,50 @@ describe('WorkOrdersPage Component', () => {
       () => new Promise(() => {})
     );
 
-    render(<WorkOrdersPage />);
-    expect(screen.getByText(/Loading Work Orders/i)).toBeInTheDocument();
+    render(<AssignmentsPage />);
+    expect(screen.getByText(/Loading Work Order Assignments/i)).toBeInTheDocument();
   });
 
-  it('loads and displays work orders list', async () => {
+  it('loads and displays technician assignments', async () => {
     vi.spyOn(workOrderService, 'getWorkOrders').mockResolvedValue({
       success: true,
-      data: mockWorkOrders,
+      data: mockWorkOrders as any,
     });
 
-    render(<WorkOrdersPage />);
+    render(<AssignmentsPage />);
 
     await waitFor(() => {
-      expect(screen.getByText('WO-2026-0001')).toBeInTheDocument();
-      expect(screen.getByText('REQ-101')).toBeInTheDocument();
+      expect(screen.getByText(/Technician Assignment Dispatch View/i)).toBeInTheDocument();
       expect(screen.getByText('TECH-001')).toBeInTheDocument();
+      expect(screen.getByText('WO-2026-0001')).toBeInTheDocument();
     });
   });
 
-  it('displays empty state when no work orders exist', async () => {
+  it('displays empty state when no assignments exist', async () => {
     vi.spyOn(workOrderService, 'getWorkOrders').mockResolvedValue({
       success: true,
       data: [],
     });
 
-    render(<WorkOrdersPage />);
+    render(<AssignmentsPage />);
 
     await waitFor(() => {
-      expect(screen.getByText(/No Work Orders Found/i)).toBeInTheDocument();
+      expect(screen.getByText(/No Work Order Assignments/i)).toBeInTheDocument();
     });
   });
 
-  it('displays error state when fetching fails', async () => {
+  it('displays error state when fetching assignments fails with 403 authorization error', async () => {
     vi.spyOn(workOrderService, 'getWorkOrders').mockResolvedValue({
       success: false,
-      message: 'Failed to fetch work orders: 500 Internal Error',
+      status: 403,
+      message: 'You are not authorized to perform this action.',
     });
 
-    render(<WorkOrdersPage />);
+    render(<AssignmentsPage />);
 
     await waitFor(() => {
-      expect(screen.getByText(/Unable to Load Work Orders/i)).toBeInTheDocument();
-      expect(screen.getByText(/Failed to fetch work orders: 500 Internal Error/i)).toBeInTheDocument();
+      expect(screen.getByText(/Unable to Load Assignments/i)).toBeInTheDocument();
+      expect(screen.getByText(/You are not authorized to perform this action/i)).toBeInTheDocument();
     });
   });
 });

@@ -74,7 +74,24 @@ export const TechnicianPage: React.FC = () => {
     loadTechnicianWorkOrders();
   }, [loadTechnicianWorkOrders]);
 
+  const isAssignedToCurrentUser = (wo: WorkOrder): boolean => {
+    if (!technicianId) return true;
+    return (
+      wo.assignedTechnicianId === technicianId ||
+      wo.assignedTechnicianId === user?.id ||
+      wo.assignedTechnicianId === user?.email
+    );
+  };
+
   const handleStartWork = async (wo: WorkOrder) => {
+    if (!isAssignedToCurrentUser(wo)) {
+      setNotification({
+        type: 'error',
+        message: 'You are not authorized to update work orders assigned to another technician.',
+      });
+      return;
+    }
+
     setStartingWoId(wo.workOrderId);
     setNotification(null);
 
@@ -100,6 +117,11 @@ export const TechnicianPage: React.FC = () => {
   const handleProgressSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedWo) return;
+
+    if (!isAssignedToCurrentUser(selectedWo)) {
+      setProgressError('You are not authorized to update work orders assigned to another technician.');
+      return;
+    }
 
     if (!progressNote.trim()) {
       setProgressError('Progress note is required.');
@@ -132,6 +154,11 @@ export const TechnicianPage: React.FC = () => {
   const handleResolutionSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedWo) return;
+
+    if (!isAssignedToCurrentUser(selectedWo)) {
+      setResolutionError('You are not authorized to update work orders assigned to another technician.');
+      return;
+    }
 
     if (!resolutionText.trim()) {
       setResolutionError('Resolution details are required.');

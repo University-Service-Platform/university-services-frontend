@@ -23,7 +23,6 @@ export const AssignmentsPage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState<string>('');
 
   const loadAssignments = useCallback(async () => {
-    setIsLoading(true);
     setFetchError(null);
 
     const result = await getWorkOrders();
@@ -34,6 +33,11 @@ export const AssignmentsPage: React.FC = () => {
     }
     setIsLoading(false);
   }, []);
+
+  const handleRefresh = () => {
+    setIsLoading(true);
+    loadAssignments();
+  };
 
   useEffect(() => {
     loadAssignments();
@@ -81,7 +85,7 @@ export const AssignmentsPage: React.FC = () => {
             Work order assignment workload derived directly from active work order telemetry.
           </p>
         </div>
-        <Button variant="outline" icon={<RefreshCw size={16} />} onClick={loadAssignments}>
+        <Button variant="outline" icon={<RefreshCw size={16} />} onClick={handleRefresh}>
           Refresh Assignments
         </Button>
       </div>

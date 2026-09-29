@@ -104,7 +104,7 @@ export const APP_ROUTES_CONFIG: RouteNavigationConfig[] = [
     path: '/triage',
     label: 'Triage Queue',
     iconName: 'Inbox',
-    requiredRoles: ['SERVICE_DESK_OFFICER', 'ADMIN_STAFF'],
+    requiredRoles: ['SERVICE_DESK_OFFICER'],
     showInNav: true,
   },
   {
@@ -120,7 +120,7 @@ export const APP_ROUTES_CONFIG: RouteNavigationConfig[] = [
     path: '/work-orders',
     label: 'Work Orders',
     iconName: 'Wrench',
-    requiredRoles: ['SERVICE_DESK_OFFICER', 'TECHNICIAN', 'ADMIN_STAFF', 'SERVICE'],
+    requiredRoles: ['SERVICE_DESK_OFFICER', 'TECHNICIAN', 'SERVICE'],
     showInNav: true,
   },
   {
@@ -128,7 +128,7 @@ export const APP_ROUTES_CONFIG: RouteNavigationConfig[] = [
     path: '/assignments',
     label: 'Assignments',
     iconName: 'UserCheck',
-    requiredRoles: ['SERVICE_DESK_OFFICER', 'ADMIN_STAFF'],
+    requiredRoles: ['SERVICE_DESK_OFFICER', 'TECHNICIAN', 'SERVICE'],
     showInNav: true,
   },
   {

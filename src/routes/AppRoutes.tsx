@@ -128,7 +128,7 @@ export const AppRoutes: React.FC = () => {
               <Route
                 path="triage"
                 element={
-                  <ProtectedRoute requiredRoles={['SERVICE_DESK_OFFICER', 'ADMIN_STAFF']}>
+                  <ProtectedRoute requiredRoles={['SERVICE_DESK_OFFICER']}>
                     <TriagePage />
                   </ProtectedRoute>
                 }
@@ -144,7 +144,7 @@ export const AppRoutes: React.FC = () => {
               <Route
                 path="work-orders"
                 element={
-                  <ProtectedRoute requiredRoles={['SERVICE_DESK_OFFICER', 'TECHNICIAN', 'ADMIN_STAFF', 'SERVICE']}>
+                  <ProtectedRoute requiredRoles={['SERVICE_DESK_OFFICER', 'TECHNICIAN', 'SERVICE']}>
                     <WorkOrdersPage />
                   </ProtectedRoute>
                 }
@@ -152,7 +152,7 @@ export const AppRoutes: React.FC = () => {
               <Route
                 path="assignments"
                 element={
-                  <ProtectedRoute requiredRoles={['SERVICE_DESK_OFFICER', 'ADMIN_STAFF']}>
+                  <ProtectedRoute requiredRoles={['SERVICE_DESK_OFFICER', 'TECHNICIAN', 'SERVICE']}>
                     <AssignmentsPage />
                   </ProtectedRoute>
                 }
