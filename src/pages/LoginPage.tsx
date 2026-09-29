@@ -30,7 +30,7 @@ export const LoginPage: React.FC = () => {
       errors.identifier = 'Please enter your University ID or Email.';
     }
 
-    if (!password) {
+    if (!password || !password.trim()) {
       errors.password = 'Please enter your password.';
     }
 
@@ -40,6 +40,8 @@ export const LoginPage: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isLoading) return;
+
     setFormError(null);
 
     if (!validateForm()) {
@@ -58,6 +60,11 @@ export const LoginPage: React.FC = () => {
       if (result.success && result.user) {
         setAuthUser(result.user);
         navigate('/');
+      } else if (result.isInactive) {
+        if (result.user) {
+          setAuthUser(result.user);
+        }
+        setFormError(result.message || 'Your account is currently inactive. Please contact the IT Support Helpdesk for assistance.');
       } else {
         setFormError(result.message || 'Authentication failed. Please check your credentials.');
       }
@@ -156,6 +163,7 @@ export const LoginPage: React.FC = () => {
                   onClick={() => setShowPassword((prev) => !prev)}
                   aria-label={showPassword ? 'Hide password' : 'Show password'}
                   tabIndex={0}
+                  disabled={isLoading}
                 >
                   {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
@@ -175,7 +183,14 @@ export const LoginPage: React.FC = () => {
                 <span>Remember me</span>
               </label>
 
-              <a href="#forgot-password" className="forgot-link" onClick={(e) => e.preventDefault()}>
+              <a
+                href="#forgot-password"
+                className="forgot-link"
+                onClick={(e) => {
+                  e.preventDefault();
+                  setFormError('Password reset is managed by the University IT Support Helpdesk.');
+                }}
+              >
                 Forgot password?
               </a>
             </div>
