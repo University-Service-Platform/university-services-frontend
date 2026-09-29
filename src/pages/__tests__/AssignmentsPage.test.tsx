@@ -2,10 +2,11 @@ import { render, screen, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { AssignmentsPage } from '../AssignmentsPage';
 import * as workOrderService from '@/services/workOrderService';
+import type { WorkOrder } from '@/types';
 
 vi.mock('@/services/workOrderService');
 
-const mockWorkOrders = [
+const mockWorkOrders: WorkOrder[] = [
   {
     workOrderId: 'WO-2026-0001',
     requestId: 'REQ-101',
@@ -34,7 +35,7 @@ describe('AssignmentsPage Component', () => {
   it('loads and displays technician assignments', async () => {
     vi.spyOn(workOrderService, 'getWorkOrders').mockResolvedValue({
       success: true,
-      data: mockWorkOrders as any,
+      data: mockWorkOrders,
     });
 
     render(<AssignmentsPage />);

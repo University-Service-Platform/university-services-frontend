@@ -1,4 +1,3 @@
-import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { TechnicianPage } from '../TechnicianPage';
@@ -44,7 +43,7 @@ describe('TechnicianPage Component', () => {
   it('loads and displays assigned work orders', async () => {
     vi.spyOn(workOrderService, 'getWorkOrders').mockResolvedValue({
       success: true,
-      data: mockAssignedOrders as any,
+      data: mockAssignedOrders,
     });
 
     render(<TechnicianPage />);
@@ -58,11 +57,11 @@ describe('TechnicianPage Component', () => {
   it('triggers startWorkOrder when Start Work is clicked', async () => {
     vi.spyOn(workOrderService, 'getWorkOrders').mockResolvedValue({
       success: true,
-      data: mockAssignedOrders as any,
+      data: mockAssignedOrders,
     });
     vi.spyOn(workOrderService, 'startWorkOrder').mockResolvedValue({
       success: true,
-      data: { ...mockAssignedOrders[0], status: 'IN_PROGRESS' } as any,
+      data: { ...mockAssignedOrders[0], status: 'IN_PROGRESS' },
     });
 
     render(<TechnicianPage />);
@@ -79,14 +78,14 @@ describe('TechnicianPage Component', () => {
   });
 
   it('opens progress note modal and submits note', async () => {
-    const inProgressOrders = [{ ...mockAssignedOrders[0], status: 'IN_PROGRESS' }];
+    const inProgressOrders: WorkOrder[] = [{ ...mockAssignedOrders[0], status: 'IN_PROGRESS' }];
     vi.spyOn(workOrderService, 'getWorkOrders').mockResolvedValue({
       success: true,
-      data: inProgressOrders as any,
+      data: inProgressOrders,
     });
     vi.spyOn(workOrderService, 'addWorkOrderProgressNote').mockResolvedValue({
       success: true,
-      data: { ...inProgressOrders[0], actionNotes: 'Replaced fuse' } as any,
+      data: { ...inProgressOrders[0], actionNotes: 'Replaced fuse' },
     });
 
     render(<TechnicianPage />);
@@ -114,11 +113,11 @@ describe('TechnicianPage Component', () => {
   it('opens resolution modal and submits resolution', async () => {
     vi.spyOn(workOrderService, 'getWorkOrders').mockResolvedValue({
       success: true,
-      data: mockAssignedOrders as any,
+      data: mockAssignedOrders,
     });
     vi.spyOn(workOrderService, 'recordWorkOrderResolution').mockResolvedValue({
       success: true,
-      data: { ...mockAssignedOrders[0], status: 'RESOLVED', resolution: 'Fixed outlet wiring' } as any,
+      data: { ...mockAssignedOrders[0], status: 'RESOLVED', resolution: 'Fixed outlet wiring' },
     });
 
     render(<TechnicianPage />);
@@ -145,7 +144,7 @@ describe('TechnicianPage Component', () => {
   });
 
   it('prevents updating work orders assigned to a different technician', async () => {
-    const unassignedToSelfOrder = [
+    const unassignedToSelfOrder: WorkOrder[] = [
       {
         ...mockAssignedOrders[0],
         workOrderId: 'WO-2026-9999',
@@ -154,7 +153,7 @@ describe('TechnicianPage Component', () => {
     ];
     vi.spyOn(workOrderService, 'getWorkOrders').mockResolvedValue({
       success: true,
-      data: unassignedToSelfOrder as any,
+      data: unassignedToSelfOrder,
     });
 
     render(<TechnicianPage />);

@@ -1,12 +1,12 @@
-import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { TriagePage } from '../TriagePage';
 import * as serviceRequestService from '@/services/serviceRequestService';
+import type { ServiceRequest } from '@/types';
 
 vi.mock('@/services/serviceRequestService');
 
-const mockRequests = [
+const mockRequests: ServiceRequest[] = [
   {
     requestId: 'REQ-001',
     requesterId: 'USER-100',
@@ -37,7 +37,7 @@ describe('TriagePage Component', () => {
   it('loads and displays requests list', async () => {
     vi.spyOn(serviceRequestService, 'getMyServiceRequests').mockResolvedValue({
       success: true,
-      data: mockRequests as any,
+      data: mockRequests,
     });
 
     render(<TriagePage />);
@@ -78,11 +78,11 @@ describe('TriagePage Component', () => {
   it('opens triage form and submits triage payload successfully', async () => {
     vi.spyOn(serviceRequestService, 'getMyServiceRequests').mockResolvedValue({
       success: true,
-      data: mockRequests as any,
+      data: mockRequests,
     });
     vi.spyOn(serviceRequestService, 'triageServiceRequest').mockResolvedValue({
       success: true,
-      data: { ...mockRequests[0], status: 'ASSIGNED', responsibleServiceUnit: 'Facilities Team' } as any,
+      data: { ...mockRequests[0], status: 'ASSIGNED', responsibleServiceUnit: 'Facilities Team' },
     });
 
     render(<TriagePage />);
@@ -111,11 +111,11 @@ describe('TriagePage Component', () => {
   it('opens rejection modal and submits rejection payload', async () => {
     vi.spyOn(serviceRequestService, 'getMyServiceRequests').mockResolvedValue({
       success: true,
-      data: mockRequests as any,
+      data: mockRequests,
     });
     vi.spyOn(serviceRequestService, 'rejectServiceRequest').mockResolvedValue({
       success: true,
-      data: { ...mockRequests[0], status: 'REJECTED', rejectionReason: 'Out of scope' } as any,
+      data: { ...mockRequests[0], status: 'REJECTED', rejectionReason: 'Out of scope' },
     });
 
     render(<TriagePage />);
