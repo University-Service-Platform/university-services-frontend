@@ -1,7 +1,8 @@
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search, Paperclip, AlertCircle } from 'lucide-react';
-import { createServiceRequest, type ServiceRequestCreatePayload } from '@/services/serviceRequestService';
+import { createServiceRequest } from '@/services/serviceRequestService';
+import type { RequestCategory, RequestPriority, CreateServiceRequestRequest } from '@/types';
 import {
   Card,
   CardBody,
@@ -12,29 +13,29 @@ import {
 } from '@/components/ui';
 import './CreateServiceRequestPage.css';
 
-/**
- * UNCONFIRMED PLACEHOLDER INTEGRATION BOUNDARY PENDING OFFICIAL BACKEND CONTRACT:
- * The official backend Service Request contract and DTO schema are not yet documented in the repository.
- * Form fields and API interactions serve strictly as an integration boundary ready for official backend endpoints.
- */
-
 const CATEGORY_OPTIONS: SelectOption[] = [
+  { label: 'Facility', value: 'FACILITY' },
+  { label: 'Equipment', value: 'EQUIPMENT' },
   { label: 'IT', value: 'IT' },
-  { label: 'Facility', value: 'Facility' },
-  { label: 'Equipment', value: 'Equipment' },
-  { label: 'General', value: 'General' },
+  { label: 'General', value: 'GENERAL' },
+];
+
+const PRIORITY_OPTIONS: { label: string; value: RequestPriority }[] = [
+  { label: 'Low', value: 'LOW' },
+  { label: 'Medium', value: 'MEDIUM' },
+  { label: 'High', value: 'HIGH' },
+  { label: 'Critical', value: 'CRITICAL' },
 ];
 
 export const CreateServiceRequestPage: React.FC = () => {
   const navigate = useNavigate();
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   // Form State
   const [category, setCategory] = useState<string>('');
   const [location, setLocation] = useState<string>('');
-  const [priority, setPriority] = useState<'Low' | 'Medium' | 'High'>('Medium');
+  const [priority, setPriority] = useState<RequestPriority>('MEDIUM');
   const [description, setDescription] = useState<string>('');
-  const [attachmentFileName, setAttachmentFileName] = useState<string>('');
+  const [attachmentReference, setAttachmentReference] = useState<string>('');
 
   // Search Bar State
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -46,10 +47,16 @@ export const CreateServiceRequestPage: React.FC = () => {
     category?: string;
     location?: string;
     description?: string;
+    attachmentReference?: string;
   }>({});
 
   const validateForm = (): boolean => {
-    const errors: { category?: string; location?: string; description?: string } = {};
+    const errors: {
+      category?: string;
+      location?: string;
+      description?: string;
+      attachmentReference?: string;
+    } = {};
 
     if (!category.trim()) {
       errors.category = 'Please select a category.';
@@ -57,10 +64,16 @@ export const CreateServiceRequestPage: React.FC = () => {
 
     if (!location.trim()) {
       errors.location = 'Location is required.';
+    } else if (location.trim().length > 255) {
+      errors.location = 'Location must not exceed 255 characters.';
     }
 
     if (!description.trim()) {
       errors.description = 'Description is required.';
+    }
+
+    if (attachmentReference.trim().length > 500) {
+      errors.attachmentReference = 'Attachment reference must not exceed 500 characters.';
     }
 
     setFieldErrors(errors);
@@ -77,12 +90,12 @@ export const CreateServiceRequestPage: React.FC = () => {
 
     setIsSubmitting(true);
 
-    const payload: ServiceRequestCreatePayload = {
-      category: category.trim(),
+    const payload: CreateServiceRequestRequest = {
+      category: category as RequestCategory,
       location: location.trim(),
       priority,
       description: description.trim(),
-      attachmentFileName: attachmentFileName.trim() || undefined,
+      attachmentReference: attachmentReference.trim() || undefined,
     };
 
     const result = await createServiceRequest(payload);
@@ -97,18 +110,6 @@ export const CreateServiceRequestPage: React.FC = () => {
 
   const handleCancel = () => {
     navigate('/requests/my');
-  };
-
-  const handleAttachmentClick = () => {
-    if (fileInputRef.current) {
-      fileInputRef.current.click();
-    }
-  };
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files.length > 0) {
-      setAttachmentFileName(e.target.files[0].name);
-    }
   };
 
   return (
@@ -176,7 +177,7 @@ export const CreateServiceRequestPage: React.FC = () => {
             <Input
               id="request-location-input"
               label="Location"
-              placeholder="e.g. Engineering Block, Room 204"
+              placeholder="e.g. Block C, Room 302"
               value={location}
               onChange={(e) => {
                 setLocation(e.target.value);
@@ -190,19 +191,19 @@ export const CreateServiceRequestPage: React.FC = () => {
 
             {/* Priority Suggestion Toggle Buttons */}
             <div className="form-group">
-              <label className="form-label">Priority suggestion</label>
-              <div className="priority-toggle-group" role="radiogroup" aria-label="Priority suggestion">
-                {(['Low', 'Medium', 'High'] as const).map((p) => (
+              <label className="form-label">Priority</label>
+              <div className="priority-toggle-group" role="radiogroup" aria-label="Priority">
+                {PRIORITY_OPTIONS.map((opt) => (
                   <button
-                    key={p}
+                    key={opt.value}
                     type="button"
                     role="radio"
-                    aria-checked={priority === p}
-                    className={`priority-btn priority-${p.toLowerCase()} ${priority === p ? 'selected' : ''}`}
-                    onClick={() => setPriority(p)}
+                    aria-checked={priority === opt.value}
+                    className={`priority-btn priority-${opt.value.toLowerCase()} ${priority === opt.value ? 'selected' : ''}`}
+                    onClick={() => setPriority(opt.value)}
                     disabled={isSubmitting}
                   >
-                    {p}
+                    {opt.label}
                   </button>
                 ))}
               </div>
@@ -235,36 +236,22 @@ export const CreateServiceRequestPage: React.FC = () => {
               )}
             </div>
 
-            {/* Attachment Box Placeholder */}
-            <div className="form-group">
-              <label className="form-label">Attachment</label>
-              <input
-                type="file"
-                ref={fileInputRef}
-                onChange={handleFileChange}
-                style={{ display: 'none' }}
-                aria-label="Upload attachment file"
-              />
-              <div
-                className="attachment-placeholder-box"
-                onClick={handleAttachmentClick}
-                role="button"
-                tabIndex={0}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    handleAttachmentClick();
-                  }
-                }}
-              >
-                <Paperclip size={18} className="attachment-box-icon" />
-                <span>
-                  {attachmentFileName
-                    ? `Attached: ${attachmentFileName}`
-                    : 'Attach a photo or file (optional)'}
-                </span>
-              </div>
-            </div>
+            {/* Attachment Reference Input */}
+            <Input
+              id="request-attachment-input"
+              label="Attachment Reference (Optional URL or File Path)"
+              placeholder="e.g. https://storage.university.edu/uploads/photo123.jpg"
+              value={attachmentReference}
+              onChange={(e) => {
+                setAttachmentReference(e.target.value);
+                if (fieldErrors.attachmentReference) {
+                  setFieldErrors((prev) => ({ ...prev, attachmentReference: undefined }));
+                }
+              }}
+              error={fieldErrors.attachmentReference}
+              leftIcon={<Paperclip size={18} />}
+              disabled={isSubmitting}
+            />
 
             {/* Action Buttons */}
             <div className="create-request-actions">

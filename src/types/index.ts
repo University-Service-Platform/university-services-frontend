@@ -50,25 +50,62 @@ export interface ServiceUnit {
 }
 
 /**
- * UNCONFIRMED PLACEHOLDER INTEGRATION BOUNDARY PENDING OFFICIAL BACKEND DTO CONTRACT:
- * The official backend Service Request DTO schema is not yet documented in the repository.
- * The fields below represent an unconfirmed placeholder UI/service boundary subject to change upon official contract.
+ * OFFICIAL BACKEND SERVICE REQUEST DTO CONTRACT:
  */
-export type ServiceRequestStatus = 'In progress' | 'Resolved' | 'Assigned' | 'Closed' | 'Open' | string;
+export type RequestCategory =
+  | 'FACILITY'
+  | 'EQUIPMENT'
+  | 'IT'
+  | 'GENERAL';
+
+export type RequestPriority =
+  | 'LOW'
+  | 'MEDIUM'
+  | 'HIGH'
+  | 'CRITICAL';
+
+export type RequestStatus =
+  | 'NEW'
+  | 'ACKNOWLEDGED'
+  | 'ASSIGNED'
+  | 'IN_PROGRESS'
+  | 'RESOLVED'
+  | 'CLOSED'
+  | 'REJECTED'
+  | 'CANCELLED'
+  | 'ESCALATED';
+
+export type ServiceRequestStatus = RequestStatus;
 
 export interface ServiceRequest {
-  id: string;
-  title: string;
-  category: string;
-  submittedDate: string;
-  status: ServiceRequestStatus;
-  location?: string;
-  priority?: 'Low' | 'Medium' | 'High' | string;
-  assignedTo?: string;
-  description?: string;
-  attachmentName?: string;
-  resolution?: string;
-  timeline?: Array<{ label: string; timestamp?: string; completed: boolean; note?: string }>;
+  requestId: string;
+  requesterId: string;
+  category: RequestCategory;
+  location: string;
+  priority: RequestPriority;
+  description: string;
+  attachmentReference?: string | null;
+  status: RequestStatus;
+  responsibleServiceUnit?: string | null;
+  rejectionReason?: string | null;
+  confirmationFeedback?: string | null;
+  reportedTime: string;
+  acknowledgedTime?: string | null;
+  assignedTime?: string | null;
+  resolvedTime?: string | null;
+  closedTime?: string | null;
+}
+
+export interface CreateServiceRequestRequest {
+  category: RequestCategory;
+  location: string;
+  priority: RequestPriority;
+  description: string;
+  attachmentReference?: string | null;
+}
+
+export interface ConfirmRequest {
+  confirmationFeedback: string;
 }
 
 export interface NavItem {

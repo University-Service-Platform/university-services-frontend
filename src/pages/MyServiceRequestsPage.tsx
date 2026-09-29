@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { Search, Plus, Eye, FileText, RefreshCw } from 'lucide-react';
 import { getMyServiceRequests } from '@/services/serviceRequestService';
-import type { ServiceRequest } from '@/types';
+import type { ServiceRequest, RequestStatus } from '@/types';
 import {
   Card,
   Button,
@@ -13,11 +13,21 @@ import {
 } from '@/components/ui';
 import './MyServiceRequestsPage.css';
 
-/**
- * UNCONFIRMED PLACEHOLDER INTEGRATION BOUNDARY PENDING OFFICIAL BACKEND CONTRACT:
- * The official backend Service Request contract and DTO schema are not yet documented in the repository.
- * Form fields and API interactions serve strictly as an integration boundary ready for official backend endpoints.
- */
+function formatDate(dateStr?: string | null): string {
+  if (!dateStr) return '';
+  try {
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return dateStr;
+    return d.toLocaleString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    });
+  } catch {
+    return dateStr;
+  }
+}
+
 export const MyServiceRequestsPage: React.FC = () => {
   const [requests, setRequests] = useState<ServiceRequest[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -31,7 +41,7 @@ export const MyServiceRequestsPage: React.FC = () => {
     setIsLoading(true);
     setFetchError(null);
     getMyServiceRequests().then((result) => {
-      if (result.success && result.data && result.data.length > 0) {
+      if (result.success && result.data) {
         setRequests(result.data);
       } else {
         setFetchError(result.message || 'Unable to connect to Service Request service.');
@@ -44,7 +54,7 @@ export const MyServiceRequestsPage: React.FC = () => {
     let isMounted = true;
     getMyServiceRequests().then((result) => {
       if (!isMounted) return;
-      if (result.success && result.data && result.data.length > 0) {
+      if (result.success && result.data) {
         setRequests(result.data);
       } else {
         setFetchError(result.message || 'Unable to connect to Service Request service.');
@@ -56,27 +66,28 @@ export const MyServiceRequestsPage: React.FC = () => {
     };
   }, []);
 
-  // Filter requests based on tab and search query
+  // Filter requests based on tab and client-side search query
   const filteredRequests = useMemo(() => {
     return requests.filter((req) => {
       let matchesTab = true;
-      const statusLower = req.status.toLowerCase();
+      const status = req.status;
 
       if (activeTab === 'Open') {
-        matchesTab = ['open', 'in progress', 'assigned'].includes(statusLower);
+        matchesTab = ['NEW', 'ACKNOWLEDGED', 'ASSIGNED', 'IN_PROGRESS', 'ESCALATED'].includes(status);
       } else if (activeTab === 'Resolved') {
-        matchesTab = statusLower === 'resolved';
+        matchesTab = status === 'RESOLVED';
       } else if (activeTab === 'Closed') {
-        matchesTab = statusLower === 'closed';
+        matchesTab = ['CLOSED', 'REJECTED', 'CANCELLED'].includes(status);
       }
 
       let matchesSearch = true;
       if (searchQuery.trim()) {
         const query = searchQuery.toLowerCase().trim();
         matchesSearch =
-          req.id.toLowerCase().includes(query) ||
-          req.title.toLowerCase().includes(query) ||
-          req.category.toLowerCase().includes(query) ||
+          req.requestId.toLowerCase().includes(query) ||
+          (req.category && req.category.toLowerCase().includes(query)) ||
+          (req.location && req.location.toLowerCase().includes(query)) ||
+          (req.description && req.description.toLowerCase().includes(query)) ||
           req.status.toLowerCase().includes(query);
       }
 
@@ -84,17 +95,21 @@ export const MyServiceRequestsPage: React.FC = () => {
     });
   }, [requests, activeTab, searchQuery]);
 
-  const getStatusVariant = (status: string): 'success' | 'warning' | 'danger' | 'info' | 'neutral' => {
-    switch (status.toLowerCase()) {
-      case 'in progress':
+  const getStatusVariant = (status: RequestStatus): 'success' | 'warning' | 'danger' | 'info' | 'neutral' => {
+    switch (status) {
+      case 'IN_PROGRESS':
+      case 'ESCALATED':
         return 'warning';
-      case 'resolved':
+      case 'RESOLVED':
         return 'success';
-      case 'assigned':
-      case 'open':
+      case 'NEW':
+      case 'ACKNOWLEDGED':
+      case 'ASSIGNED':
         return 'info';
-      case 'closed':
-        return 'neutral';
+      case 'REJECTED':
+        return 'danger';
+      case 'CLOSED':
+      case 'CANCELLED':
       default:
         return 'neutral';
     }
@@ -159,18 +174,28 @@ export const MyServiceRequestsPage: React.FC = () => {
           title="Loading Submitted Requests..."
           description="Retrieving your service request history."
         />
-      ) : requests.length === 0 ? (
+      ) : fetchError ? (
         <EmptyState
-          title="Service Request API Integration Pending"
-          description={
-            fetchError ||
-            'The official backend Service Request API contract is not yet available in the repository. The user service requests interface is prepared to connect to backend endpoints.'
-          }
+          title="Unable to Load Requests"
+          description={fetchError}
           icon={<FileText className="state-icon" />}
           action={
             <Button variant="outline" icon={<RefreshCw size={16} />} onClick={fetchRequestsData}>
               Retry Connection
             </Button>
+          }
+        />
+      ) : requests.length === 0 ? (
+        <EmptyState
+          title="No Submitted Service Requests"
+          description="You have not submitted any service requests yet."
+          icon={<FileText className="state-icon" />}
+          action={
+            <Link to="/requests/new" style={{ textDecoration: 'none' }}>
+              <Button variant="primary" icon={<Plus size={16} />}>
+                Create Service Request
+              </Button>
+            </Link>
           }
         />
       ) : (
@@ -189,19 +214,21 @@ export const MyServiceRequestsPage: React.FC = () => {
             {filteredRequests.length > 0 ? (
               <div className="requests-list-body">
                 {filteredRequests.map((request) => (
-                  <div key={request.id} className="requests-row request-item">
+                  <div key={request.requestId} className="requests-row request-item">
                     <div className="req-col req-col-request">
                       <span className="request-title-line">
-                        <strong className="request-id">{request.id}</strong>
+                        <strong className="request-id">{request.requestId}</strong>
                         <span className="request-sep">·</span>
-                        <span className="request-name">{request.title}</span>
+                        <span className="request-name">
+                          {request.category} issue at {request.location}
+                        </span>
                       </span>
                     </div>
                     <div className="req-col req-col-category">
                       <span className="category-text">{request.category}</span>
                     </div>
                     <div className="req-col req-col-submitted">
-                      <span className="date-text">{request.submittedDate}</span>
+                      <span className="date-text">{formatDate(request.reportedTime)}</span>
                     </div>
                     <div className="req-col req-col-status">
                       <Badge variant={getStatusVariant(request.status)}>
@@ -209,11 +236,11 @@ export const MyServiceRequestsPage: React.FC = () => {
                       </Badge>
                     </div>
                     <div className="req-col req-col-actions">
-                      <Link to={`/requests/${request.id}`} style={{ textDecoration: 'none' }}>
+                      <Link to={`/requests/${request.requestId}`} style={{ textDecoration: 'none' }}>
                         <Button
                           variant="ghost"
                           size="sm"
-                          aria-label={`View request ${request.id}`}
+                          aria-label={`View request ${request.requestId}`}
                           icon={<Eye size={16} />}
                         />
                       </Link>
@@ -232,7 +259,7 @@ export const MyServiceRequestsPage: React.FC = () => {
 
           {/* Footer Pagination Text */}
           <div className="requests-pagination-footer">
-            Showing 1–{filteredRequests.length} of 12 requests.
+            Showing {filteredRequests.length} of {requests.length} requests.
           </div>
         </div>
       )}

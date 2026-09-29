@@ -11,6 +11,21 @@ export interface ApiResponse<T = unknown> {
   status: number;
 }
 
+export function getAuthToken(): string | null {
+  return (
+    localStorage.getItem('token') ||
+    localStorage.getItem('jwt') ||
+    localStorage.getItem('auth_token') ||
+    sessionStorage.getItem('token') ||
+    sessionStorage.getItem('jwt') ||
+    null
+  );
+}
+
+export function setAuthToken(token: string): void {
+  localStorage.setItem('token', token);
+}
+
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api/v1';
 
 export async function apiFetch<T>(
@@ -23,15 +38,30 @@ export async function apiFetch<T>(
     headers.set('Content-Type', 'application/json');
   }
 
+  if (!headers.has('Authorization')) {
+    const token = getAuthToken();
+    if (token) {
+      headers.set('Authorization', `Bearer ${token}`);
+    }
+  }
+
+  const url = endpoint.startsWith('http')
+    ? endpoint
+    : endpoint.startsWith('/api')
+    ? endpoint
+    : endpoint.startsWith('/')
+    ? `${BASE_URL}${endpoint}`
+    : `${BASE_URL}/${endpoint}`;
+
   try {
-    const response = await fetch(`${BASE_URL}${endpoint}`, {
+    const response = await fetch(url, {
       ...options,
       headers,
     });
 
     const status = response.status;
     
-    if (status === 24) return { status }; // Handle empty response
+    if (status === 204) return { status }; // Handle empty response
 
     let data: T | undefined;
     const contentType = response.headers.get('content-type');
@@ -40,8 +70,9 @@ export async function apiFetch<T>(
     }
 
     if (!response.ok) {
+      const errObj = data as { message?: string; error?: string } | undefined;
       return {
-        error: (data as { message?: string })?.message || response.statusText || 'API Request Failed',
+        error: errObj?.message || errObj?.error || response.statusText || 'API Request Failed',
         status,
       };
     }
