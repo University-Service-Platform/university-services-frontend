@@ -104,7 +104,7 @@ export const APP_ROUTES_CONFIG: RouteNavigationConfig[] = [
     path: '/triage',
     label: 'Triage Queue',
     iconName: 'Inbox',
-    requiredRoles: ['SERVICE_DESK_OFFICER', 'ADMIN_STAFF', 'ADMIN', 'STAFF'],
+    requiredRoles: ['SERVICE_DESK_OFFICER', 'ADMIN_STAFF'],
     showInNav: true,
   },
   {
@@ -112,7 +112,7 @@ export const APP_ROUTES_CONFIG: RouteNavigationConfig[] = [
     path: '/service-dashboard',
     label: 'Service Dashboard',
     iconName: 'BarChart2',
-    requiredRoles: ['SERVICE_DESK_OFFICER', 'ADMIN_STAFF', 'ADMIN', 'STAFF'],
+    requiredRoles: ['SERVICE_DESK_OFFICER', 'ADMIN_STAFF'],
     showInNav: true,
   },
   {
@@ -120,7 +120,7 @@ export const APP_ROUTES_CONFIG: RouteNavigationConfig[] = [
     path: '/work-orders',
     label: 'Work Orders',
     iconName: 'Wrench',
-    requiredRoles: ['SERVICE_DESK_OFFICER', 'TECHNICIAN', 'ADMIN_STAFF', 'ADMIN', 'STAFF'],
+    requiredRoles: ['SERVICE_DESK_OFFICER', 'TECHNICIAN', 'ADMIN_STAFF', 'SERVICE'],
     showInNav: true,
   },
   {
@@ -128,7 +128,7 @@ export const APP_ROUTES_CONFIG: RouteNavigationConfig[] = [
     path: '/assignments',
     label: 'Assignments',
     iconName: 'UserCheck',
-    requiredRoles: ['SERVICE_DESK_OFFICER', 'ADMIN_STAFF', 'ADMIN', 'STAFF'],
+    requiredRoles: ['SERVICE_DESK_OFFICER', 'ADMIN_STAFF'],
     showInNav: true,
   },
   {
@@ -136,7 +136,7 @@ export const APP_ROUTES_CONFIG: RouteNavigationConfig[] = [
     path: '/technician',
     label: 'Technician Workspace',
     iconName: 'Wrench',
-    requiredRoles: ['TECHNICIAN', 'ADMIN_STAFF', 'ADMIN', 'STAFF'],
+    requiredRoles: ['TECHNICIAN'],
     showInNav: true,
   },
 ];

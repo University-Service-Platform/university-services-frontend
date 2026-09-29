@@ -7,5 +7,6 @@ export * from './facultyService';
 export * from './serviceUnitService';
 export * from './userService';
 export * from './serviceRequestService';
+export * from './workOrderService';
 
 

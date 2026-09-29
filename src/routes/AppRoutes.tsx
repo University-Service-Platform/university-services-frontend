@@ -128,7 +128,7 @@ export const AppRoutes: React.FC = () => {
               <Route
                 path="triage"
                 element={
-                  <ProtectedRoute requiredRoles={['SERVICE_DESK_OFFICER', 'ADMIN_STAFF', 'ADMIN', 'STAFF']}>
+                  <ProtectedRoute requiredRoles={['SERVICE_DESK_OFFICER', 'ADMIN_STAFF']}>
                     <TriagePage />
                   </ProtectedRoute>
                 }
@@ -136,7 +136,7 @@ export const AppRoutes: React.FC = () => {
               <Route
                 path="service-dashboard"
                 element={
-                  <ProtectedRoute requiredRoles={['SERVICE_DESK_OFFICER', 'ADMIN_STAFF', 'ADMIN', 'STAFF']}>
+                  <ProtectedRoute requiredRoles={['SERVICE_DESK_OFFICER', 'ADMIN_STAFF']}>
                     <ServiceDashboardPage />
                   </ProtectedRoute>
                 }
@@ -144,7 +144,7 @@ export const AppRoutes: React.FC = () => {
               <Route
                 path="work-orders"
                 element={
-                  <ProtectedRoute requiredRoles={['SERVICE_DESK_OFFICER', 'TECHNICIAN', 'ADMIN_STAFF', 'ADMIN', 'STAFF']}>
+                  <ProtectedRoute requiredRoles={['SERVICE_DESK_OFFICER', 'TECHNICIAN', 'ADMIN_STAFF', 'SERVICE']}>
                     <WorkOrdersPage />
                   </ProtectedRoute>
                 }
@@ -152,7 +152,7 @@ export const AppRoutes: React.FC = () => {
               <Route
                 path="assignments"
                 element={
-                  <ProtectedRoute requiredRoles={['SERVICE_DESK_OFFICER', 'ADMIN_STAFF', 'ADMIN', 'STAFF']}>
+                  <ProtectedRoute requiredRoles={['SERVICE_DESK_OFFICER', 'ADMIN_STAFF']}>
                     <AssignmentsPage />
                   </ProtectedRoute>
                 }
@@ -160,7 +160,7 @@ export const AppRoutes: React.FC = () => {
               <Route
                 path="technician"
                 element={
-                  <ProtectedRoute requiredRoles={['TECHNICIAN', 'ADMIN_STAFF', 'ADMIN', 'STAFF']}>
+                  <ProtectedRoute requiredRoles={['TECHNICIAN']}>
                     <TechnicianPage />
                   </ProtectedRoute>
                 }

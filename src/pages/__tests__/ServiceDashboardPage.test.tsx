@@ -3,12 +3,18 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { ServiceDashboardPage } from '../ServiceDashboardPage';
 import * as serviceRequestService from '@/services/serviceRequestService';
+import * as workOrderService from '@/services/workOrderService';
 
 vi.mock('@/services/serviceRequestService');
+vi.mock('@/services/workOrderService');
 
 describe('ServiceDashboardPage Component', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.spyOn(workOrderService, 'getWorkOrderSummary').mockResolvedValue({
+      success: true,
+      data: { ASSIGNED: 5, RESOLVED: 15 },
+    });
   });
 
   it('displays loading state initially', () => {
@@ -17,10 +23,10 @@ describe('ServiceDashboardPage Component', () => {
     );
 
     render(<ServiceDashboardPage />);
-    expect(screen.getByText(/Loading Analytics Telemetry/i)).toBeInTheDocument();
+    expect(screen.getByText(/Loading Service Request Telemetry/i)).toBeInTheDocument();
   });
 
-  it('loads and displays summary counts and breakdown table', async () => {
+  it('loads and displays summary counts', async () => {
     vi.spyOn(serviceRequestService, 'getServiceRequestSummary').mockResolvedValue({
       success: true,
       data: {
@@ -50,7 +56,7 @@ describe('ServiceDashboardPage Component', () => {
     render(<ServiceDashboardPage />);
 
     await waitFor(() => {
-      expect(screen.getByText('Telemetry Connection Error')).toBeInTheDocument();
+      expect(screen.getByText('Service Request Summary Error')).toBeInTheDocument();
       expect(screen.getByText('Summary endpoint error 500')).toBeInTheDocument();
     });
   });
@@ -70,7 +76,7 @@ describe('ServiceDashboardPage Component', () => {
       expect(serviceRequestService.getServiceRequestSummary).toHaveBeenCalledWith('status');
     });
 
-    const select = screen.getByLabelText(/Aggregation Dimension/i);
+    const select = screen.getByLabelText(/Service Request Aggregation GroupBy/i);
     fireEvent.change(select, { target: { value: 'category' } });
 
     await waitFor(() => {
@@ -78,3 +84,4 @@ describe('ServiceDashboardPage Component', () => {
     });
   });
 });
+

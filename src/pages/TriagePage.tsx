@@ -7,6 +7,7 @@ import {
   TrendingUp,
   RefreshCw,
   Layers,
+  Wrench,
 } from 'lucide-react';
 import {
   getMyServiceRequests,
@@ -14,6 +15,7 @@ import {
   rejectServiceRequest,
   escalateServiceRequest,
 } from '@/services/serviceRequestService';
+import { createWorkOrder } from '@/services/workOrderService';
 import type {
   ServiceRequest,
   RequestCategory,
@@ -76,6 +78,14 @@ export const TriagePage: React.FC = () => {
   const [escalationUnit, setEscalationUnit] = useState<string>('');
   const [escalateError, setEscalateError] = useState<string | null>(null);
   const [isEscalating, setIsEscalating] = useState<boolean>(false);
+
+  // Create Work Order Modal States
+  const [createWoModalOpen, setCreateWoModalOpen] = useState<boolean>(false);
+  const [assignedTechnicianId, setAssignedTechnicianId] = useState<string>('');
+  const [serviceTeam, setServiceTeam] = useState<string>('');
+  const [schedule, setSchedule] = useState<string>('');
+  const [createWoError, setCreateWoError] = useState<string | null>(null);
+  const [isCreatingWo, setIsCreatingWo] = useState<boolean>(false);
 
   // Global Notification Banner
   const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
@@ -201,6 +211,43 @@ export const TriagePage: React.FC = () => {
     setIsEscalating(false);
   };
 
+  const handleCreateWorkOrderSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedRequest) return;
+
+    if (!assignedTechnicianId.trim()) {
+      setCreateWoError('Assigned Technician ID is required.');
+      return;
+    }
+
+    setIsCreatingWo(true);
+    setCreateWoError(null);
+
+    const result = await createWorkOrder({
+      requestId: selectedRequest.requestId,
+      assignedTechnicianId: assignedTechnicianId.trim(),
+      serviceTeam: serviceTeam.trim() || undefined,
+      schedule: schedule.trim() || undefined,
+    });
+
+    if (result.success && result.data) {
+      setNotification({
+        type: 'success',
+        message: `Work Order ${result.data.workOrderId} created successfully for request ${selectedRequest.requestId}.`,
+      });
+      setCreateWoModalOpen(false);
+      setAssignedTechnicianId('');
+      setServiceTeam('');
+      setSchedule('');
+      setSelectedRequest(null);
+      loadRequests();
+    } else {
+      setCreateWoError(result.message || 'Failed to create work order.');
+    }
+
+    setIsCreatingWo(false);
+  };
+
   // Filter requests
   const filteredRequests = requests.filter((req) => {
     const matchesStatus = statusFilter === 'ALL' || req.status === statusFilter;
@@ -233,6 +280,9 @@ export const TriagePage: React.FC = () => {
         return 'neutral';
     }
   };
+
+  const isEligibleForWorkOrder =
+    selectedRequest?.status === 'ACKNOWLEDGED' || selectedRequest?.status === 'ESCALATED';
 
   return (
     <div className="triage-page-container">
@@ -429,7 +479,7 @@ export const TriagePage: React.FC = () => {
                         required
                       />
 
-                      <div className="triage-action-buttons">
+                      <div className="triage-action-buttons" style={{ flexWrap: 'wrap', gap: '0.5rem' }}>
                         <Button
                           variant="primary"
                           type="submit"
@@ -438,6 +488,19 @@ export const TriagePage: React.FC = () => {
                         >
                           Submit Triage
                         </Button>
+                        {isEligibleForWorkOrder && (
+                          <Button
+                            variant="secondary"
+                            type="button"
+                            onClick={() => {
+                              setCreateWoError(null);
+                              setCreateWoModalOpen(true);
+                            }}
+                            icon={<Wrench size={16} />}
+                          >
+                            Create Work Order
+                          </Button>
+                        )}
                         <Button
                           variant="outline"
                           type="button"
@@ -471,6 +534,64 @@ export const TriagePage: React.FC = () => {
             </Card>
           </div>
         </div>
+      )}
+
+      {/* Create Work Order Modal */}
+      {selectedRequest && (
+        <Modal
+          isOpen={createWoModalOpen}
+          onClose={() => setCreateWoModalOpen(false)}
+          title={`Create Work Order for Request ${selectedRequest.requestId}`}
+        >
+          <form onSubmit={handleCreateWorkOrderSubmit}>
+            <p style={{ fontSize: '0.875rem', color: '#4B5563', marginBottom: '1rem' }}>
+              Convert request into a field work order and assign to a field technician.
+            </p>
+            {createWoError && (
+              <div className="form-alert form-alert-error" style={{ marginBottom: '1rem' }}>
+                <AlertCircle size={18} />
+                <span>{createWoError}</span>
+              </div>
+            )}
+            <Input
+              id="wo-technician-input"
+              label="Assigned Technician ID *"
+              placeholder="e.g. TECH-001 or technician user ID"
+              value={assignedTechnicianId}
+              onChange={(e) => setAssignedTechnicianId(e.target.value)}
+              disabled={isCreatingWo}
+              required
+            />
+            <div style={{ marginTop: '0.75rem' }}>
+              <Input
+                id="wo-team-input"
+                label="Service Team (Optional)"
+                placeholder="e.g. Electrical Maintenance Team"
+                value={serviceTeam}
+                onChange={(e) => setServiceTeam(e.target.value)}
+                disabled={isCreatingWo}
+              />
+            </div>
+            <div style={{ marginTop: '0.75rem', marginBottom: '1rem' }}>
+              <Input
+                id="wo-schedule-input"
+                label="Schedule / Target Date (Optional)"
+                placeholder="e.g. 2026-09-30 09:00"
+                value={schedule}
+                onChange={(e) => setSchedule(e.target.value)}
+                disabled={isCreatingWo}
+              />
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
+              <Button variant="outline" type="button" onClick={() => setCreateWoModalOpen(false)} disabled={isCreatingWo}>
+                Cancel
+              </Button>
+              <Button variant="primary" type="submit" isLoading={isCreatingWo} icon={<Wrench size={16} />}>
+                Create Work Order
+              </Button>
+            </div>
+          </form>
+        </Modal>
       )}
 
       {/* Reject Modal */}
