@@ -1,0 +1,151 @@
+openapi: 3.0.3
+info:
+  title: Group 5 - Cross-Team Identity & Role Validation API
+  description: >
+    Secure backend validation API provided by Group 5 (University Identity & Directory)
+    for Groups 6, 7, and 8 to validate user identity, account status, and role permissions.
+  version: 1.0.0
+servers:
+  - url: /api/v1
+    description: Production API Base Path
+paths:
+  /users/validate/{userId}:
+    get:
+      summary: Validate user identity, account status, and assigned roles
+      operationId: validateUserIdentity
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          description: University user ID or email address
+          schema:
+            type: string
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
+      responses:
+        '200':
+          description: User identity valid and active
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserValidationResponse'
+        '400':
+          description: Invalid request parameters
+        '401':
+          description: Unauthenticated consuming service
+        '403':
+          description: Inactive user account or access denied
+        '404':
+          description: User not found
+
+  /users/validate/roles:
+    post:
+      summary: Validate user role requirements
+      operationId: validateUserRole
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RoleValidationRequest'
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
+      responses:
+        '200':
+          description: Role validation successful and authorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserValidationResponse'
+        '403':
+          description: Role match failed or account inactive
+
+  /users/account-status/{userId}:
+    get:
+      summary: Verify account activation status
+      operationId: checkAccountStatus
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
+      responses:
+        '200':
+          description: Account status verified
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccountStatusResponse'
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-Service-Api-Key
+
+  schemas:
+    UserRole:
+      type: string
+      enum: [ADMIN, STAFF, STUDENT, DEAN, HOD, GUEST]
+
+    AccountStatus:
+      type: string
+      enum: [ACTIVE, INACTIVE]
+
+    UserValidationResponse:
+      type: object
+      properties:
+        valid:
+          type: boolean
+        userId:
+          type: string
+        email:
+          type: string
+        accountStatus:
+          $ref: '#/components/schemas/AccountStatus'
+        isAccountActive:
+          type: boolean
+        roles:
+          type: array
+          items:
+            $ref: '#/components/schemas/UserRole'
+        departmentId:
+          type: string
+        facultyId:
+          type: string
+        serviceUnitId:
+          type: string
+
+    RoleValidationRequest:
+      type: object
+      required:
+        - userId
+        - requiredRoles
+      properties:
+        userId:
+          type: string
+        requiredRoles:
+          type: array
+          items:
+            $ref: '#/components/schemas/UserRole'
+
+    AccountStatusResponse:
+      type: object
+      properties:
+        userId:
+          type: string
+        accountStatus:
+          $ref: '#/components/schemas/AccountStatus'
+        isInactive:
+          type: boolean
