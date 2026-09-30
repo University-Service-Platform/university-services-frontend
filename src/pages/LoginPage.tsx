@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { User, Lock, Eye, EyeOff, ArrowRight, GraduationCap, AlertCircle, Globe } from 'lucide-react';
+import { User, Lock, Eye, EyeOff, ArrowRight, GraduationCap, AlertCircle } from 'lucide-react';
 import { Button, Input } from '@/components/ui';
 import { loginUser } from '@/services/authService';
 import { useAuth } from '@/auth';
@@ -17,7 +17,6 @@ export const LoginPage: React.FC = () => {
 
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
-  const [rememberMe, setRememberMe] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
@@ -54,7 +53,6 @@ export const LoginPage: React.FC = () => {
       const result = await loginUser({
         identifier: identifier.trim(),
         password,
-        rememberMe,
       });
 
       if (result.success && result.user) {
@@ -85,19 +83,10 @@ export const LoginPage: React.FC = () => {
           </div>
           <h1 className="brand-title">University of Kelaniya</h1>
           <p className="brand-tagline">One Platform. Many Possibilities.</p>
-
-          <div className="brand-portals-group">
-            <a href="#student-portal" className="portal-pill" onClick={(e) => e.preventDefault()}>
-              Student Portal &gt;
-            </a>
-            <a href="#staff-portal" className="portal-pill" onClick={(e) => e.preventDefault()}>
-              Staff Portal &gt;
-            </a>
-          </div>
         </div>
 
         <footer className="brand-panel-footer">
-          © 2025 University of Kelaniya • Learn • Belong • Thrive
+          © 2026 University of Kelaniya • Learn • Belong • Thrive
         </footer>
       </section>
 
@@ -107,11 +96,11 @@ export const LoginPage: React.FC = () => {
           <header className="auth-header">
             <div className="auth-badge">
               <span className="auth-badge-dot" aria-hidden="true" />
-              <span>University of Kelaniya Identity Core</span>
+              <span>University Services Platform</span>
             </div>
-            <h2 className="auth-heading">Welcome to University of Kelaniya LMS</h2>
+            <h2 className="auth-heading">Sign in</h2>
             <p className="auth-subheading">
-              Sign in with your University of Kelaniya credentials to access academic portal, student information, email, and campus resources.
+              Use your university ID or email to access events, announcements, facilities and service requests.
             </p>
           </header>
 
@@ -129,7 +118,7 @@ export const LoginPage: React.FC = () => {
               id="university-id"
               label="University ID / Email"
               type="email"
-              placeholder="student@kln.ac.lk"
+              placeholder="e.g. STU001 or name@university.example"
               value={identifier}
               onChange={(e) => {
                 setIdentifier(e.target.value);
@@ -173,22 +162,12 @@ export const LoginPage: React.FC = () => {
             />
 
             <div className="auth-options">
-              <label className="checkbox-label">
-                <input
-                  type="checkbox"
-                  checked={rememberMe}
-                  onChange={(e) => setRememberMe(e.target.checked)}
-                  disabled={isLoading}
-                />
-                <span>Remember me</span>
-              </label>
-
               <a
                 href="#forgot-password"
                 className="forgot-link"
                 onClick={(e) => {
                   e.preventDefault();
-                  setFormError('Password reset is managed by the University IT Support Helpdesk.');
+                  setFormError('Ask a platform administrator to reset your password; they can set a new one for you.');
                 }}
               >
                 Forgot password?
@@ -207,50 +186,9 @@ export const LoginPage: React.FC = () => {
             </Button>
           </form>
 
-          {/* Single Sign On Section */}
-          <div className="auth-divider">
-            <span>SINGLE SIGN ON</span>
-          </div>
-
-          <div className="sso-group">
-            <Button
-              variant="outline"
-              fullWidth
-              className="sso-btn"
-              onClick={() => setFormError('Single Sign-On requires external identity provider connection.')}
-              icon={<span className="sso-dot-red" aria-hidden="true" />}
-            >
-              Campus ID
-            </Button>
-
-            <Button
-              variant="outline"
-              fullWidth
-              className="sso-btn"
-              onClick={() => setFormError('Single Sign-On requires external identity provider connection.')}
-              icon={<Globe size={16} aria-hidden="true" />}
-            >
-              Google Workspace
-            </Button>
-          </div>
-
           {/* Help & Legal Footer */}
           <footer className="auth-footer">
-            <p>
-              Need help?{' '}
-              <a href="#it-support" onClick={(e) => e.preventDefault()}>
-                Contact IT Support
-              </a>
-            </p>
-            <div className="auth-legal-links">
-              <a href="#acceptable-use" onClick={(e) => e.preventDefault()}>
-                Acceptable Use
-              </a>{' '}
-              •{' '}
-              <a href="#privacy" onClick={(e) => e.preventDefault()}>
-                Privacy
-              </a>
-            </div>
+            <p>Need help signing in? Ask your platform administrator.</p>
           </footer>
         </div>
       </section>

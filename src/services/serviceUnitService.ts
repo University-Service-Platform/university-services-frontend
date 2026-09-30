@@ -42,7 +42,7 @@ export async function getServiceUnits(): Promise<ServiceUnitServiceResult<Servic
   if (response.error || !list) {
     return {
       success: false,
-      message: response.error || 'Unable to connect to Service Unit Management service. Official backend contract is pending integration.',
+      message: response.error || 'Unable to load service units right now. Please try again in a moment.',
     };
   }
 

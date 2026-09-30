@@ -43,7 +43,7 @@ export async function getProfile(): Promise<ProfileServiceResult<UserProfile>> {
   if (response.error || !response.data) {
     return {
       success: false,
-      message: response.error || 'Unable to connect to profile service. Official backend API contract is pending integration.',
+      message: response.error || 'Unable to load your profile right now. Please try again in a moment.',
     };
   }
 

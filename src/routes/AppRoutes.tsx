@@ -1,7 +1,7 @@
 import React from 'react';
 import { Routes, Route } from 'react-router-dom';
 import { AppShell } from '@/components/layout';
-import { HomePage, LoginPage, ProfilePage, RolesPage, FacultiesPage, ServiceUnitsPage, DepartmentsPage, UsersPage, AccountStatusPage } from '@/pages';
+import { HomePage, LoginPage, NotFoundPage, ProfilePage, RolesPage, FacultiesPage, ServiceUnitsPage, DepartmentsPage, UsersPage, AccountStatusPage } from '@/pages';
 import { ProtectedRoute } from './ProtectedRoute';
 import { APP_ROUTES_CONFIG } from '@/config/navigationConfig';
 import { renderGroup8Page } from './group8RouteElements';
@@ -23,7 +23,7 @@ const renderRoutePage = (path: string) => {
     case '/service-units':
       return <ServiceUnitsPage />;
     default:
-      return renderGroup8Page(path) ?? <HomePage />;
+      return renderGroup8Page(path) ?? (path === '/' ? <HomePage /> : <NotFoundPage />);
   }
 };
 
@@ -55,7 +55,7 @@ export const AppRoutes: React.FC = () => {
                   }
                 />
               ))}
-              <Route path="*" element={<HomePage />} />
+              <Route path="*" element={<NotFoundPage />} />
             </Routes>
           </AppShell>
         }

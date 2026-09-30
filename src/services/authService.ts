@@ -116,6 +116,10 @@ export function mapBackendUserToProfile(raw: Record<string, unknown>): UserProfi
     }
   }
 
+  if (raw.universityId || raw.university_id) profile.universityId = String(raw.universityId || raw.university_id);
+  const accountType = String(raw.accountType || raw.account_type || '').toUpperCase();
+  if (accountType === 'STUDENT' || accountType === 'STAFF') profile.accountType = accountType;
+
   if (raw.phone || raw.phoneNumber || raw.phone_number) {
     profile.phone = String(raw.phone || raw.phoneNumber || raw.phone_number);
   }
