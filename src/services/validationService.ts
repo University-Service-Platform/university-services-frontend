@@ -1,4 +1,4 @@
-import { apiFetch } from './apiClient';
+import { apiFetch, type ApiResponse } from './apiClient';
 import type { UserRole, AccountStatus } from '@/types';
 
 /**
@@ -85,6 +85,53 @@ function dedupeValidation<T>(key: string, request: () => Promise<T>): Promise<T>
   return pending;
 }
 
+const UNAUTHENTICATED_MESSAGE =
+  'Unauthenticated API access. Consuming service credentials are invalid or missing.';
+
+interface FailureMessages {
+  badRequest: string;
+  forbidden: string;
+  /** Omitted for endpoints whose contract does not define a 404 response. */
+  notFound?: string;
+  unavailable: string;
+}
+
+type HttpOutcome<T> =
+  | { data: T; failure?: undefined }
+  | { data?: undefined; failure: ValidationResult<T> };
+
+/**
+ * Map the HTTP failure statuses shared by every validation endpoint to a ValidationResult.
+ * Backend error text is preferred; the endpoint-specific fallback messages are used otherwise.
+ */
+function mapHttpOutcome<T>(response: ApiResponse<T>, messages: FailureMessages): HttpOutcome<T> {
+  if (response.status === 400) {
+    return { failure: { success: false, status: 400, message: response.error || messages.badRequest } };
+  }
+
+  if (response.status === 401) {
+    return { failure: { success: false, status: 401, message: response.error || UNAUTHENTICATED_MESSAGE } };
+  }
+
+  if (response.status === 403) {
+    return {
+      failure: { success: false, status: 403, data: response.data, message: response.error || messages.forbidden },
+    };
+  }
+
+  if (response.status === 404 && messages.notFound) {
+    return { failure: { success: false, status: 404, message: response.error || messages.notFound } };
+  }
+
+  if (response.error || !response.data) {
+    return {
+      failure: { success: false, status: response.status || 500, message: response.error || messages.unavailable },
+    };
+  }
+
+  return { data: response.data };
+}
+
 /**
  * Validate user identity, account status, roles, and organizational scope.
  *
@@ -108,52 +155,20 @@ export async function validateUserIdentity(userId: string): Promise<ValidationRe
     apiFetch<UserValidationData>(endpoint, { method: 'GET' })
   );
 
-  if (response.status === 400) {
-    return {
-      success: false,
-      status: 400,
-      message: response.error || 'Invalid user ID for cross-team identity validation.',
-    };
-  }
+  const outcome = mapHttpOutcome(response, {
+    badRequest: 'Invalid user ID for cross-team identity validation.',
+    forbidden: 'User account is inactive or access to identity validation was denied.',
+    notFound: 'Target user identity record was not found in the university identity directory.',
+    unavailable: 'Unable to connect to the cross-team validation API.',
+  });
+  if (outcome.failure) return outcome.failure;
+  const { data } = outcome;
 
-  if (response.status === 401) {
-    return {
-      success: false,
-      status: 401,
-      message: response.error || 'Unauthenticated API access. Consuming service credentials are invalid or missing.',
-    };
-  }
-
-  if (response.status === 403) {
-    return {
-      success: false,
-      status: 403,
-      message: response.error || 'User account is inactive or access to identity validation was denied.',
-      data: response.data,
-    };
-  }
-
-  if (response.status === 404) {
-    return {
-      success: false,
-      status: 404,
-      message: response.error || 'Target user identity record was not found in the university identity directory.',
-    };
-  }
-
-  if (response.error || !response.data) {
-    return {
-      success: false,
-      status: response.status || 500,
-      message: response.error || 'Unable to connect to the cross-team validation API.',
-    };
-  }
-
-  if (!response.data.valid || !response.data.isAccountActive || response.data.accountStatus !== 'ACTIVE') {
+  if (!data.valid || !data.isAccountActive || data.accountStatus !== 'ACTIVE') {
     return {
       success: false,
       status: response.status || 403,
-      data: response.data,
+      data,
       message: 'User identity validation failed because the account is not active or valid.',
     };
   }
@@ -161,7 +176,7 @@ export async function validateUserIdentity(userId: string): Promise<ValidationRe
   return {
     success: true,
     status: response.status,
-    data: response.data,
+    data,
   };
 }
 
@@ -176,7 +191,8 @@ export async function validateUserRole(
   requiredRoles: UserRole | UserRole[]
 ): Promise<ValidationResult<UserValidationData>> {
   const normalizedUserId = normalizeUserId(userId);
-  const rolesArray = Array.isArray(requiredRoles) ? requiredRoles : [requiredRoles];
+  // Duplicate roles add nothing to the check and would split the in-flight dedupe key.
+  const rolesArray = [...new Set(Array.isArray(requiredRoles) ? requiredRoles : [requiredRoles])];
 
   if (!normalizedUserId) {
     return {
@@ -205,56 +221,31 @@ export async function validateUserRole(
     })
   );
 
-  if (response.status === 400) {
-    return {
-      success: false,
-      status: 400,
-      message: response.error || 'Invalid role validation request.',
-    };
-  }
-
-  if (response.status === 401) {
-    return {
-      success: false,
-      status: 401,
-      message: response.error || 'Unauthenticated API access. Consuming service credentials are invalid or missing.',
-    };
-  }
-
-  if (response.status === 403) {
-    return {
-      success: false,
-      status: 403,
-      data: response.data,
-      message: response.error || 'User does not possess the required role(s) or the account is inactive.',
-    };
-  }
-
-  if (response.error || !response.data) {
-    return {
-      success: false,
-      status: response.status || 500,
-      message: response.error || 'Role validation request failed. Unable to connect to the backend validation service.',
-    };
-  }
+  const outcome = mapHttpOutcome(response, {
+    badRequest: 'Invalid role validation request.',
+    forbidden: 'User does not possess the required role(s) or the account is inactive.',
+    unavailable: 'Role validation request failed. Unable to connect to the backend validation service.',
+  });
+  if (outcome.failure) return outcome.failure;
+  const { data } = outcome;
 
   // The contract answers inactive accounts with 403; a 200 body reporting an inactive
   // account is still treated as a failure rather than silently authorized.
-  if (response.data.isAccountActive === false || (response.data.accountStatus && response.data.accountStatus !== 'ACTIVE')) {
+  if (data.isAccountActive === false || (data.accountStatus && data.accountStatus !== 'ACTIVE')) {
     return {
       success: false,
       status: response.status || 403,
-      data: response.data,
+      data,
       message: 'Role validation failed because the user account is not active.',
     };
   }
 
-  const roleAuthorized = response.data.isRoleAuthorized ?? response.data.valid;
+  const roleAuthorized = data.isRoleAuthorized ?? data.valid;
   if (!roleAuthorized) {
     return {
       success: false,
       status: response.status || 403,
-      data: response.data,
+      data,
       message: 'Role validation failed. The user does not satisfy the required role(s).',
     };
   }
@@ -262,7 +253,7 @@ export async function validateUserRole(
   return {
     success: true,
     status: response.status,
-    data: response.data,
+    data,
   };
 }
 
@@ -314,7 +305,6 @@ export async function validateUserAffiliation(
   return identityResult;
 }
 
-
 /**
  * Verify account activation using the dedicated published account-status endpoint.
  */
@@ -336,52 +326,20 @@ export async function validateAccountStatus(
     apiFetch<AccountStatusValidationData>(endpoint, { method: 'GET' })
   );
 
-  if (response.status === 400) {
-    return {
-      success: false,
-      status: 400,
-      message: response.error || 'Invalid user ID for account status validation.',
-    };
-  }
+  const outcome = mapHttpOutcome(response, {
+    badRequest: 'Invalid user ID for account status validation.',
+    forbidden: 'Account status validation was denied because the account is inactive.',
+    notFound: 'Target user identity record was not found in the university identity directory.',
+    unavailable: 'Unable to connect to account status verification service.',
+  });
+  if (outcome.failure) return outcome.failure;
+  const { data } = outcome;
 
-  if (response.status === 401) {
-    return {
-      success: false,
-      status: 401,
-      message: response.error || 'Unauthenticated API access. Consuming service credentials are invalid or missing.',
-    };
-  }
-
-  if (response.status === 403) {
-    return {
-      success: false,
-      status: 403,
-      data: response.data,
-      message: response.error || 'Account status validation was denied because the account is inactive.',
-    };
-  }
-
-  if (response.status === 404) {
-    return {
-      success: false,
-      status: 404,
-      message: response.error || 'Target user identity record was not found in the university identity directory.',
-    };
-  }
-
-  if (response.error || !response.data) {
-    return {
-      success: false,
-      status: response.status || 500,
-      message: response.error || 'Unable to connect to account status verification service.',
-    };
-  }
-
-  if (response.data.accountStatus !== 'ACTIVE' || response.data.isInactive) {
+  if (data.accountStatus !== 'ACTIVE' || data.isInactive) {
     return {
       success: false,
       status: response.status || 403,
-      data: response.data,
+      data,
       message: 'Account status validation failed: the user account is INACTIVE.',
     };
   }
@@ -389,6 +347,6 @@ export async function validateAccountStatus(
   return {
     success: true,
     status: response.status,
-    data: response.data,
+    data,
   };
 }
