@@ -8,7 +8,13 @@ export * from './FacultiesPage';
 export * from './ServiceUnitsPage';
 export * from './UsersPage';
 export * from './AccountStatusPage';
-
-
-
-
+export * from './MyServiceRequestsPage';
+export * from './RequestDetailsPage';
+export * from './CreateServiceRequestPage';
+export * from './ServiceRequestTimelinePage';
+export * from './TriagePage';
+export * from './ServiceDashboardPage';
+export * from './WorkOrdersPage';
+export * from './AssignmentsPage';
+export * from './TechnicianPage';
+export * from './group8';
