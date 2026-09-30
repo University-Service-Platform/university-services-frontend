@@ -2,7 +2,8 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { User, Shield, CheckCircle, AlertCircle, Edit2, Save, X, RefreshCw } from 'lucide-react';
 import { useAuth } from '@/auth';
 import { getProfile, updateProfile } from '@/services/profileService';
-import type { UserProfile } from '@/types';
+import { getUserAffiliations } from '@/services/affiliationService';
+import type { UserProfile, Affiliation } from '@/types';
 import { Card, CardHeader, CardBody, CardFooter, Button, Input, Badge, LoadingState, EmptyState, ErrorState } from '@/components/ui';
 import { formatRole } from '@/utils';
 import './ProfilePage.css';
@@ -11,6 +12,7 @@ export const ProfilePage: React.FC = () => {
   const { user: authUser, setAuthUser } = useAuth();
 
   const [fetchedProfile, setFetchedProfile] = useState<UserProfile | null>(null);
+  const [userAffiliation, setUserAffiliation] = useState<Affiliation | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(!authUser);
   const [fetchError, setFetchError] = useState<string | null>(null);
 
@@ -63,6 +65,23 @@ export const ProfilePage: React.FC = () => {
     };
   }, [authUser]);
 
+  useEffect(() => {
+    let isMounted = true;
+
+    if (currentProfile?.id) {
+      getUserAffiliations(currentProfile.id).then((res) => {
+        if (!isMounted) return;
+        if (res.success && res.data) {
+          setUserAffiliation(res.data);
+        }
+      });
+    }
+
+    return () => {
+      isMounted = false;
+    };
+  }, [currentProfile?.id]);
+
   const startEditing = () => {
     if (currentProfile) {
       setFirstName(currentProfile.firstName || '');
@@ -108,6 +127,7 @@ export const ProfilePage: React.FC = () => {
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSaving) return;
     setSaveError(null);
     setSaveSuccess(false);
 
@@ -117,7 +137,6 @@ export const ProfilePage: React.FC = () => {
 
     setIsSaving(true);
 
-    // Permitted payload: Strictly limited to editable fields (firstName, lastName, email, phone)
     const payload = {
       firstName: firstName.trim(),
       lastName: lastName.trim(),
@@ -142,15 +161,12 @@ export const ProfilePage: React.FC = () => {
       setSaveSuccess(true);
       setIsEditing(false);
     } else {
-      // Keep user in edit mode and preserve entered values on failure
       setSaveError(result.message || 'Failed to update profile. Unable to connect to backend profile service.');
     }
 
     setIsSaving(false);
   };
 
-
-  // 1. Loading State
   if (isLoading) {
     return (
       <div className="profile-container">
@@ -162,7 +178,6 @@ export const ProfilePage: React.FC = () => {
     );
   }
 
-  // 2. Error State
   if (fetchError && !currentProfile) {
     return (
       <div className="profile-container">
@@ -175,7 +190,6 @@ export const ProfilePage: React.FC = () => {
     );
   }
 
-  // 3. Empty / Unavailable State
   if (!currentProfile) {
     return (
       <div className="profile-container">
@@ -194,12 +208,16 @@ export const ProfilePage: React.FC = () => {
   }
 
   const userInitials = `${currentProfile.firstName?.[0] || 'U'}${currentProfile.lastName?.[0] || ''}`;
-  const primaryRole = currentProfile.roles && currentProfile.roles.length > 0 ? currentProfile.roles[0] : 'GUEST';
-  const statusVariant = currentProfile.accountStatus === 'ACTIVE' ? 'success' : 'danger';
+  const primaryRole = currentProfile.roles && currentProfile.roles.length > 0 ? currentProfile.roles[0] : null;
+  const statusLabel = currentProfile.accountStatus || 'UNKNOWN';
+  const statusVariant =
+    currentProfile.accountStatus === 'ACTIVE' ? 'success' : currentProfile.accountStatus === 'INACTIVE' ? 'danger' : 'neutral';
+
+  const facultyDisplay = userAffiliation?.facultyName || currentProfile.facultyName || currentProfile.facultyId || 'Not assigned';
+  const departmentDisplay = userAffiliation?.departmentName || currentProfile.departmentName || currentProfile.departmentId || 'Not assigned';
 
   return (
     <div className="profile-container">
-      {/* Alert Messages */}
       {saveSuccess && (
         <div className="profile-alert profile-alert-success" role="status">
           <CheckCircle size={18} />
@@ -214,7 +232,6 @@ export const ProfilePage: React.FC = () => {
         </div>
       )}
 
-      {/* Profile Header Banner Card */}
       <Card>
         <div className="profile-header-card">
           <div className="profile-avatar">{userInitials}</div>
@@ -229,7 +246,7 @@ export const ProfilePage: React.FC = () => {
                 </Badge>
               ))}
               <Badge variant={statusVariant}>
-                {currentProfile.accountStatus || 'ACTIVE'}
+                {statusLabel}
               </Badge>
             </div>
           </div>
@@ -246,9 +263,7 @@ export const ProfilePage: React.FC = () => {
         </div>
       </Card>
 
-      {/* Form Container */}
       <form onSubmit={handleSave} noValidate>
-        {/* Card 1: Read-Only System Identity & Organizational Information */}
         <Card style={{ marginBottom: '1.5rem' }}>
           <CardHeader
             title="University Identity & System Information"
@@ -263,25 +278,27 @@ export const ProfilePage: React.FC = () => {
 
               <div className="profile-field-item">
                 <span className="profile-field-label">Primary Role</span>
-                <span className="profile-field-value">{formatRole(primaryRole)}</span>
+                <span className="profile-field-value">{primaryRole ? formatRole(primaryRole) : 'Not assigned'}</span>
               </div>
 
               <div className="profile-field-item">
                 <span className="profile-field-label">Account Status</span>
-                <span className="profile-field-value">{currentProfile.accountStatus || 'ACTIVE'}</span>
+                <span className="profile-field-value">{currentProfile.accountStatus || 'Not available'}</span>
               </div>
 
               <div className="profile-field-item">
-                <span className="profile-field-label">Department / Unit</span>
-                <span className="profile-field-value">
-                  {currentProfile.departmentName || currentProfile.departmentId || currentProfile.serviceUnitName || currentProfile.serviceUnitId || 'General University Services'}
-                </span>
+                <span className="profile-field-label">Faculty Affiliation</span>
+                <span className="profile-field-value">{facultyDisplay}</span>
+              </div>
+
+              <div className="profile-field-item">
+                <span className="profile-field-label">Department Affiliation</span>
+                <span className="profile-field-value">{departmentDisplay}</span>
               </div>
             </div>
           </CardBody>
         </Card>
 
-        {/* Card 2: Contact & Personal Information */}
         <Card>
           <CardHeader
             title="Personal & Contact Information"
@@ -352,7 +369,6 @@ export const ProfilePage: React.FC = () => {
                   disabled={isSaving}
                 />
               </div>
-
             ) : (
               <div className="profile-grid">
                 <div className="profile-field-item">

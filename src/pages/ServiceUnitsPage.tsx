@@ -18,6 +18,7 @@ import {
   Modal,
   LoadingState,
   EmptyState,
+  ErrorState,
 } from '@/components/ui';
 import './ServiceUnitsPage.css';
 
@@ -59,7 +60,7 @@ export const ServiceUnitsPage: React.FC = () => {
     setIsLoading(true);
     setFetchError(null);
     getServiceUnits().then((result) => {
-      if (result.success && result.data && result.data.length > 0) {
+      if (result.success && result.data) {
         setServiceUnits(result.data);
       } else {
         setFetchError(result.message || 'Unable to connect to Service Unit Management service.');
@@ -72,7 +73,7 @@ export const ServiceUnitsPage: React.FC = () => {
     let isMounted = true;
     getServiceUnits().then((result) => {
       if (!isMounted) return;
-      if (result.success && result.data && result.data.length > 0) {
+      if (result.success && result.data) {
         setServiceUnits(result.data);
       } else {
         setFetchError(result.message || 'Unable to connect to Service Unit Management service.');
@@ -135,6 +136,7 @@ export const ServiceUnitsPage: React.FC = () => {
 
   const handleSaveServiceUnit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSaving) return;
     setSaveError(null);
     setSuccessMessage(null);
 
@@ -169,7 +171,7 @@ export const ServiceUnitsPage: React.FC = () => {
   };
 
   const handleDeleteServiceUnit = async () => {
-    if (!deletingUnit) return;
+    if (!deletingUnit || isDeleting) return;
 
     setIsDeleting(true);
     setDeleteError(null);
@@ -236,11 +238,24 @@ export const ServiceUnitsPage: React.FC = () => {
         </Card>
       )}
 
-      {/* Content Area: Loading / Empty / Loaded States */}
+      {fetchError && serviceUnits.length > 0 && !isLoading && (
+        <div className="service-units-alert service-units-alert-error" role="alert">
+          <AlertCircle size={18} />
+          <span>{fetchError}</span>
+        </div>
+      )}
+
+      {/* Content Area: Loading / Error / Empty / Loaded States */}
       {isLoading ? (
         <LoadingState
           title="Loading Service Units..."
           description="Retrieving service unit records from the university directory."
+        />
+      ) : fetchError && serviceUnits.length === 0 ? (
+        <ErrorState
+          title="Unable to Load Service Units"
+          description={fetchError}
+          onRetry={fetchServiceUnitsData}
         />
       ) : serviceUnits.length > 0 ? (
         <div className="service-units-grid">
@@ -288,20 +303,17 @@ export const ServiceUnitsPage: React.FC = () => {
         </div>
       ) : (
         <EmptyState
-          title="Service Unit Management API Integration Pending"
-          description={
-            fetchError ||
-            'The official backend Service Unit Management API contract is not yet available in the repository. The service unit management interface and service layer boundary are prepared to connect to backend services.'
-          }
+          title="No Service Units Found"
+          description="The Service Unit Management service returned no records."
           icon={<Layers className="state-icon" />}
           action={
             <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center' }}>
               <Button variant="outline" icon={<RefreshCw size={16} />} onClick={fetchServiceUnitsData}>
-                Retry Connection
+                Refresh
               </Button>
               {canManageServiceUnits && (
                 <Button variant="primary" icon={<Plus size={16} />} onClick={openCreateModal}>
-                  Open Create Modal
+                  Add Service Unit
                 </Button>
               )}
             </div>
@@ -312,7 +324,9 @@ export const ServiceUnitsPage: React.FC = () => {
       {/* Create / Edit Service Unit Modal */}
       <Modal
         isOpen={isFormModalOpen}
-        onClose={() => setIsFormModalOpen(false)}
+        onClose={() => {
+          if (!isSaving) setIsFormModalOpen(false);
+        }}
         title={editingUnit ? 'Edit Service Unit' : 'Add New Service Unit'}
         footer={
           <>
@@ -388,7 +402,9 @@ export const ServiceUnitsPage: React.FC = () => {
       {/* Delete Confirmation Modal */}
       <Modal
         isOpen={Boolean(deletingUnit)}
-        onClose={() => setDeletingUnit(null)}
+        onClose={() => {
+          if (!isDeleting) setDeletingUnit(null);
+        }}
         title="Delete Service Unit"
         footer={
           <>

@@ -18,6 +18,7 @@ import {
   Modal,
   LoadingState,
   EmptyState,
+  ErrorState,
 } from '@/components/ui';
 import './FacultiesPage.css';
 
@@ -59,7 +60,7 @@ export const FacultiesPage: React.FC = () => {
     setIsLoading(true);
     setFetchError(null);
     getFaculties().then((result) => {
-      if (result.success && result.data && result.data.length > 0) {
+      if (result.success && result.data) {
         setFaculties(result.data);
       } else {
         setFetchError(result.message || 'Unable to connect to Faculty Management service.');
@@ -72,7 +73,7 @@ export const FacultiesPage: React.FC = () => {
     let isMounted = true;
     getFaculties().then((result) => {
       if (!isMounted) return;
-      if (result.success && result.data && result.data.length > 0) {
+      if (result.success && result.data) {
         setFaculties(result.data);
       } else {
         setFetchError(result.message || 'Unable to connect to Faculty Management service.');
@@ -135,6 +136,7 @@ export const FacultiesPage: React.FC = () => {
 
   const handleSaveFaculty = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSaving) return;
     setSaveError(null);
     setSuccessMessage(null);
 
@@ -169,7 +171,7 @@ export const FacultiesPage: React.FC = () => {
   };
 
   const handleDeleteFaculty = async () => {
-    if (!deletingFaculty) return;
+    if (!deletingFaculty || isDeleting) return;
 
     setIsDeleting(true);
     setDeleteError(null);
@@ -236,11 +238,24 @@ export const FacultiesPage: React.FC = () => {
         </Card>
       )}
 
-      {/* Content Area: Loading / Empty / Loaded States */}
+      {fetchError && faculties.length > 0 && !isLoading && (
+        <div className="faculties-alert faculties-alert-error" role="alert">
+          <AlertCircle size={18} />
+          <span>{fetchError}</span>
+        </div>
+      )}
+
+      {/* Content Area: Loading / Error / Empty / Loaded States */}
       {isLoading ? (
         <LoadingState
           title="Loading University Faculties..."
           description="Retrieving faculty records from the university directory."
+        />
+      ) : fetchError && faculties.length === 0 ? (
+        <ErrorState
+          title="Unable to Load Faculties"
+          description={fetchError}
+          onRetry={fetchFacultiesData}
         />
       ) : faculties.length > 0 ? (
         <div className="faculties-grid">
@@ -288,20 +303,17 @@ export const FacultiesPage: React.FC = () => {
         </div>
       ) : (
         <EmptyState
-          title="Faculty Management API Integration Pending"
-          description={
-            fetchError ||
-            'The official backend Faculty Management API contract is not yet available in the repository. The faculty management interface and service layer boundary are prepared to connect to backend services.'
-          }
+          title="No Faculties Found"
+          description="The Faculty Management service returned no records."
           icon={<GraduationCap className="state-icon" />}
           action={
             <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center' }}>
               <Button variant="outline" icon={<RefreshCw size={16} />} onClick={fetchFacultiesData}>
-                Retry Connection
+                Refresh
               </Button>
               {canManageFaculties && (
                 <Button variant="primary" icon={<Plus size={16} />} onClick={openCreateModal}>
-                  Open Create Modal
+                  Add Faculty
                 </Button>
               )}
             </div>
@@ -312,7 +324,9 @@ export const FacultiesPage: React.FC = () => {
       {/* Create / Edit Faculty Modal */}
       <Modal
         isOpen={isFormModalOpen}
-        onClose={() => setIsFormModalOpen(false)}
+        onClose={() => {
+          if (!isSaving) setIsFormModalOpen(false);
+        }}
         title={editingFaculty ? 'Edit Faculty' : 'Add New Faculty'}
         footer={
           <>
@@ -388,7 +402,9 @@ export const FacultiesPage: React.FC = () => {
       {/* Delete Confirmation Modal */}
       <Modal
         isOpen={Boolean(deletingFaculty)}
-        onClose={() => setDeletingFaculty(null)}
+        onClose={() => {
+          if (!isDeleting) setDeletingFaculty(null);
+        }}
         title="Delete Faculty"
         footer={
           <>

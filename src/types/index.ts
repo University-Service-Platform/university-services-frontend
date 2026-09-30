@@ -3,17 +3,20 @@
  */
 
 export type UserRole =
-  | 'STUDENT'
-  | 'ACADEMIC_STAFF'
-  | 'ADMIN_STAFF'
-  | 'SERVICE_DESK_OFFICER'
-  | 'TECHNICIAN'
-  | 'SERVICE'
   | 'ADMIN'
   | 'STAFF'
+  | 'STUDENT'
   | 'DEAN'
   | 'HOD'
-  | 'GUEST';
+  | 'GUEST'
+  | 'ACADEMIC_STAFF'
+  | 'ADMIN_STAFF'
+  | 'ADMINISTRATIVE_STAFF'
+  | 'EVENT_ORGANIZER'
+  | 'SERVICE_DESK_OFFICER'
+  | 'TECHNICIAN'
+  | 'RESOURCE_MANAGER'
+  | 'SERVICE';
 
 export type AccountStatus = 'ACTIVE' | 'INACTIVE';
 
@@ -31,6 +34,34 @@ export interface UserProfile {
   serviceUnitName?: string;
   accountStatus?: AccountStatus;
   phone?: string;
+}
+
+export interface Affiliation {
+  id: string;
+  userId: string;
+  departmentId: string;
+  facultyId?: string;
+  departmentName?: string;
+  facultyName?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface AffiliationCreatePayload {
+  userId: string;
+  departmentId: string;
+  facultyId?: string;
+}
+
+export interface AffiliationUpdatePayload {
+  departmentId: string;
+  facultyId?: string;
+}
+
+export interface AffiliationServiceResult<T = unknown> {
+  success: boolean;
+  data?: T;
+  message?: string;
 }
 
 /**
@@ -181,6 +212,42 @@ export interface RecordResolutionPayload {
 }
 
 export type WorkOrderSummaryGroupByDimension = 'status' | 'technician' | 'serviceTeam';
+
+/**
+ * UNCONFIRMED PLACEHOLDER INTEGRATION BOUNDARY PENDING OFFICIAL BACKEND CONTRACT:
+ * The official backend Department DTO schema is not yet documented in the repository.
+ * The fields below represent an unconfirmed placeholder UI/service boundary subject to change upon official contract.
+ */
+export interface Department {
+  id: string;
+  name: string;
+  code: string;
+  facultyId: string;
+  facultyName?: string;
+  description?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface DepartmentCreatePayload {
+  name: string;
+  code: string;
+  facultyId: string;
+  description?: string;
+}
+
+export interface DepartmentUpdatePayload {
+  name?: string;
+  code?: string;
+  facultyId?: string;
+  description?: string;
+}
+
+export interface DepartmentServiceResult<T = unknown> {
+  success: boolean;
+  data?: T;
+  message?: string;
+}
 
 export interface NavItem {
   label: string;

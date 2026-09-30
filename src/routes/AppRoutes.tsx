@@ -7,6 +7,7 @@ import {
   ProfilePage,
   RolesPage,
   FacultiesPage,
+  DepartmentsPage,
   ServiceUnitsPage,
   UsersPage,
   AccountStatusPage,
@@ -36,6 +37,8 @@ const renderRoutePage = (path: string) => {
       return <RolesPage />;
     case '/faculties':
       return <FacultiesPage />;
+    case '/departments':
+      return <DepartmentsPage />;
     case '/service-units':
       return <ServiceUnitsPage />;
     case '/requests/my':

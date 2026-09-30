@@ -6,6 +6,7 @@ export * from './RolesPage';
 export * from './AccountInactivePage';
 export * from './FacultiesPage';
 export * from './ServiceUnitsPage';
+export * from './DepartmentsPage';
 export * from './UsersPage';
 export * from './AccountStatusPage';
 export * from './MyServiceRequestsPage';

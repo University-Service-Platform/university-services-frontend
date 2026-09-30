@@ -10,12 +10,31 @@ import type { RouteNavigationConfig } from './navigationConfig';
  * services (BR8-09).
  */
 
-/** Event organizers: academic & administrative staff (BR8-01). */
-export const G8_ORGANIZER_ROLES: UserRole[] = ['ADMIN', 'STAFF', 'HOD', 'DEAN'];
-/** Staff allowed to publish targeted announcements (US8-08). */
-export const G8_ANNOUNCER_ROLES: UserRole[] = ['ADMIN', 'STAFF'];
-/** Staff allowed to view feedback summaries and the engagement dashboard (US8-13). */
-export const G8_INSIGHT_ROLES: UserRole[] = ['ADMIN', 'STAFF', 'HOD', 'DEAN'];
+/*
+ * Role groups use the Group 5 Identity Service role names and match what the Group 8 services
+ * enforce, so the UI never offers an action the backend would refuse (USMG8-132).
+ */
+
+/** Create/edit/publish/cancel events - event-service MANAGE_ROLES (BR8-01). */
+export const G8_ORGANIZER_ROLES: UserRole[] = ['EVENT_ORGANIZER', 'ACADEMIC_STAFF', 'ADMIN'];
+/** Per-event registration summary - event-service SummaryController. */
+export const G8_REGISTRATION_SUMMARY_ROLES: UserRole[] = [...G8_ORGANIZER_ROLES, 'ADMINISTRATIVE_STAFF'];
+/** Publish targeted announcements - Group 5: administrative staff "publishes announcements" (US8-08). */
+export const G8_ANNOUNCER_ROLES: UserRole[] = ['ADMINISTRATIVE_STAFF', 'ADMIN'];
+/** Feedback summaries and the engagement dashboard (US8-13). */
+export const G8_INSIGHT_ROLES: UserRole[] = ['ADMINISTRATIVE_STAFF', 'ADMIN', 'EVENT_ORGANIZER', 'ACADEMIC_STAFF'];
+
+/** Roles an event can be restricted to (event eligibility rule `roles`). */
+export const G8_ELIGIBLE_ROLE_OPTIONS: UserRole[] = [
+  'STUDENT',
+  'ACADEMIC_STAFF',
+  'ADMINISTRATIVE_STAFF',
+  'EVENT_ORGANIZER',
+  'SERVICE_DESK_OFFICER',
+  'TECHNICIAN',
+  'RESOURCE_MANAGER',
+  'ADMIN',
+];
 
 export const GROUP8_ROUTES_CONFIG: RouteNavigationConfig[] = [
   {

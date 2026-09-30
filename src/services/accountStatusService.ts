@@ -8,78 +8,89 @@ export interface AccountStatusResult {
   message?: string;
 }
 
-/**
- * UNCONFIRMED INTEGRATION BOUNDARY:
- * Official backend API contract for account status verification endpoints is not yet documented in the repository.
- * The endpoint constant below serves as a placeholder integration boundary that will be updated
- * once the official backend OpenAPI/Swagger specification is provided by the backend team.
- */
-export const ACCOUNT_STATUS_API_ENDPOINT = import.meta.env.VITE_ACCOUNT_STATUS_API_ENDPOINT || '/users/account-status';
+function isKnownAccountStatus(value: unknown): value is AccountStatus {
+  return value === 'ACTIVE' || value === 'INACTIVE';
+}
 
+/**
+ * Read a user's account status using official GET /users/{userId}/status
+ */
 export async function checkAccountStatus(userId?: string): Promise<AccountStatusResult> {
-  if (!userId) {
+  if (!userId || !userId.trim()) {
     return {
       success: false,
       message: 'User ID is required to verify account status.',
     };
   }
 
-  const response = await apiFetch<{ accountStatus: AccountStatus }>(`${ACCOUNT_STATUS_API_ENDPOINT}/${userId}`, {
+  const endpoint = `/users/${encodeURIComponent(userId.trim())}/status`;
+  const response = await apiFetch<Record<string, unknown>>(endpoint, {
     method: 'GET',
   });
 
   if (response.error || !response.data) {
     return {
       success: false,
-      message: 'Unable to connect to account status verification service. Official backend contract is pending integration.',
+      message: response.error || 'Unable to verify account status.',
     };
   }
 
-  const status = response.data.accountStatus;
-  const isInactive = status !== 'ACTIVE';
+  const resBody = response.data;
+  const resData = (resBody?.data || resBody) as Record<string, unknown>;
+  const rawStatus = String(resData?.status || resData?.accountStatus || '').toUpperCase();
+
+  if (!isKnownAccountStatus(rawStatus)) {
+    return {
+      success: false,
+      message: 'Unknown account status returned by server.',
+    };
+  }
 
   return {
     success: true,
-    accountStatus: status,
-    isInactive,
+    accountStatus: rawStatus,
+    isInactive: rawStatus !== 'ACTIVE',
   };
 }
 
 /**
- * UNCONFIRMED PLACEHOLDER INTEGRATION BOUNDARY PENDING OFFICIAL BACKEND CONTRACT:
- * Update account status endpoint boundary. Official backend contract is pending.
+ * Official status endpoint: PATCH /users/{user_id}/status
  */
 export async function updateAccountStatus(
   userId: string,
   accountStatus: AccountStatus
 ): Promise<AccountStatusResult> {
-  if (!userId) {
+  const normalizedUserId = userId?.trim();
+  if (!normalizedUserId) {
     return {
       success: false,
       message: 'User ID is required to update account status.',
     };
   }
 
-  const response = await apiFetch<{ accountStatus: AccountStatus }>(`${ACCOUNT_STATUS_API_ENDPOINT}/${userId}`, {
+  const endpoint = `/users/${encodeURIComponent(normalizedUserId)}/status`;
+  const response = await apiFetch<Record<string, unknown>>(endpoint, {
     method: 'PATCH',
-    body: JSON.stringify({ accountStatus }),
+    body: JSON.stringify({ status: accountStatus }),
   });
 
-  if (response.error || !response.data) {
+  if (response.error) {
     return {
       success: false,
-      message: response.error || 'Failed to update account status. Unable to connect to account status backend service.',
+      message: response.error,
     };
   }
 
-  const status = response.data.accountStatus;
-  const isInactive = status !== 'ACTIVE';
+  const resBody = response.data;
+  const resData = (resBody?.data || resBody) as Record<string, unknown> | undefined;
+  const rawReturnedStatus = String(resData?.status || resData?.accountStatus || accountStatus).toUpperCase();
+  const returnedStatus: AccountStatus = isKnownAccountStatus(rawReturnedStatus) ? rawReturnedStatus : accountStatus;
 
   return {
     success: true,
-    accountStatus: status,
-    isInactive,
-    message: `Account status updated to ${status} successfully.`,
+    accountStatus: returnedStatus,
+    isInactive: returnedStatus !== 'ACTIVE',
+    message: `Account status updated to ${returnedStatus} successfully.`,
   };
 }
 
@@ -96,4 +107,3 @@ export async function activateAccount(userId: string): Promise<AccountStatusResu
 export async function deactivateAccount(userId: string): Promise<AccountStatusResult> {
   return updateAccountStatus(userId, 'INACTIVE');
 }
-

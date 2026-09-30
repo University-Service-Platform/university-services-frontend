@@ -10,11 +10,12 @@ import {
   ROLE_LABELS,
   describeAudience,
 } from '@/components/group8';
+import { G8_ELIGIBLE_ROLE_OPTIONS } from '@/config/group8Routes';
 import { getFaculties } from '@/services/facultyService';
 import { getServiceUnits } from '@/services/serviceUnitService';
 import { createAnnouncement, previewAudience } from '@/services/group8';
 import { useAppDispatch, userActivityRecorded } from '@/store';
-import type { AudiencePreview, AudienceRule, AudienceType, UserRole } from '@/types';
+import type { AudiencePreview, AudienceRule, AudienceType } from '@/types';
 import { cn } from '@/utils';
 import './group8Pages.css';
 
@@ -31,7 +32,7 @@ const AUDIENCE_TYPES: Array<{ value: AudienceType; label: string; hint: string }
   { value: 'SERVICE_UNIT', label: 'By service unit', hint: 'Staff of the selected service units.' },
 ];
 
-const ROLE_OPTIONS: Option[] = (['STUDENT', 'STAFF', 'HOD', 'DEAN', 'ADMIN'] as UserRole[]).map((role) => ({
+const ROLE_OPTIONS: Option[] = G8_ELIGIBLE_ROLE_OPTIONS.map((role) => ({
   value: role,
   label: ROLE_LABELS[role],
 }));
@@ -127,8 +128,9 @@ export const AnnouncementFormPage: React.FC = () => {
     setErrors((prev) => ({ ...prev, audience: undefined }));
   };
 
-  const toggleValue = (value: string) => {
-    setSelectedValues((prev) => (prev.includes(value) ? prev.filter((item) => item !== value) : [...prev, value]));
+  // The communication service stores one audience value per announcement.
+  const chooseValue = (value: string) => {
+    setSelectedValues([value]);
     setErrors((prev) => ({ ...prev, audience: undefined }));
   };
 
@@ -138,7 +140,8 @@ export const AnnouncementFormPage: React.FC = () => {
     else if (title.trim().length > 150) found.title = 'Title must be 150 characters or fewer.';
     if (content.trim().length < 10) found.content = 'Write at least a short message (10+ characters).';
     if (!audienceType) found.audience = 'Choose who should receive this announcement.';
-    else if (!hasAudienceValues) found.audience = 'Select at least one recipient group.';
+    else if (!hasAudienceValues) found.audience = 'Select the recipient group.';
+    else if (!pickerOptions && splitIds(typedIds).length > 1) found.audience = 'Enter one directory ID - an announcement targets one group.';
     setErrors(found);
     return Object.keys(found).length === 0;
   };
@@ -264,14 +267,15 @@ export const AnnouncementFormPage: React.FC = () => {
             {audienceType && audienceType !== 'ALL' && (
               pickerOptions ? (
                 <fieldset className="g8-fieldset">
-                  <legend className="form-label">Select recipients</legend>
-                  <div className="g8-checkbox-row">
+                  <legend className="form-label">Select the recipient group</legend>
+                  <div className="g8-checkbox-row" role="radiogroup">
                     {pickerOptions.map((option) => (
                       <label key={option.value} className="g8-checkbox">
                         <input
-                          type="checkbox"
+                          type="radio"
+                          name="audienceValue"
                           checked={selectedValues.includes(option.value)}
-                          onChange={() => toggleValue(option.value)}
+                          onChange={() => chooseValue(option.value)}
                         />
                         <span>{option.label}</span>
                       </label>
@@ -280,14 +284,14 @@ export const AnnouncementFormPage: React.FC = () => {
                 </fieldset>
               ) : (
                 <Input
-                  label="Directory IDs"
-                  placeholder={audienceType === 'DEPARTMENT' ? 'e.g. DEP-CS, DEP-MATH' : 'e.g. FAC-SCI or SU-LIB'}
+                  label="Directory ID"
+                  placeholder={audienceType === 'DEPARTMENT' ? 'e.g. CS' : audienceType === 'FACULTY' ? 'e.g. FSC' : 'e.g. ITHD'}
                   value={typedIds}
                   onChange={(e) => {
                     setTypedIds(e.target.value);
                     setErrors((prev) => ({ ...prev, audience: undefined }));
                   }}
-                  helperText="Comma-separated Group 5 IDs. The directory list could not be loaded, so enter IDs directly."
+                  helperText="One Group 5 code. The directory list could not be loaded, so enter it directly."
                 />
               )
             )}

@@ -11,6 +11,7 @@ import {
   fromDateTimeLocal,
   toDateTimeLocal,
 } from '@/components/group8';
+import { G8_ELIGIBLE_ROLE_OPTIONS } from '@/config/group8Routes';
 import { createEvent, getEvent, updateEvent, validateVenue } from '@/services/group8';
 import type { EventMode, EventUpsertRequest, UserRole, VenueValidationResult } from '@/types';
 import { cn } from '@/utils';
@@ -34,7 +35,6 @@ interface FormState {
 
 type FieldErrors = Partial<Record<keyof FormState, string>>;
 
-const ELIGIBLE_ROLE_OPTIONS: UserRole[] = ['STUDENT', 'STAFF', 'HOD', 'DEAN', 'ADMIN'];
 
 const EMPTY_FORM: FormState = {
   title: '',
@@ -70,12 +70,17 @@ function validate(form: FormState): FieldErrors {
   else if (!Number.isInteger(capacity) || capacity <= 0) errors.capacity = 'Capacity must be a positive whole number.';
 
   if (form.mode === 'PHYSICAL' && !form.venueResourceId.trim()) {
-    errors.venueResourceId = 'Enter the Facility Services resource ID of the venue.';
+    errors.venueResourceId = 'Enter the Facility Services resource code of the venue.';
   }
   if (form.mode === 'ONLINE') {
-    if (!form.onlineLink.trim()) errors.onlineLink = 'Enter the meeting link.';
-    else if (!/^https?:\/\/\S+$/i.test(form.onlineLink.trim())) errors.onlineLink = 'Enter a valid http(s) link.';
+    if (form.onlineLink.trim() && !/^https?:\/\/\S+$/i.test(form.onlineLink.trim())) {
+      errors.onlineLink = 'Enter a valid http(s) link, or leave it empty.';
+    }
   }
+
+  // The event-service eligibility rule holds a single faculty and a single department code.
+  if (splitIds(form.facultyIds).length > 1) errors.facultyIds = 'Enter one faculty code.';
+  if (splitIds(form.departmentIds).length > 1) errors.departmentIds = 'Enter one department code.';
 
   if (!form.startTime) errors.startTime = 'Choose when the event starts.';
   if (!form.endTime) errors.endTime = 'Choose when the event ends.';
@@ -338,12 +343,12 @@ export const EventFormPage: React.FC = () => {
             {form.mode === 'PHYSICAL' ? (
               <div className="g8-venue-row">
                 <Input
-                  label="Venue resource ID"
-                  placeholder="e.g. RES-204"
+                  label="Venue resource code"
+                  placeholder="e.g. LAB-101"
                   value={form.venueResourceId}
                   onChange={(e) => update('venueResourceId', e.target.value)}
                   error={errors.venueResourceId}
-                  helperText="Use the resource ID from Facility Services."
+                  helperText="Group 6 resource code. It is validated again when you publish."
                 />
                 <Button type="button" variant="outline" onClick={handleVenueCheck} isLoading={isCheckingVenue}>
                   Check venue
@@ -351,12 +356,12 @@ export const EventFormPage: React.FC = () => {
               </div>
             ) : (
               <Input
-                label="Meeting link"
+                label="Meeting link (optional)"
                 placeholder="https://"
                 value={form.onlineLink}
                 onChange={(e) => update('onlineLink', e.target.value)}
                 error={errors.onlineLink}
-                helperText="Only shown to registered participants."
+                helperText="The event service does not store meeting links yet - share joining details with registrants directly."
               />
             )}
 
@@ -431,7 +436,7 @@ export const EventFormPage: React.FC = () => {
             <fieldset className="g8-fieldset">
               <legend className="form-label">Eligible roles</legend>
               <div className="g8-checkbox-row">
-                {ELIGIBLE_ROLE_OPTIONS.map((role) => (
+                {G8_ELIGIBLE_ROLE_OPTIONS.map((role) => (
                   <label key={role} className="g8-checkbox">
                     <input type="checkbox" checked={form.roles.includes(role)} onChange={() => toggleRole(role)} />
                     <span>{ROLE_LABELS[role]}</span>
@@ -441,18 +446,20 @@ export const EventFormPage: React.FC = () => {
             </fieldset>
             <div className="g8-form-grid">
               <Input
-                label="Faculty IDs (optional)"
-                placeholder="e.g. FAC-SCI, FAC-CMS"
+                label="Faculty code (optional)"
+                placeholder="e.g. FSC"
                 value={form.facultyIds}
                 onChange={(e) => update('facultyIds', e.target.value)}
-                helperText="Comma-separated Group 5 faculty IDs."
+                error={errors.facultyIds}
+                helperText="One Group 5 faculty code."
               />
               <Input
-                label="Department IDs (optional)"
-                placeholder="e.g. DEP-CS"
+                label="Department code (optional)"
+                placeholder="e.g. CS"
                 value={form.departmentIds}
                 onChange={(e) => update('departmentIds', e.target.value)}
-                helperText="Comma-separated Group 5 department IDs."
+                error={errors.departmentIds}
+                helperText="One Group 5 department code."
               />
             </div>
           </CardBody>

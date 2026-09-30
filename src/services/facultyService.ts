@@ -37,10 +37,10 @@ export async function getFaculties(): Promise<FacultyServiceResult<Faculty[]>> {
     method: 'GET',
   });
 
-  if (response.error || !response.data) {
+  if (response.error || !Array.isArray(response.data)) {
     return {
       success: false,
-      message: 'Unable to connect to Faculty Management service. Official backend contract is pending integration.',
+      message: response.error || 'Unable to connect to Faculty Management service. Official backend contract is pending integration.',
     };
   }
 
@@ -71,7 +71,7 @@ export async function createFaculty(payload: FacultyCreatePayload): Promise<Facu
 }
 
 export async function updateFaculty(id: string, payload: FacultyUpdatePayload): Promise<FacultyServiceResult<Faculty>> {
-  const response = await apiFetch<Faculty>(`${FACULTIES_API_ENDPOINT}/${id}`, {
+  const response = await apiFetch<Faculty>(`${FACULTIES_API_ENDPOINT}/${encodeURIComponent(id)}`, {
     method: 'PUT',
     body: JSON.stringify(payload),
   });
@@ -91,7 +91,7 @@ export async function updateFaculty(id: string, payload: FacultyUpdatePayload): 
 }
 
 export async function deleteFaculty(id: string): Promise<FacultyServiceResult<null>> {
-  const response = await apiFetch<null>(`${FACULTIES_API_ENDPOINT}/${id}`, {
+  const response = await apiFetch<null>(`${FACULTIES_API_ENDPOINT}/${encodeURIComponent(id)}`, {
     method: 'DELETE',
   });
 

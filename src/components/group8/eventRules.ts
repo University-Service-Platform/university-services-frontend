@@ -27,7 +27,7 @@ export function getRegistrationAvailability(event: UniversityEvent, now = Date.n
   if (now > new Date(event.registrationClosesAt).getTime()) {
     return { open: false, reason: `Registration closed on ${formatDateTime(event.registrationClosesAt)}.` };
   }
-  if (event.confirmedCount >= event.capacity) {
+  if (event.confirmedCount !== undefined && event.confirmedCount >= event.capacity) {
     return { open: false, reason: 'Capacity reached - registration is closed.' };
   }
   return { open: true, reason: `Registration open until ${formatDateTime(event.registrationClosesAt)}.` };
@@ -40,10 +40,13 @@ export const ROLE_LABELS: Record<UserRole, string> = {
   DEAN: 'Dean',
   HOD: 'Head of Department',
   GUEST: 'Guest',
-  ACADEMIC_STAFF: 'Academic Staff',
-  ADMIN_STAFF: 'Administrative Staff',
-  SERVICE_DESK_OFFICER: 'Service Desk Officer',
+  ACADEMIC_STAFF: 'Academic staff',
+  ADMIN_STAFF: 'Administrative staff',
+  ADMINISTRATIVE_STAFF: 'Administrative staff',
+  EVENT_ORGANIZER: 'Event organizer',
+  SERVICE_DESK_OFFICER: 'Service desk officer',
   TECHNICIAN: 'Technician',
+  RESOURCE_MANAGER: 'Resource manager',
   SERVICE: 'Service Team',
 };
 

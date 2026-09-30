@@ -1,11 +1,6 @@
 import { apiFetch } from './apiClient';
 import type { UserProfile } from '@/types';
 
-/**
- * UNCONFIRMED PLACEHOLDER INTEGRATION BOUNDARY PENDING OFFICIAL BACKEND CONTRACT:
- * The official backend User Management DTO payloads are not yet documented in the repository.
- * The payload structures below represent an unconfirmed integration boundary subject to change.
- */
 export interface UserCreatePayload {
   email: string;
   firstName: string;
@@ -26,12 +21,6 @@ export interface UserServiceResult<T = unknown> {
   message?: string;
 }
 
-/**
- * UNCONFIRMED PLACEHOLDER INTEGRATION BOUNDARY PENDING OFFICIAL BACKEND CONTRACT:
- * The official backend API contract for User Management endpoints is not yet documented in the repository.
- * The endpoint constant below serves as a placeholder integration boundary that will be updated
- * once the official backend OpenAPI/Swagger specification is provided by the backend team.
- */
 export const USERS_API_ENDPOINT = import.meta.env.VITE_USERS_API_ENDPOINT || '/users';
 
 export async function getUsers(): Promise<UserServiceResult<UserProfile[]>> {
@@ -39,10 +28,10 @@ export async function getUsers(): Promise<UserServiceResult<UserProfile[]>> {
     method: 'GET',
   });
 
-  if (response.error || !response.data) {
+  if (response.error || !Array.isArray(response.data)) {
     return {
       success: false,
-      message: 'Unable to connect to User Management service. Official backend contract is pending integration.',
+      message: response.error || 'Unable to connect to User Management service.',
     };
   }
 
@@ -73,7 +62,7 @@ export async function createUser(payload: UserCreatePayload): Promise<UserServic
 }
 
 export async function updateUser(id: string, payload: UserUpdatePayload): Promise<UserServiceResult<UserProfile>> {
-  const response = await apiFetch<UserProfile>(`${USERS_API_ENDPOINT}/${id}`, {
+  const response = await apiFetch<UserProfile>(`${USERS_API_ENDPOINT}/${encodeURIComponent(id)}`, {
     method: 'PUT',
     body: JSON.stringify(payload),
   });
@@ -93,7 +82,7 @@ export async function updateUser(id: string, payload: UserUpdatePayload): Promis
 }
 
 export async function deleteUser(id: string): Promise<UserServiceResult<null>> {
-  const response = await apiFetch<null>(`${USERS_API_ENDPOINT}/${id}`, {
+  const response = await apiFetch<null>(`${USERS_API_ENDPOINT}/${encodeURIComponent(id)}`, {
     method: 'DELETE',
   });
 
