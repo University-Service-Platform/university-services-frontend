@@ -40,6 +40,7 @@ import {
   Modal,
   LoadingState,
   EmptyState,
+  ErrorState,
 } from '@/components/ui';
 import { formatRole } from '@/utils';
 import './UsersPage.css';
@@ -63,6 +64,7 @@ export const UsersPage: React.FC = () => {
   const [faculties, setFaculties] = useState<Faculty[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
   const [serviceUnits, setServiceUnits] = useState<ServiceUnit[]>([]);
+  const [directoryError, setDirectoryError] = useState<string | null>(null);
 
   // Search & Filter State
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -87,6 +89,7 @@ export const UsersPage: React.FC = () => {
   // Delete Modal State
   const [deletingUser, setDeletingUser] = useState<UserProfile | null>(null);
   const [isDeleting, setIsDeleting] = useState<boolean>(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   // Status Banners
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -103,10 +106,10 @@ export const UsersPage: React.FC = () => {
       getServiceUnits(),
     ]);
 
-    if (usersRes.success && usersRes.data && usersRes.data.length > 0) {
+    // A successful empty list is a valid empty state, not a connection error.
+    if (usersRes.success && usersRes.data) {
       setUsers(usersRes.data);
     } else {
-      setUsers([]);
       setFetchError(usersRes.message || 'Unable to connect to User Management service.');
     }
 
@@ -119,6 +122,17 @@ export const UsersPage: React.FC = () => {
     if (unitsRes.success && unitsRes.data) {
       setServiceUnits(unitsRes.data);
     }
+
+    const failedDirectories = [
+      !facultiesRes.success && 'faculties',
+      !deptsRes.success && 'departments',
+      !unitsRes.success && 'service units',
+    ].filter(Boolean);
+    setDirectoryError(
+      failedDirectories.length > 0
+        ? `Unable to load ${failedDirectories.join(', ')}. Affiliation options may be incomplete.`
+        : null
+    );
 
     setIsLoading(false);
   }, []);
@@ -179,10 +193,10 @@ export const UsersPage: React.FC = () => {
     const query = searchQuery.toLowerCase().trim();
     return users.filter(
       (user) =>
-        user.firstName.toLowerCase().includes(query) ||
-        user.lastName.toLowerCase().includes(query) ||
-        user.email.toLowerCase().includes(query) ||
-        user.id.toLowerCase().includes(query) ||
+        (user.firstName || '').toLowerCase().includes(query) ||
+        (user.lastName || '').toLowerCase().includes(query) ||
+        (user.email || '').toLowerCase().includes(query) ||
+        (user.id || '').toLowerCase().includes(query) ||
         (user.facultyName && user.facultyName.toLowerCase().includes(query)) ||
         (user.departmentName && user.departmentName.toLowerCase().includes(query)) ||
         (user.serviceUnitName && user.serviceUnitName.toLowerCase().includes(query))
@@ -242,6 +256,7 @@ export const UsersPage: React.FC = () => {
 
   const handleSaveUser = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSaving) return;
     setSaveError(null);
     setSuccessMessage(null);
 
@@ -280,19 +295,20 @@ export const UsersPage: React.FC = () => {
   };
 
   const handleDeleteUser = async () => {
-    if (!deletingUser) return;
+    if (!deletingUser || isDeleting) return;
 
     setIsDeleting(true);
+    setDeleteError(null);
     setSuccessMessage(null);
 
     const result = await deleteUser(deletingUser.id);
 
     if (result.success) {
-      setSuccessMessage('User record deleted successfully.');
+      setSuccessMessage(result.message || 'User record deleted successfully.');
       setDeletingUser(null);
       fetchUsersData();
     } else {
-      setSaveError(result.message || 'Failed to delete user record.');
+      setDeleteError(result.message || 'Failed to delete user record.');
     }
 
     setIsDeleting(false);
@@ -369,11 +385,24 @@ export const UsersPage: React.FC = () => {
         </Card>
       )}
 
-      {/* Content Area: Loading / Empty / Loaded States */}
+      {fetchError && users.length > 0 && !isLoading && (
+        <div className="users-alert users-alert-error" role="alert">
+          <AlertCircle size={18} />
+          <span>{fetchError}</span>
+        </div>
+      )}
+
+      {/* Content Area: Loading / Error / Empty / Loaded States */}
       {isLoading ? (
         <LoadingState
           title="Loading University Users..."
           description="Retrieving user account records and organizational affiliations from the identity core."
+        />
+      ) : fetchError && users.length === 0 ? (
+        <ErrorState
+          title="Unable to Load Users"
+          description={fetchError}
+          onRetry={fetchUsersData}
         />
       ) : users.length > 0 ? (
         <div className="users-grid">
@@ -451,7 +480,10 @@ export const UsersPage: React.FC = () => {
                           size="sm"
                           className="btn-danger"
                           icon={<Trash2 size={16} />}
-                          onClick={() => setDeletingUser(user)}
+                          onClick={() => {
+                            setDeleteError(null);
+                            setDeletingUser(user);
+                          }}
                         >
                           Delete
                         </Button>
@@ -465,20 +497,17 @@ export const UsersPage: React.FC = () => {
         </div>
       ) : (
         <EmptyState
-          title="User Management API Integration Pending"
-          description={
-            fetchError ||
-            'The official backend User Management API contract is not yet available in the repository. The user account management interface and service layer boundary are prepared to connect to backend services.'
-          }
+          title="No User Accounts Found"
+          description="The User Management service returned no user accounts."
           icon={<Users className="state-icon" />}
           action={
             <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center' }}>
               <Button variant="outline" icon={<RefreshCw size={16} />} onClick={fetchUsersData}>
-                Retry Connection
+                Refresh
               </Button>
               {canManageUsers && (
                 <Button variant="primary" icon={<Plus size={16} />} onClick={openCreateModal}>
-                  Open Create Modal
+                  Add User
                 </Button>
               )}
             </div>
@@ -489,7 +518,9 @@ export const UsersPage: React.FC = () => {
       {/* Create / Edit User Modal */}
       <Modal
         isOpen={isFormModalOpen}
-        onClose={() => setIsFormModalOpen(false)}
+        onClose={() => {
+          if (!isSaving) setIsFormModalOpen(false);
+        }}
         title={editingUser ? 'Edit User Account' : 'Add New User Account'}
         footer={
           <>
@@ -516,6 +547,13 @@ export const UsersPage: React.FC = () => {
             <div className="users-alert users-alert-error" role="alert">
               <AlertCircle size={18} />
               <span>{saveError}</span>
+            </div>
+          )}
+
+          {directoryError && (
+            <div className="users-alert users-alert-error" role="status">
+              <AlertCircle size={18} />
+              <span>{directoryError}</span>
             </div>
           )}
 
@@ -619,7 +657,9 @@ export const UsersPage: React.FC = () => {
       {/* Delete Confirmation Modal */}
       <Modal
         isOpen={Boolean(deletingUser)}
-        onClose={() => setDeletingUser(null)}
+        onClose={() => {
+          if (!isDeleting) setDeletingUser(null);
+        }}
         title="Delete User Account"
         footer={
           <>
@@ -641,9 +681,17 @@ export const UsersPage: React.FC = () => {
           </>
         }
       >
-        <p style={{ color: 'var(--color-neutral)', lineHeight: '1.6' }}>
-          Are you sure you want to delete account for <strong>{deletingUser?.firstName} {deletingUser?.lastName}</strong> ({deletingUser?.email})? This action cannot be undone.
-        </p>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          {deleteError && (
+            <div className="users-alert users-alert-error" role="alert">
+              <AlertCircle size={18} />
+              <span>{deleteError}</span>
+            </div>
+          )}
+          <p style={{ color: 'var(--color-neutral)', lineHeight: '1.6' }}>
+            Are you sure you want to delete account for <strong>{deletingUser?.firstName} {deletingUser?.lastName}</strong> ({deletingUser?.email})? This action cannot be undone.
+          </p>
+        </div>
       </Modal>
     </div>
   );

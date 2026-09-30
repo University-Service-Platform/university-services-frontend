@@ -19,10 +19,10 @@ export async function getDepartments(): Promise<DepartmentServiceResult<Departme
     method: 'GET',
   });
 
-  if (response.error || !response.data) {
+  if (response.error || !Array.isArray(response.data)) {
     return {
       success: false,
-      message: 'Unable to connect to Department Management service. Official backend contract is pending integration.',
+      message: response.error || 'Unable to connect to Department Management service. Official backend contract is pending integration.',
     };
   }
 
@@ -53,7 +53,7 @@ export async function createDepartment(payload: DepartmentCreatePayload): Promis
 }
 
 export async function updateDepartment(id: string, payload: DepartmentUpdatePayload): Promise<DepartmentServiceResult<Department>> {
-  const response = await apiFetch<Department>(`${DEPARTMENTS_API_ENDPOINT}/${id}`, {
+  const response = await apiFetch<Department>(`${DEPARTMENTS_API_ENDPOINT}/${encodeURIComponent(id)}`, {
     method: 'PUT',
     body: JSON.stringify(payload),
   });
@@ -73,7 +73,7 @@ export async function updateDepartment(id: string, payload: DepartmentUpdatePayl
 }
 
 export async function deleteDepartment(id: string): Promise<DepartmentServiceResult<null>> {
-  const response = await apiFetch<null>(`${DEPARTMENTS_API_ENDPOINT}/${id}`, {
+  const response = await apiFetch<null>(`${DEPARTMENTS_API_ENDPOINT}/${encodeURIComponent(id)}`, {
     method: 'DELETE',
   });
 

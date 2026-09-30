@@ -2,7 +2,9 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Shield, UserPlus, AlertCircle, CheckCircle, RefreshCw, ChevronRight, ArrowLeft } from 'lucide-react';
 import { getRoles, assignUserRole, type SystemRoleDefinition, type RoleAssignmentPayload } from '@/services/roleService';
 import { getUsers } from '@/services/userService';
-import type { UserProfile, UserRole } from '@/types';
+import { getDepartments } from '@/services/departmentService';
+import { getServiceUnits } from '@/services/serviceUnitService';
+import type { UserProfile, UserRole, Department, ServiceUnit } from '@/types';
 import { useAuth } from '@/auth';
 import {
   Card,
@@ -14,6 +16,7 @@ import {
   Modal,
   LoadingState,
   EmptyState,
+  ErrorState,
 } from '@/components/ui';
 import { formatRole } from '@/utils';
 import './RolesPage.css';
@@ -23,12 +26,25 @@ import './RolesPage.css';
  * The official backend Role Management & Role Assignment API contract is not yet documented in the repository.
  * Role definitions, permissions, user-role assignments, and responsibility fields serve strictly as an integration boundary.
  */
+type ResponsibilityScope = { kind: 'department' | 'serviceUnit'; id: string };
+
+function parseResponsibility(value: string): ResponsibilityScope | null {
+  const separator = value.indexOf(':');
+  if (separator <= 0) return null;
+  const kind = value.slice(0, separator);
+  const id = value.slice(separator + 1);
+  if (!id || (kind !== 'department' && kind !== 'serviceUnit')) return null;
+  return { kind, id };
+}
+
 export const RolesPage: React.FC = () => {
   const { isAuthorized } = useAuth();
   const canManageRoles = isAuthorized(['ADMIN']);
 
   const [roles, setRoles] = useState<SystemRoleDefinition[]>([]);
   const [availableUsers, setAvailableUsers] = useState<UserProfile[]>([]);
+  const [departments, setDepartments] = useState<Department[]>([]);
+  const [serviceUnits, setServiceUnits] = useState<ServiceUnit[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
 
@@ -43,49 +59,49 @@ export const RolesPage: React.FC = () => {
   const [assignError, setAssignError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<{ userId?: string; role?: string }>({});
 
+  const loadRoleData = useCallback(
+    () => Promise.all([getRoles(), getUsers(), getDepartments(), getServiceUnits()]),
+    []
+  );
+
+  const applyRoleData = useCallback((results: Awaited<ReturnType<typeof loadRoleData>>) => {
+    const [rolesRes, usersRes, deptsRes, unitsRes] = results;
+
+    // A successful empty list is a valid empty state, not a connection error.
+    if (rolesRes.success && rolesRes.data) {
+      setRoles(rolesRes.data);
+    } else {
+      setFetchError(rolesRes.message || 'Unable to connect to role management service.');
+    }
+
+    if (usersRes.success && usersRes.data) {
+      setAvailableUsers(usersRes.data);
+    }
+    if (deptsRes.success && deptsRes.data) {
+      setDepartments(deptsRes.data);
+    }
+    if (unitsRes.success && unitsRes.data) {
+      setServiceUnits(unitsRes.data);
+    }
+    setIsLoading(false);
+  }, []);
+
   const fetchData = useCallback(() => {
     setIsLoading(true);
     setFetchError(null);
-
-    Promise.all([getRoles(), getUsers()])
-      .then(([rolesRes, usersRes]) => {
-        if (rolesRes.success && rolesRes.data && rolesRes.data.length > 0) {
-          setRoles(rolesRes.data);
-        } else {
-          setFetchError(rolesRes.message || 'Unable to connect to role management service.');
-        }
-
-        if (usersRes.success && usersRes.data) {
-          setAvailableUsers(usersRes.data);
-        }
-        setIsLoading(false);
-      })
-      .catch(() => {
-        setFetchError('Unable to connect to backend role management services.');
-        setIsLoading(false);
-      });
-  }, []);
+    loadRoleData().then(applyRoleData);
+  }, [loadRoleData, applyRoleData]);
 
   useEffect(() => {
     let isMounted = true;
-    Promise.all([getRoles(), getUsers()]).then(([rolesRes, usersRes]) => {
-      if (!isMounted) return;
-      if (rolesRes.success && rolesRes.data && rolesRes.data.length > 0) {
-        setRoles(rolesRes.data);
-      } else {
-        setFetchError(rolesRes.message || 'Unable to connect to role management service.');
-      }
-
-      if (usersRes.success && usersRes.data) {
-        setAvailableUsers(usersRes.data);
-      }
-      setIsLoading(false);
+    loadRoleData().then((results) => {
+      if (isMounted) applyRoleData(results);
     });
 
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [loadRoleData, applyRoleData]);
 
   const openAssignmentModal = () => {
     setStep('FORM');
@@ -130,13 +146,17 @@ export const RolesPage: React.FC = () => {
   };
 
   const handleExecuteAssignment = async () => {
+    if (isAssigning || !canManageRoles) return;
     setIsAssigning(true);
     setAssignError(null);
 
+    // Responsibility scope is chosen from loaded directory records, so each ID is sent in its own field.
+    const scope = parseResponsibility(responsibility);
     const payload: RoleAssignmentPayload = {
       userId: userId.trim(),
       role: selectedRole as UserRole,
-      departmentId: responsibility.trim() || undefined,
+      departmentId: scope?.kind === 'department' ? scope.id : undefined,
+      serviceUnitId: scope?.kind === 'serviceUnit' ? scope.id : undefined,
     };
 
     const result = await assignUserRole(payload);
@@ -182,6 +202,24 @@ export const RolesPage: React.FC = () => {
     return roles.find((r) => r.code === selectedRole);
   }, [roles, selectedRole]);
 
+  // Optional responsibility scope options, sourced only from the department and service unit services.
+  const responsibilityOptions = useMemo(() => {
+    return [
+      ...departments.map((d) => ({
+        value: `department:${d.id}`,
+        label: `Department: ${d.name} (${d.code})`,
+      })),
+      ...serviceUnits.map((s) => ({
+        value: `serviceUnit:${s.id}`,
+        label: `Service Unit: ${s.name} (${s.code})`,
+      })),
+    ];
+  }, [departments, serviceUnits]);
+
+  const selectedResponsibilityLabel = useMemo(() => {
+    return responsibilityOptions.find((o) => o.value === responsibility)?.label;
+  }, [responsibilityOptions, responsibility]);
+
   return (
     <div className="roles-container">
       {/* Alert Messages */}
@@ -226,6 +264,12 @@ export const RolesPage: React.FC = () => {
           title="Loading Roles & Permissions..."
           description="Retrieving system role definitions from backend identity services."
         />
+      ) : fetchError && roles.length === 0 ? (
+        <ErrorState
+          title="Unable to Load Roles"
+          description={fetchError}
+          onRetry={fetchData}
+        />
       ) : roles.length > 0 ? (
         <div className="roles-grid">
           {roles.map((role) => (
@@ -251,23 +295,13 @@ export const RolesPage: React.FC = () => {
         </div>
       ) : (
         <EmptyState
-          title="Role Management API Integration Pending"
-          description={
-            fetchError ||
-            'The official backend role management API contract is not yet available in the repository. The role assignment interface and service layer boundary are prepared to connect to backend services.'
-          }
+          title="No Role Definitions Found"
+          description="The role management service returned no role definitions."
           icon={<Shield className="state-icon" />}
           action={
-            <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center' }}>
-              <Button variant="outline" icon={<RefreshCw size={16} />} onClick={fetchData}>
-                Retry Connection
-              </Button>
-              {canManageRoles && (
-                <Button variant="primary" icon={<UserPlus size={16} />} onClick={openAssignmentModal}>
-                  Open Assignment Modal
-                </Button>
-              )}
-            </div>
+            <Button variant="outline" icon={<RefreshCw size={16} />} onClick={fetchData}>
+              Refresh
+            </Button>
           }
         />
       )}
@@ -390,14 +424,18 @@ export const RolesPage: React.FC = () => {
               required
             />
 
-            <Input
+            <Select
               id="department-responsibility"
               label="Department / Service Unit Responsibility (Optional)"
-              placeholder="e.g. DEPT-CS-01 or UNIT-IT-02"
+              options={[{ value: '', label: 'None (System-wide)' }, ...responsibilityOptions]}
               value={responsibility}
               onChange={(e) => setResponsibility(e.target.value)}
-              helperText="Optional organizational scope for department or service unit authorization pending official DTO schema."
-              disabled={isAssigning}
+              helperText={
+                responsibilityOptions.length === 0
+                  ? 'No departments or service units could be loaded; responsibility scope is unavailable.'
+                  : 'Optional organizational scope for department or service unit authorization pending official DTO schema.'
+              }
+              disabled={isAssigning || responsibilityOptions.length === 0}
             />
           </form>
         ) : (
@@ -431,7 +469,7 @@ export const RolesPage: React.FC = () => {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span style={{ fontSize: '0.875rem', color: 'var(--color-neutral)', fontWeight: 500 }}>Department / Service Responsibility:</span>
                 <span style={{ fontSize: '0.875rem', color: 'var(--color-neutral-heading)' }}>
-                  {responsibility.trim() ? responsibility.trim() : 'None (System-wide)'}
+                  {selectedResponsibilityLabel || 'None (System-wide)'}
                 </span>
               </div>
             </div>

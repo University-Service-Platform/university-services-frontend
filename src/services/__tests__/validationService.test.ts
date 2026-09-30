@@ -25,7 +25,12 @@ export async function runValidationServiceTests(): Promise<boolean> {
     assertEqual(emptyRoleResult.success, false, 'Invalid User ID Role - success status');
     assertEqual(emptyRoleResult.status, 400, 'Invalid User ID Role - HTTP status');
 
-    // 3. Account status validation invalid input test
+    // 3. Role validation with no required roles
+    const emptyRolesResult = await validateUserRole('USER-1001', []);
+    assertEqual(emptyRolesResult.success, false, 'Empty role list - success status');
+    assertEqual(emptyRolesResult.status, 400, 'Empty role list - HTTP status');
+
+    // 4. Account status validation invalid input test
     const emptyStatusResult = await validateAccountStatus('');
     assertEqual(emptyStatusResult.success, false, 'Invalid User ID Account Status - success status');
     assertEqual(emptyStatusResult.status, 400, 'Invalid User ID Account Status - HTTP status');

@@ -1,4 +1,4 @@
-import { apiFetch } from './apiClient';
+import { apiFetch, AUTH_TOKEN_STORAGE_KEY } from './apiClient';
 import type { UserProfile } from '@/types';
 
 /**
@@ -35,6 +35,61 @@ export interface AuthResult {
  * that will be updated once the official backend OpenAPI/Swagger authentication specification is provided.
  */
 export const AUTH_LOGIN_API_ENDPOINT = import.meta.env.VITE_AUTH_LOGIN_API_ENDPOINT || '/auth/login';
+export const AUTH_USER_STORAGE_KEY = 'university-services.auth.user';
+
+/**
+ * UNCONFIRMED PLACEHOLDER INTEGRATION BOUNDARY PENDING OFFICIAL BACKEND CONTRACT:
+ * The login response token (AuthResponse.token) is persisted for the current browser session only
+ * so apiFetch can send `Authorization: Bearer <token>`, which the confirmed cross-team validation
+ * contract requires. The token format itself is not yet documented.
+ */
+
+export interface StoredAuthSession {
+  user: UserProfile;
+}
+
+export function storeAuthSession(user: UserProfile, token?: string): void {
+  if (typeof window === 'undefined') return;
+
+  try {
+    sessionStorage.setItem(AUTH_USER_STORAGE_KEY, JSON.stringify(user));
+
+    if (token) {
+      sessionStorage.setItem(AUTH_TOKEN_STORAGE_KEY, token);
+    }
+  } catch {
+    // Session persistence is best-effort; authentication state still remains in memory.
+  }
+}
+
+export function getStoredAuthSession(): StoredAuthSession | null {
+  if (typeof window === 'undefined') return null;
+
+  try {
+    const rawUser = sessionStorage.getItem(AUTH_USER_STORAGE_KEY);
+    if (!rawUser) return null;
+
+    const user = JSON.parse(rawUser) as UserProfile;
+    if (!user || typeof user.id !== 'string' || !Array.isArray(user.roles)) {
+      return null;
+    }
+
+    return { user };
+  } catch {
+    return null;
+  }
+}
+
+export function clearAuthSession(): void {
+  if (typeof window === 'undefined') return;
+
+  try {
+    sessionStorage.removeItem(AUTH_USER_STORAGE_KEY);
+    sessionStorage.removeItem(AUTH_TOKEN_STORAGE_KEY);
+  } catch {
+    // Ignore storage cleanup failures; in-memory logout still succeeds.
+  }
+}
 
 export async function loginUser(credentials: LoginCredentials): Promise<AuthResult> {
   const response = await apiFetch<AuthResponse>(AUTH_LOGIN_API_ENDPOINT, {
@@ -48,6 +103,7 @@ export async function loginUser(credentials: LoginCredentials): Promise<AuthResu
 
   // Handle explicit API HTTP status codes safely
   if (response.status === 401) {
+    clearAuthSession();
     return {
       success: false,
       message: 'Invalid University ID/Email or password. Please check your credentials and try again.',
@@ -55,6 +111,7 @@ export async function loginUser(credentials: LoginCredentials): Promise<AuthResu
   }
 
   if (response.status === 403 || response.data?.isInactive) {
+    clearAuthSession();
     return {
       success: false,
       isInactive: true,
@@ -65,11 +122,13 @@ export async function loginUser(credentials: LoginCredentials): Promise<AuthResu
   if (response.error || !response.data) {
     return {
       success: false,
-      message: 'Unable to connect to authentication service. Please verify system connection or contact IT Support.',
+      message: response.error || 'Unable to connect to authentication service. Please verify system connection or contact IT Support.',
     };
   }
 
   if (response.data.success && response.data.user) {
+    storeAuthSession(response.data.user, response.data.token);
+
     return {
       success: true,
       user: response.data.user,
