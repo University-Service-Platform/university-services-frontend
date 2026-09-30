@@ -13,12 +13,8 @@ export default defineConfig({
   },
   server: {
     proxy: {
-      '/api/work-orders': {
-        target: 'http://localhost:8082',
-        changeOrigin: true,
-      },
       '/api': {
-        target: 'http://localhost:8081',
+        target: 'http://localhost:8000',
         changeOrigin: true,
       },
     },

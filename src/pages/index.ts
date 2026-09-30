@@ -17,11 +17,4 @@ export * from './ServiceDashboardPage';
 export * from './WorkOrdersPage';
 export * from './AssignmentsPage';
 export * from './TechnicianPage';
-
-
-
-
-
-
-
-
+export * from './group8';

@@ -3,6 +3,7 @@ import { Shield, UserPlus, AlertCircle, CheckCircle, RefreshCw, ChevronRight, Ar
 import { getRoles, assignUserRole, type SystemRoleDefinition, type RoleAssignmentPayload } from '@/services/roleService';
 import { getUsers } from '@/services/userService';
 import type { UserProfile, UserRole } from '@/types';
+import { useAuth } from '@/auth';
 import {
   Card,
   CardBody,
@@ -23,6 +24,9 @@ import './RolesPage.css';
  * Role definitions, permissions, user-role assignments, and responsibility fields serve strictly as an integration boundary.
  */
 export const RolesPage: React.FC = () => {
+  const { isAuthorized } = useAuth();
+  const canManageRoles = isAuthorized(['ADMIN']);
+
   const [roles, setRoles] = useState<SystemRoleDefinition[]>([]);
   const [availableUsers, setAvailableUsers] = useState<UserProfile[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -204,13 +208,15 @@ export const RolesPage: React.FC = () => {
               Manage university system roles, authorization permissions, and user role assignments.
             </p>
           </div>
-          <Button
-            variant="primary"
-            icon={<UserPlus size={16} />}
-            onClick={openAssignmentModal}
-          >
-            Assign Role
-          </Button>
+          {canManageRoles && (
+            <Button
+              variant="primary"
+              icon={<UserPlus size={16} />}
+              onClick={openAssignmentModal}
+            >
+              Assign Role
+            </Button>
+          )}
         </div>
       </Card>
 
@@ -256,9 +262,11 @@ export const RolesPage: React.FC = () => {
               <Button variant="outline" icon={<RefreshCw size={16} />} onClick={fetchData}>
                 Retry Connection
               </Button>
-              <Button variant="primary" icon={<UserPlus size={16} />} onClick={openAssignmentModal}>
-                Open Assignment Modal
-              </Button>
+              {canManageRoles && (
+                <Button variant="primary" icon={<UserPlus size={16} />} onClick={openAssignmentModal}>
+                  Open Assignment Modal
+                </Button>
+              )}
             </div>
           }
         />

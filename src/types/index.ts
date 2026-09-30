@@ -194,4 +194,4 @@ export type VariantType = 'primary' | 'secondary' | 'tertiary' | 'outline' | 'gh
 export type SizeType = 'sm' | 'md' | 'lg';
 export type StatusType = 'success' | 'warning' | 'danger' | 'info' | 'neutral';
 
-
+export * from './group8';

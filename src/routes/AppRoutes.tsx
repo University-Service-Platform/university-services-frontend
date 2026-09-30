@@ -22,6 +22,7 @@ import {
 } from '@/pages';
 import { ProtectedRoute } from './ProtectedRoute';
 import { APP_ROUTES_CONFIG } from '@/config/navigationConfig';
+import { renderGroup8Page } from './group8RouteElements';
 
 const renderRoutePage = (path: string) => {
   switch (path) {
@@ -53,10 +54,9 @@ const renderRoutePage = (path: string) => {
     case '/technician':
       return <TechnicianPage />;
     default:
-      return <HomePage />;
+      return renderGroup8Page(path) ?? <HomePage />;
   }
 };
-
 
 export const AppRoutes: React.FC = () => {
   return (
@@ -173,4 +173,3 @@ export const AppRoutes: React.FC = () => {
     </Routes>
   );
 };
-

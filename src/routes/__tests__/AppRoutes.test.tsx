@@ -1,6 +1,8 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
+import { Provider } from 'react-redux';
+import { store } from '@/store';
 import { AppRoutes } from '../AppRoutes';
 import * as authModule from '@/auth';
 import * as serviceRequestService from '@/services/serviceRequestService';
@@ -31,13 +33,23 @@ function mockAuthForRole(role: UserRole) {
       return arr.includes(role);
     },
     hasPermission: () => false,
-    isAuthorized: (requiredRoles?: UserRole[], _requiredPermissions?: string[]) => {
+    isAuthorized: (requiredRoles?: UserRole[]) => {
       if (!requiredRoles || requiredRoles.length === 0) return true;
       return requiredRoles.includes(role);
     },
     setAuthUser: vi.fn(),
     logout: vi.fn(),
   });
+}
+
+function renderAppRoute(initialEntry: string) {
+  return render(
+    <Provider store={store}>
+      <MemoryRouter initialEntries={[initialEntry]}>
+        <AppRoutes />
+      </MemoryRouter>
+    </Provider>
+  );
 }
 
 describe('AppRoutes Role Protection & Authorization Tests', () => {
@@ -68,44 +80,28 @@ describe('AppRoutes Role Protection & Authorization Tests', () => {
     });
 
     it('can access /triage', async () => {
-      render(
-        <MemoryRouter initialEntries={['/triage']}>
-          <AppRoutes />
-        </MemoryRouter>
-      );
+      renderAppRoute('/triage');
       await waitFor(() => {
         expect(screen.getByText(/Service Desk Request Triage/i)).toBeInTheDocument();
       });
     });
 
     it('can access /work-orders', async () => {
-      render(
-        <MemoryRouter initialEntries={['/work-orders']}>
-          <AppRoutes />
-        </MemoryRouter>
-      );
+      renderAppRoute('/work-orders');
       await waitFor(() => {
         expect(screen.getByText(/Work Orders Management/i)).toBeInTheDocument();
       });
     });
 
     it('can access /assignments', async () => {
-      render(
-        <MemoryRouter initialEntries={['/assignments']}>
-          <AppRoutes />
-        </MemoryRouter>
-      );
+      renderAppRoute('/assignments');
       await waitFor(() => {
         expect(screen.getByText(/Technician Assignment Dispatch View/i)).toBeInTheDocument();
       });
     });
 
     it('can access /service-dashboard', async () => {
-      render(
-        <MemoryRouter initialEntries={['/service-dashboard']}>
-          <AppRoutes />
-        </MemoryRouter>
-      );
+      renderAppRoute('/service-dashboard');
       await waitFor(() => {
         expect(screen.getByText(/Service Desk Analytics/i)).toBeInTheDocument();
       });
@@ -118,44 +114,28 @@ describe('AppRoutes Role Protection & Authorization Tests', () => {
     });
 
     it('can access /service-dashboard', async () => {
-      render(
-        <MemoryRouter initialEntries={['/service-dashboard']}>
-          <AppRoutes />
-        </MemoryRouter>
-      );
+      renderAppRoute('/service-dashboard');
       await waitFor(() => {
         expect(screen.getByText(/Service Desk Analytics/i)).toBeInTheDocument();
       });
     });
 
     it('cannot access /triage (denied access)', async () => {
-      render(
-        <MemoryRouter initialEntries={['/triage']}>
-          <AppRoutes />
-        </MemoryRouter>
-      );
+      renderAppRoute('/triage');
       await waitFor(() => {
         expect(screen.getByText(/Access Denied/i)).toBeInTheDocument();
       });
     });
 
     it('cannot access /work-orders (denied access)', async () => {
-      render(
-        <MemoryRouter initialEntries={['/work-orders']}>
-          <AppRoutes />
-        </MemoryRouter>
-      );
+      renderAppRoute('/work-orders');
       await waitFor(() => {
         expect(screen.getByText(/Access Denied/i)).toBeInTheDocument();
       });
     });
 
     it('cannot access /assignments (denied access)', async () => {
-      render(
-        <MemoryRouter initialEntries={['/assignments']}>
-          <AppRoutes />
-        </MemoryRouter>
-      );
+      renderAppRoute('/assignments');
       await waitFor(() => {
         expect(screen.getByText(/Access Denied/i)).toBeInTheDocument();
       });
@@ -168,44 +148,28 @@ describe('AppRoutes Role Protection & Authorization Tests', () => {
     });
 
     it('can access /technician workspace', async () => {
-      render(
-        <MemoryRouter initialEntries={['/technician']}>
-          <AppRoutes />
-        </MemoryRouter>
-      );
+      renderAppRoute('/technician');
       await waitFor(() => {
         expect(screen.getByText(/Technician Field Workspace/i)).toBeInTheDocument();
       });
     });
 
     it('can access /work-orders', async () => {
-      render(
-        <MemoryRouter initialEntries={['/work-orders']}>
-          <AppRoutes />
-        </MemoryRouter>
-      );
+      renderAppRoute('/work-orders');
       await waitFor(() => {
         expect(screen.getByText(/Work Orders Management/i)).toBeInTheDocument();
       });
     });
 
     it('can access /assignments', async () => {
-      render(
-        <MemoryRouter initialEntries={['/assignments']}>
-          <AppRoutes />
-        </MemoryRouter>
-      );
+      renderAppRoute('/assignments');
       await waitFor(() => {
         expect(screen.getByText(/Technician Assignment Dispatch View/i)).toBeInTheDocument();
       });
     });
 
     it('cannot access /triage (denied access)', async () => {
-      render(
-        <MemoryRouter initialEntries={['/triage']}>
-          <AppRoutes />
-        </MemoryRouter>
-      );
+      renderAppRoute('/triage');
       await waitFor(() => {
         expect(screen.getByText(/Access Denied/i)).toBeInTheDocument();
       });
@@ -218,33 +182,21 @@ describe('AppRoutes Role Protection & Authorization Tests', () => {
     });
 
     it('can access /work-orders', async () => {
-      render(
-        <MemoryRouter initialEntries={['/work-orders']}>
-          <AppRoutes />
-        </MemoryRouter>
-      );
+      renderAppRoute('/work-orders');
       await waitFor(() => {
         expect(screen.getByText(/Work Orders Management/i)).toBeInTheDocument();
       });
     });
 
     it('can access /assignments', async () => {
-      render(
-        <MemoryRouter initialEntries={['/assignments']}>
-          <AppRoutes />
-        </MemoryRouter>
-      );
+      renderAppRoute('/assignments');
       await waitFor(() => {
         expect(screen.getByText(/Technician Assignment Dispatch View/i)).toBeInTheDocument();
       });
     });
 
     it('cannot access /triage (denied access)', async () => {
-      render(
-        <MemoryRouter initialEntries={['/triage']}>
-          <AppRoutes />
-        </MemoryRouter>
-      );
+      renderAppRoute('/triage');
       await waitFor(() => {
         expect(screen.getByText(/Access Denied/i)).toBeInTheDocument();
       });

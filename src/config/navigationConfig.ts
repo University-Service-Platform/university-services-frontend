@@ -1,4 +1,5 @@
 import type { UserRole, NavItem } from '@/types';
+import { GROUP8_ROUTES_CONFIG } from './group8Routes';
 
 export interface RouteNavigationConfig {
   id: string;
@@ -139,6 +140,8 @@ export const APP_ROUTES_CONFIG: RouteNavigationConfig[] = [
     requiredRoles: ['TECHNICIAN'],
     showInNav: true,
   },
+  // Group 8 - Events, Communications & Feedback
+  ...GROUP8_ROUTES_CONFIG,
 ];
 
 /**
