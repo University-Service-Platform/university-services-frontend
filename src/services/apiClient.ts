@@ -31,7 +31,7 @@ export async function apiFetch<T>(
 
     const status = response.status;
     
-    if (status === 24) return { status }; // Handle empty response
+    if (status === 204) return { status }; // Handle empty response (204 No Content)
 
     let data: T | undefined;
     const contentType = response.headers.get('content-type');

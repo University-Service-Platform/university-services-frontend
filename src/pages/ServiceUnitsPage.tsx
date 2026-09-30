@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { Layers, Plus, Edit2, Trash2, AlertCircle, CheckCircle, RefreshCw, Search } from 'lucide-react';
+import { Layers, Plus, Edit2, Trash2, AlertCircle, CheckCircle, RefreshCw, Search, X } from 'lucide-react';
 import {
   getServiceUnits,
   createServiceUnit,
   updateServiceUnit,
   deleteServiceUnit,
   type ServiceUnitCreatePayload,
+  type ServiceUnitUpdatePayload,
 } from '@/services/serviceUnitService';
 import type { ServiceUnit } from '@/types';
 import { useAuth } from '@/auth';
@@ -21,14 +22,9 @@ import {
 } from '@/components/ui';
 import './ServiceUnitsPage.css';
 
-/**
- * UNCONFIRMED PLACEHOLDER INTEGRATION BOUNDARY PENDING OFFICIAL BACKEND CONTRACT:
- * The official backend Service Unit management contract and DTO schema are not yet documented in the repository.
- * Form fields and API interactions serve strictly as an integration boundary ready for official backend endpoints.
- */
 export const ServiceUnitsPage: React.FC = () => {
-  const { isAuthorized } = useAuth();
-  const canManageServiceUnits = isAuthorized(['ADMIN']);
+  const { isAuthorized, isAccountInactive } = useAuth();
+  const canManageServiceUnits = isAuthorized(['ADMIN']) && !isAccountInactive;
 
   const [serviceUnits, setServiceUnits] = useState<ServiceUnit[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -39,7 +35,7 @@ export const ServiceUnitsPage: React.FC = () => {
 
   // Form Modal State (Create / Edit)
   const [isFormModalOpen, setIsFormModalOpen] = useState<boolean>(false);
-  const [editingUnit, setEditingUnit] = useState<ServiceUnit | null>(null);
+  const [editingServiceUnit, setEditingServiceUnit] = useState<ServiceUnit | null>(null);
   const [name, setName] = useState<string>('');
   const [code, setCode] = useState<string>('');
   const [description, setDescription] = useState<string>('');
@@ -48,7 +44,7 @@ export const ServiceUnitsPage: React.FC = () => {
   const [fieldErrors, setFieldErrors] = useState<{ name?: string; code?: string }>({});
 
   // Delete Modal State
-  const [deletingUnit, setDeletingUnit] = useState<ServiceUnit | null>(null);
+  const [deletingServiceUnit, setDeletingServiceUnit] = useState<ServiceUnit | null>(null);
   const [isDeleting, setIsDeleting] = useState<boolean>(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
@@ -84,20 +80,20 @@ export const ServiceUnitsPage: React.FC = () => {
     };
   }, []);
 
-  // Filter loaded service units by search query (name, code, or description)
+  // Filter loaded service units by search query
   const filteredServiceUnits = useMemo(() => {
     if (!searchQuery.trim()) return serviceUnits;
     const query = searchQuery.toLowerCase().trim();
     return serviceUnits.filter(
-      (unit) =>
-        unit.name.toLowerCase().includes(query) ||
-        unit.code.toLowerCase().includes(query) ||
-        (unit.description && unit.description.toLowerCase().includes(query))
+      (u) =>
+        u.name.toLowerCase().includes(query) ||
+        u.code.toLowerCase().includes(query) ||
+        (u.description && u.description.toLowerCase().includes(query))
     );
   }, [serviceUnits, searchQuery]);
 
   const openCreateModal = () => {
-    setEditingUnit(null);
+    setEditingServiceUnit(null);
     setName('');
     setCode('');
     setDescription('');
@@ -108,7 +104,7 @@ export const ServiceUnitsPage: React.FC = () => {
   };
 
   const openEditModal = (unit: ServiceUnit) => {
-    setEditingUnit(unit);
+    setEditingServiceUnit(unit);
     setName(unit.name || '');
     setCode(unit.code || '');
     setDescription(unit.description || '');
@@ -144,45 +140,58 @@ export const ServiceUnitsPage: React.FC = () => {
 
     setIsSaving(true);
 
-    const payload: ServiceUnitCreatePayload = {
-      name: name.trim(),
-      code: code.trim(),
-      description: description.trim() || undefined,
-    };
+    if (editingServiceUnit) {
+      const payload: ServiceUnitUpdatePayload = {
+        name: name.trim(),
+        code: code.trim().toUpperCase(),
+        description: description.trim() || undefined,
+      };
 
-    let result;
-    if (editingUnit) {
-      result = await updateServiceUnit(editingUnit.id, payload);
-    } else {
-      result = await createServiceUnit(payload);
-    }
+      const result = await updateServiceUnit(editingServiceUnit.id, payload);
 
-    if (result.success) {
-      setSuccessMessage(result.message || 'Service unit saved successfully.');
-      setIsFormModalOpen(false);
-      fetchServiceUnitsData();
+      if (result.success) {
+        setSuccessMessage(result.message || 'Service unit updated successfully.');
+        setIsFormModalOpen(false);
+        fetchServiceUnitsData();
+      } else {
+        setSaveError(result.message || 'Failed to update service unit.');
+      }
     } else {
-      setSaveError(result.message || 'Failed to save service unit. Unable to connect to backend.');
+      const payload: ServiceUnitCreatePayload = {
+        name: name.trim(),
+        code: code.trim().toUpperCase(),
+        description: description.trim() || undefined,
+      };
+
+      const result = await createServiceUnit(payload);
+
+      if (result.success) {
+        setSuccessMessage(result.message || 'Service unit created successfully.');
+        setIsFormModalOpen(false);
+        fetchServiceUnitsData();
+      } else {
+        setSaveError(result.message || 'Failed to create service unit.');
+      }
     }
 
     setIsSaving(false);
   };
 
   const handleDeleteServiceUnit = async () => {
-    if (!deletingUnit) return;
+    if (!deletingServiceUnit) return;
 
     setIsDeleting(true);
     setDeleteError(null);
     setSuccessMessage(null);
 
-    const result = await deleteServiceUnit(deletingUnit.id);
+    const result = await deleteServiceUnit(deletingServiceUnit.id);
 
     if (result.success) {
       setSuccessMessage('Service unit deleted successfully.');
-      setDeletingUnit(null);
+      setDeletingServiceUnit(null);
       fetchServiceUnitsData();
     } else {
-      setDeleteError(result.message || 'Failed to delete service unit. Unable to connect to backend.');
+      setDeleteError(result.message || 'Failed to delete service unit.');
     }
 
     setIsDeleting(false);
@@ -198,32 +207,43 @@ export const ServiceUnitsPage: React.FC = () => {
         </div>
       )}
 
-      {/* Page Header Card */}
+      {/* Header Card */}
       <Card>
         <div className="service-units-header-card">
           <div className="service-units-header-text">
-            <h2 className="service-units-title">Service Unit Management</h2>
+            <h2 className="service-units-title">Service Units Management</h2>
             <p className="service-units-subtitle">
-              Manage university administrative, academic support, and operational service units.
+              Manage administrative units, support centers, and operational divisions.
             </p>
           </div>
           {canManageServiceUnits && (
-            <Button
-              variant="primary"
-              icon={<Plus size={16} />}
-              onClick={openCreateModal}
-            >
+            <Button variant="primary" icon={<Plus size={16} />} onClick={openCreateModal}>
               Add Service Unit
             </Button>
           )}
         </div>
       </Card>
 
-      {/* Search & Filter Bar */}
+      {/* Stats Bar */}
       {serviceUnits.length > 0 && (
-        <Card className="service-units-controls-card" style={{ padding: '1rem 1.5rem' }}>
-          <div className="service-units-search-bar" style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-            <div className="service-units-search-input" style={{ flex: 1 }}>
+        <div className="service-units-stats-bar">
+          <div className="service-units-stat-pill">
+            <div className="service-units-stat-pill-icon">
+              <Layers size={18} />
+            </div>
+            <div className="service-units-stat-pill-content">
+              <span className="service-units-stat-pill-count">{serviceUnits.length}</span>
+              <span className="service-units-stat-pill-label">Registered Service Units</span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Search Controls */}
+      {serviceUnits.length > 0 && (
+        <Card className="service-units-controls-card">
+          <div className="service-units-search-bar">
+            <div className="service-units-search-input">
               <Input
                 id="service-unit-search-input"
                 placeholder="Search service units by name, code, or description..."
@@ -232,66 +252,85 @@ export const ServiceUnitsPage: React.FC = () => {
                 leftIcon={<Search size={18} />}
               />
             </div>
+            {searchQuery && (
+              <Button variant="ghost" size="sm" icon={<X size={14} />} onClick={() => setSearchQuery('')}>
+                Clear
+              </Button>
+            )}
           </div>
         </Card>
       )}
 
-      {/* Content Area: Loading / Empty / Loaded States */}
+      {/* Content Area */}
       {isLoading ? (
         <LoadingState
           title="Loading Service Units..."
-          description="Retrieving service unit records from the university directory."
+          description="Retrieving service unit records from identity directory."
         />
       ) : serviceUnits.length > 0 ? (
-        <div className="service-units-grid">
-          {filteredServiceUnits.map((unit) => (
-            <Card key={unit.id} className="service-unit-card">
-              <CardBody>
-                <div className="service-unit-card-header">
-                  <h3 className="service-unit-name">{unit.name}</h3>
-                  <Badge variant="info">{unit.code}</Badge>
-                </div>
-                <div className="service-unit-meta">
-                  {unit.description && (
-                    <p style={{ marginTop: '0.25rem', lineHeight: '1.5' }}>
-                      {unit.description}
-                    </p>
-                  )}
-                </div>
-                {canManageServiceUnits && (
-                  <div className="service-unit-card-actions">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      icon={<Edit2 size={16} />}
-                      onClick={() => openEditModal(unit)}
-                    >
-                      Edit
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="btn-danger"
-                      icon={<Trash2 size={16} />}
-                      onClick={() => {
-                        setDeleteError(null);
-                        setDeletingUnit(unit);
-                      }}
-                    >
-                      Delete
-                    </Button>
+        filteredServiceUnits.length > 0 ? (
+          <div className="service-units-grid">
+            {filteredServiceUnits.map((unit) => (
+              <Card key={unit.id} className="service-unit-card">
+                <CardBody>
+                  <div className="service-unit-card-header">
+                    <h3 className="service-unit-name">{unit.name}</h3>
+                    <Badge variant="neutral">{unit.code}</Badge>
                   </div>
-                )}
-              </CardBody>
-            </Card>
-          ))}
-        </div>
+
+                  <div className="service-unit-meta">
+                    <p style={{ color: 'var(--color-neutral)', lineHeight: 1.4 }}>
+                      {unit.description || 'No description provided.'}
+                    </p>
+                  </div>
+
+                  {canManageServiceUnits && (
+                    <div className="service-unit-card-actions">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        icon={<Edit2 size={15} />}
+                        onClick={() => openEditModal(unit)}
+                      >
+                        Edit
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="btn-danger"
+                        icon={<Trash2 size={15} />}
+                        onClick={() => setDeletingServiceUnit(unit)}
+                      >
+                        Delete
+                      </Button>
+                    </div>
+                  )}
+                </CardBody>
+              </Card>
+            ))}
+          </div>
+        ) : (
+          <Card>
+            <CardBody>
+              <EmptyState
+                title="No Matching Service Units"
+                description="No administrative service units match your search query."
+                icon={<Search className="state-icon" />}
+                action={
+                  <Button variant="outline" icon={<RefreshCw size={16} />} onClick={() => setSearchQuery('')}>
+                    Reset Search
+                  </Button>
+                }
+              />
+            </CardBody>
+          </Card>
+        )
       ) : (
         <EmptyState
           title="Service Unit Management API Integration Pending"
           description={
             fetchError ||
-            'The official backend Service Unit Management API contract is not yet available in the repository. The service unit management interface and service layer boundary are prepared to connect to backend services.'
+            'The official backend Service Unit Management API contract is not yet available in the repository. Service unit management interfaces and service boundaries are prepared to connect to backend services.'
           }
           icon={<Layers className="state-icon" />}
           action={
@@ -301,7 +340,7 @@ export const ServiceUnitsPage: React.FC = () => {
               </Button>
               {canManageServiceUnits && (
                 <Button variant="primary" icon={<Plus size={16} />} onClick={openCreateModal}>
-                  Open Create Modal
+                  Add Service Unit
                 </Button>
               )}
             </div>
@@ -313,7 +352,7 @@ export const ServiceUnitsPage: React.FC = () => {
       <Modal
         isOpen={isFormModalOpen}
         onClose={() => setIsFormModalOpen(false)}
-        title={editingUnit ? 'Edit Service Unit' : 'Add New Service Unit'}
+        title={editingServiceUnit ? 'Edit Service Unit' : 'Add New Service Unit'}
         footer={
           <>
             <Button
@@ -329,7 +368,7 @@ export const ServiceUnitsPage: React.FC = () => {
               isLoading={isSaving}
               icon={<Layers size={16} />}
             >
-              {editingUnit ? 'Save Changes' : 'Create Service Unit'}
+              {editingServiceUnit ? 'Save Changes' : 'Create Service Unit'}
             </Button>
           </>
         }
@@ -343,9 +382,9 @@ export const ServiceUnitsPage: React.FC = () => {
           )}
 
           <Input
-            id="service-unit-name-input"
+            id="unit-name-input"
             label="Service Unit Name"
-            placeholder="e.g. Information Technology Services"
+            placeholder="e.g. Information & Communication Technology Centre"
             value={name}
             onChange={(e) => {
               setName(e.target.value);
@@ -359,9 +398,9 @@ export const ServiceUnitsPage: React.FC = () => {
           />
 
           <Input
-            id="service-unit-code-input"
+            id="unit-code-input"
             label="Service Unit Code"
-            placeholder="e.g. ITS"
+            placeholder="e.g. ICTC"
             value={code}
             onChange={(e) => {
               setCode(e.target.value);
@@ -375,9 +414,9 @@ export const ServiceUnitsPage: React.FC = () => {
           />
 
           <Input
-            id="service-unit-description-input"
+            id="unit-description-input"
             label="Description (Optional)"
-            placeholder="Brief overview of the service unit..."
+            placeholder="Brief overview of service unit responsibilities"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             disabled={isSaving}
@@ -385,16 +424,16 @@ export const ServiceUnitsPage: React.FC = () => {
         </form>
       </Modal>
 
-      {/* Delete Confirmation Modal */}
+      {/* Delete Service Unit Modal */}
       <Modal
-        isOpen={Boolean(deletingUnit)}
-        onClose={() => setDeletingUnit(null)}
-        title="Delete Service Unit"
+        isOpen={Boolean(deletingServiceUnit)}
+        onClose={() => setDeletingServiceUnit(null)}
+        title="Confirm Service Unit Deletion"
         footer={
           <>
             <Button
               variant="ghost"
-              onClick={() => setDeletingUnit(null)}
+              onClick={() => setDeletingServiceUnit(null)}
               disabled={isDeleting}
             >
               Cancel
@@ -410,16 +449,18 @@ export const ServiceUnitsPage: React.FC = () => {
           </>
         }
       >
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          {deleteError && (
-            <div className="service-units-alert service-units-alert-error" role="alert">
-              <AlertCircle size={18} />
-              <span>{deleteError}</span>
-            </div>
-          )}
-          <p style={{ color: 'var(--color-neutral)', lineHeight: '1.6' }}>
-            Are you sure you want to delete <strong>{deletingUnit?.name}</strong>? This action cannot be undone.
-          </p>
+        {deleteError && (
+          <div className="service-units-alert service-units-alert-error" role="alert" style={{ marginBottom: '1rem' }}>
+            <AlertCircle size={18} />
+            <span>{deleteError}</span>
+          </div>
+        )}
+        <p style={{ color: 'var(--color-neutral)', marginBottom: '1rem' }}>
+          Are you sure you want to delete the service unit{' '}
+          <strong>{deletingServiceUnit?.name}</strong> ({deletingServiceUnit?.code})?
+        </p>
+        <div style={{ padding: '0.75rem', backgroundColor: 'var(--color-danger-bg)', borderRadius: 'var(--radius-md)', color: 'var(--color-danger-text)', fontSize: '0.875rem' }}>
+          This action will remove the service unit from the directory.
         </div>
       </Modal>
     </div>

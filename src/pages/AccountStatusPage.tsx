@@ -37,6 +37,7 @@ export const AccountStatusPage: React.FC = () => {
   // Confirmation Modal State
   const [targetUser, setTargetUser] = useState<UserProfile | null>(null);
   const [pendingStatus, setPendingStatus] = useState<AccountStatus | null>(null);
+  const [statusReason, setStatusReason] = useState<string>('');
   const [isUpdating, setIsUpdating] = useState<boolean>(false);
   const [modalError, setModalError] = useState<string | null>(null);
 
@@ -103,6 +104,7 @@ export const AccountStatusPage: React.FC = () => {
   const openConfirmation = (userItem: UserProfile, newStatus: AccountStatus) => {
     setTargetUser(userItem);
     setPendingStatus(newStatus);
+    setStatusReason('');
     setModalError(null);
     setSuccessMessage(null);
   };
@@ -112,6 +114,7 @@ export const AccountStatusPage: React.FC = () => {
     if (isUpdating) return;
     setTargetUser(null);
     setPendingStatus(null);
+    setStatusReason('');
     setModalError(null);
   };
 
@@ -383,6 +386,17 @@ export const AccountStatusPage: React.FC = () => {
               <span className="transition-label">Target Status</span>
               {renderStatusBadge(pendingStatus || undefined)}
             </div>
+          </div>
+
+          <div style={{ marginTop: '0.75rem', marginBottom: '0.75rem' }}>
+            <Input
+              id="status-change-reason"
+              label="Reason for Status Change (Optional)"
+              placeholder={pendingStatus === 'INACTIVE' ? 'e.g. Leave of absence / Graduation' : 'e.g. Identity verified / Reactivated'}
+              value={statusReason}
+              onChange={(e) => setStatusReason(e.target.value)}
+              disabled={isUpdating}
+            />
           </div>
 
           <p className="confirmation-notice">

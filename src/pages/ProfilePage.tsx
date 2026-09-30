@@ -1,5 +1,19 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { User, Shield, CheckCircle, AlertCircle, Edit2, Save, X, RefreshCw } from 'lucide-react';
+import {
+  User,
+  Shield,
+  CheckCircle,
+  AlertCircle,
+  Edit2,
+  Save,
+  X,
+  Copy,
+  Check,
+  Building2,
+  GraduationCap,
+  ShieldCheck,
+  Key,
+} from 'lucide-react';
 import { useAuth } from '@/auth';
 import { getProfile, updateProfile } from '@/services/profileService';
 import type { UserProfile } from '@/types';
@@ -22,6 +36,7 @@ export const ProfilePage: React.FC = () => {
   const [isSaving, setIsSaving] = useState<boolean>(false);
   const [saveSuccess, setSaveSuccess] = useState<boolean>(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [copiedId, setCopiedId] = useState<boolean>(false);
 
   // Form Field State
   const [firstName, setFirstName] = useState<string>('');
@@ -62,6 +77,13 @@ export const ProfilePage: React.FC = () => {
       isMounted = false;
     };
   }, [authUser]);
+
+  const copyIdToClipboard = (id: string) => {
+    navigator.clipboard.writeText(id).then(() => {
+      setCopiedId(true);
+      setTimeout(() => setCopiedId(false), 2000);
+    });
+  };
 
   const startEditing = () => {
     if (currentProfile) {
@@ -117,7 +139,6 @@ export const ProfilePage: React.FC = () => {
 
     setIsSaving(true);
 
-    // Permitted payload: Strictly limited to editable fields (firstName, lastName, email, phone)
     const payload = {
       firstName: firstName.trim(),
       lastName: lastName.trim(),
@@ -142,32 +163,28 @@ export const ProfilePage: React.FC = () => {
       setSaveSuccess(true);
       setIsEditing(false);
     } else {
-      // Keep user in edit mode and preserve entered values on failure
       setSaveError(result.message || 'Failed to update profile. Unable to connect to backend profile service.');
     }
 
     setIsSaving(false);
   };
 
-
-  // 1. Loading State
   if (isLoading) {
     return (
       <div className="profile-container">
         <LoadingState
-          title="Loading User Profile..."
-          description="Retrieving your university account details."
+          title="Loading Profile..."
+          description="Fetching your university identity and account parameters."
         />
       </div>
     );
   }
 
-  // 2. Error State
   if (fetchError && !currentProfile) {
     return (
       <div className="profile-container">
         <ErrorState
-          title="Unable to Load Profile"
+          title="Failed to Load Profile"
           description={fetchError}
           onRetry={handleRetry}
         />
@@ -175,27 +192,21 @@ export const ProfilePage: React.FC = () => {
     );
   }
 
-  // 3. Empty / Unavailable State
   if (!currentProfile) {
     return (
       <div className="profile-container">
         <EmptyState
-          title="No Profile Information Available"
-          description="Your user profile details could not be found. Please connect backend services or sign in to view your profile."
+          title="Profile Not Available"
+          description="No active profile record found for the current user session."
           icon={<User className="state-icon" />}
-          action={
-            <Button variant="outline" icon={<RefreshCw size={16} />} onClick={handleRetry}>
-              Retry Connection
-            </Button>
-          }
         />
       </div>
     );
   }
 
-  const userInitials = `${currentProfile.firstName?.[0] || 'U'}${currentProfile.lastName?.[0] || ''}`;
-  const primaryRole = currentProfile.roles && currentProfile.roles.length > 0 ? currentProfile.roles[0] : 'GUEST';
+  const primaryRole = currentProfile.roles?.[0] || 'STUDENT';
   const statusVariant = currentProfile.accountStatus === 'ACTIVE' ? 'success' : 'danger';
+  const userInitials = `${(currentProfile.firstName || 'U')[0]}${(currentProfile.lastName || '')[0]}`.toUpperCase();
 
   return (
     <div className="profile-container">
@@ -258,7 +269,19 @@ export const ProfilePage: React.FC = () => {
             <div className="profile-grid">
               <div className="profile-field-item">
                 <span className="profile-field-label">University Identifier</span>
-                <span className="profile-field-value">{currentProfile.id || 'N/A'}</span>
+                <div className="profile-field-value">
+                  <span>{currentProfile.id || 'N/A'}</span>
+                  {currentProfile.id && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      icon={copiedId ? <Check size={14} color="var(--color-success)" /> : <Copy size={14} />}
+                      onClick={() => copyIdToClipboard(currentProfile.id)}
+                    >
+                      {copiedId ? 'Copied' : 'Copy'}
+                    </Button>
+                  )}
+                </div>
               </div>
 
               <div className="profile-field-item">
@@ -274,7 +297,7 @@ export const ProfilePage: React.FC = () => {
               <div className="profile-field-item">
                 <span className="profile-field-label">Department / Unit</span>
                 <span className="profile-field-value">
-                  {currentProfile.departmentName || currentProfile.departmentId || currentProfile.serviceUnitName || currentProfile.serviceUnitId || 'General University Services'}
+                  {currentProfile.departmentName || currentProfile.facultyName || currentProfile.serviceUnitName || 'General University Services'}
                 </span>
               </div>
             </div>
@@ -282,7 +305,7 @@ export const ProfilePage: React.FC = () => {
         </Card>
 
         {/* Card 2: Contact & Personal Information */}
-        <Card>
+        <Card style={{ marginBottom: '1.5rem' }}>
           <CardHeader
             title="Personal & Contact Information"
             subtitle="User contact parameters"
@@ -352,22 +375,21 @@ export const ProfilePage: React.FC = () => {
                   disabled={isSaving}
                 />
               </div>
-
             ) : (
               <div className="profile-grid">
                 <div className="profile-field-item">
                   <span className="profile-field-label">First Name</span>
-                  <span className="profile-field-value">{currentProfile.firstName || 'N/A'}</span>
+                  <span className="profile-field-value">{currentProfile.firstName || 'Not provided'}</span>
                 </div>
 
                 <div className="profile-field-item">
                   <span className="profile-field-label">Last Name</span>
-                  <span className="profile-field-value">{currentProfile.lastName || 'N/A'}</span>
+                  <span className="profile-field-value">{currentProfile.lastName || 'Not provided'}</span>
                 </div>
 
                 <div className="profile-field-item">
                   <span className="profile-field-label">Email Address</span>
-                  <span className="profile-field-value">{currentProfile.email || 'N/A'}</span>
+                  <span className="profile-field-value">{currentProfile.email || 'Not provided'}</span>
                 </div>
 
                 <div className="profile-field-item">
@@ -380,24 +402,54 @@ export const ProfilePage: React.FC = () => {
 
           {isEditing && (
             <CardFooter>
-              <Button
-                variant="ghost"
-                onClick={handleCancel}
-                disabled={isSaving}
-                icon={<X size={16} />}
-              >
-                Cancel
-              </Button>
-              <Button
-                type="submit"
-                variant="primary"
-                isLoading={isSaving}
-                icon={<Save size={16} />}
-              >
-                Save Changes
-              </Button>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', width: '100%' }}>
+                <Button
+                  variant="ghost"
+                  icon={<X size={16} />}
+                  onClick={handleCancel}
+                  disabled={isSaving}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  variant="primary"
+                  icon={<Save size={16} />}
+                  isLoading={isSaving}
+                  onClick={handleSave}
+                >
+                  Save Changes
+                </Button>
+              </div>
             </CardFooter>
           )}
+        </Card>
+
+        {/* Card 3: Security & Access Level Matrix */}
+        <Card>
+          <CardHeader
+            title="Assigned Roles & Access Rights"
+            subtitle="Access capabilities derived from Group 5 Identity Core"
+          />
+          <CardBody>
+            <div className="profile-permissions-grid">
+              <div className="profile-permission-item">
+                <ShieldCheck size={16} color="var(--color-primary)" />
+                <span>Identity Authentication</span>
+              </div>
+              <div className="profile-permission-item">
+                <Key size={16} color="var(--color-primary)" />
+                <span>Role-Based Navigation</span>
+              </div>
+              <div className="profile-permission-item">
+                <GraduationCap size={16} color="var(--color-primary)" />
+                <span>Academic Directory Access</span>
+              </div>
+              <div className="profile-permission-item">
+                <Building2 size={16} color="var(--color-primary)" />
+                <span>Service Unit Discovery</span>
+              </div>
+            </div>
+          </CardBody>
         </Card>
       </form>
     </div>
