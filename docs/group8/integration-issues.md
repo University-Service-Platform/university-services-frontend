@@ -39,6 +39,15 @@ behaviour, **Low** = worked around in the frontend.
 | CF-6 | Medium | Venue lookup `/api/facilities/{id}` does not match Group 6 (`/api/resources/code/{code}/validate`). | Use the Group 6 contract. |
 | CF-7 | Medium | No endpoint for "my eligible activities", "my announcements/drafts", audience preview, feedback summary, mark-all-read. | Add them, or keep the frontend fallbacks below. |
 | CF-8 | Low | Errors are `{ code }` only. | Frontend maps codes to messages (`g8Api.ts`); add `message` for other clients. |
+| CF-9 | **High** | The trigger rejects `type: LEGACY` (400 `INVALID_NOTIFICATION_TYPE`) and the only accepted types are Group 8 event types; `relatedId` must be a UUID unless `relatedType` is `EXTERNAL`. Groups 6 and 7 therefore cannot send a meaningful notification. | Add `RESERVATION_STATUS` and `SERVICE_REQUEST_STATUS` types; accept string related ids. |
+| CF-10 | **High** | Creating a feedback form fails with 500: the UUID `activityId` is written as binary into the `char(36)` `activity_id` column (MySQL error 1366 "Incorrect string value"). No feedback can be collected on MySQL. | Map the UUID columns as `char(36)` strings (e.g. `@JdbcTypeCode(SqlTypes.CHAR)`), or change the migration. |
+| CF-11 | Medium | Listing announcements needs the recipient directory; without `USER_DIRECTORY_BASE_URL` it returns 503 `RECIPIENT_DIRECTORY_NOT_CONFIGURED` (and CF-5's path is wrong). | Configure it against Group 5 (after CF-5). |
+
+**Evidence (30 Sep 2026, service run locally from `main` with Docker):** a Group 5-shaped RS256 token
+(minted by event-service's dev issuer, `sub=usr-student-001`) gets **403** on `/api/notifications`,
+`/api/announcements` and `/api/feedback/forms` (CF-1 - note 403, not 401). With an HS256 token signed by the
+service's own secret and `sub=usr-student-001`, announcements return **401 `INVALID_USER_ID`** (CF-2).
+Trigger with `LEGACY` -> 400 (CF-9); `POST /api/feedback/forms` -> 500 (CF-10).
 
 ## Open - event-service (owner: harshana)
 
@@ -52,7 +61,7 @@ behaviour, **Low** = worked around in the frontend.
 
 | Area | Status |
 |---|---|
-| Events, registrations, organizer tools | **Integrated** with event-service (this branch) |
+| Events, registrations, organizer tools | **Integrated and verified against the real event-service** (run locally from `main` with MySQL, `dev,seed` profiles): list, detail, register, capacity-full, my registrations, cancel, create, publish, summary, edit, cancel event |
 | Venue check | **Integrated** with Group 6 through the gateway |
 | Announcements, notifications | Integration in progress (Mahela); needs GW-1/2 and CF-1/2 to work end to end |
 | Feedback, engagement | Integration in progress (Ravindu); needs GW-1/2/3 and CF-1/2/4 |

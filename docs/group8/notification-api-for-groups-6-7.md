@@ -6,6 +6,12 @@ Receivers: Group 6 (reservation-service) and Group 7 (service-request-service, w
 Contract version: **1.1** (updated 30 Sep 2026 to match the implemented service; see
 [api-contract-register.md](api-contract-register.md)).
 
+> **Status: blocked - do not send yet.** Tested against the running service on 30 Sep 2026: the trigger
+> rejects `type: LEGACY` (400 `INVALID_NOTIFICATION_TYPE`) and accepts only Group 8 event types, and
+> `relatedId` must be a UUID unless `relatedType` is `EXTERNAL`. Group 8 must first add
+> `RESERVATION_STATUS` / `SERVICE_REQUEST_STATUS` types (integration-issues **CF-9**). The examples below show
+> the intended payload once that change is made.
+
 Group 8 shows in-app notifications to users (header bell and Notification Center). When something
 in your workflow changes that the user should know about, call this endpoint once from your service.
 
@@ -23,10 +29,10 @@ in your workflow changes that the user should know about, call this endpoint onc
 | Field | Type | Required | Rules |
 |---|---|---|---|
 | `recipientId` | string (max 64) | yes | Group 5 user id of the person to notify, e.g. `usr-student-001` |
-| `type` | enum | yes | Use `LEGACY` for Group 6/7 updates (the other values are Group 8 event types) |
+| `type` | enum | yes | `RESERVATION_STATUS` (Group 6) or `SERVICE_REQUEST_STATUS` (Group 7) - **to be added by CF-9**; today only Group 8 event types are accepted |
 | `message` | string (max 2000) | yes | Plain text the user sees, e.g. "Your reservation of Seminar Room 2 on 3 Oct, 10:00-12:00 was approved." |
-| `relatedType` | enum | yes | Group 6: `RESERVATION`. Group 7: `SERVICE_REQUEST` |
-| `relatedId` | UUID | no | Only if your record id is a UUID; otherwise put your id in the message |
+| `relatedType` | enum | yes | Group 6: `RESERVATION`. Group 7: `SERVICE_REQUEST`. Use `EXTERNAL` while related ids must be UUIDs |
+| `relatedId` | UUID | required unless `relatedType` is `EXTERNAL` | Only UUIDs are accepted today; put non-UUID ids in the message |
 | `sourceService` | string (max 64) | yes | e.g. `reservation-service`, `service-request-service`, `work-order-service` |
 | `idempotencyKey` | string (max 200) | yes | `<service>-<recordId>-<status>`, e.g. `g6-RSV-7781-APPROVED` |
 
@@ -39,7 +45,7 @@ Content-Type: application/json
 
 {
   "recipientId": "usr-student-001",
-  "type": "LEGACY",
+  "type": "RESERVATION_STATUS",
   "message": "Your reservation of Seminar Room 2 on 3 Oct, 10:00-12:00 was approved.",
   "relatedType": "RESERVATION",
   "sourceService": "reservation-service",
@@ -56,7 +62,7 @@ Content-Type: application/json
 
 {
   "recipientId": "usr-student-001",
-  "type": "LEGACY",
+  "type": "SERVICE_REQUEST_STATUS",
   "message": "Your request REQ-2026-004 \"Software license request for MATLAB\" was marked Resolved.",
   "relatedType": "SERVICE_REQUEST",
   "sourceService": "work-order-service",
