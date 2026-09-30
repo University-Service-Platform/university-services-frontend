@@ -205,14 +205,14 @@ export async function loginUser(credentials: LoginCredentials): Promise<AuthResu
     return {
       success: false,
       isInactive: true,
-      message: 'Your account is currently inactive. Please contact the IT Support Helpdesk for assistance.',
+      message: 'Your account is currently inactive. Please contact a platform administrator.',
     };
   }
 
   if (response.error || !response.data) {
     return {
       success: false,
-      message: response.error || 'Unable to connect to authentication service. Please verify system connection or contact IT Support.',
+      message: response.error || 'Unable to reach the sign-in service. Please try again in a moment.',
     };
   }
 

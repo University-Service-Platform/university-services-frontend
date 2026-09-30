@@ -10,7 +10,7 @@ export interface AccountInactivePageProps {
 
 export const AccountInactivePage: React.FC<AccountInactivePageProps> = ({
   title = 'Account Access Restricted',
-  description = 'Your university account is currently inactive or unresolved. Inactive accounts are denied access to protected platform functionality. Please contact your system administrator or the IT Support Helpdesk for assistance.',
+  description = 'Your university account is currently inactive or unresolved. Inactive accounts are denied access to protected platform functionality. Please contact a platform administrator to reactivate it.',
 }) => {
   const { logout } = useAuth();
 
