@@ -1,3 +1,4 @@
+import { G8_ORGANIZER_ROLES } from '@/config/group8Routes';
 import type {
   EventStatus,
   EventUpsertRequest,
@@ -31,7 +32,7 @@ export const EVENTS_API = '/events';
 export const REGISTRATIONS_API = '/registrations';
 
 /** Roles allowed to organise events (BR8-01). Final check is always server-side. */
-export const EVENT_ORGANIZER_ROLES: UserRole[] = ['ADMIN', 'STAFF', 'HOD', 'DEAN'];
+export const EVENT_ORGANIZER_ROLES: UserRole[] = G8_ORGANIZER_ROLES;
 
 /* ------------------------------------------------------------------ */
 /* Synthetic demo data (used only when the gateway is unreachable)     */

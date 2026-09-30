@@ -1,3 +1,4 @@
+import { G8_ANNOUNCER_ROLES } from '@/config/group8Routes';
 import type {
   Announcement,
   AnnouncementCreateRequest,
@@ -29,7 +30,7 @@ export const ANNOUNCEMENTS_API = '/announcements';
 export const NOTIFICATIONS_API = '/notifications';
 
 /** Roles allowed to publish announcements (US8-08). Final check is server-side. */
-export const ANNOUNCER_ROLES: UserRole[] = ['ADMIN', 'STAFF'];
+export const ANNOUNCER_ROLES: UserRole[] = G8_ANNOUNCER_ROLES;
 
 /* ------------------------------------------------------------------ */
 /* Synthetic demo data                                                 */

@@ -2,7 +2,20 @@
  * Core Types for University Services Management Platform Foundation
  */
 
-export type UserRole = 'ADMIN' | 'STAFF' | 'STUDENT' | 'DEAN' | 'HOD' | 'GUEST';
+export type UserRole =
+  | 'ADMIN'
+  | 'STAFF'
+  | 'STUDENT'
+  | 'DEAN'
+  | 'HOD'
+  | 'GUEST'
+  // Role names issued by the Group 5 Identity Service (Identity Service API Reference, roles table)
+  | 'ACADEMIC_STAFF'
+  | 'ADMINISTRATIVE_STAFF'
+  | 'EVENT_ORGANIZER'
+  | 'SERVICE_DESK_OFFICER'
+  | 'TECHNICIAN'
+  | 'RESOURCE_MANAGER';
 export type AccountStatus = 'ACTIVE' | 'INACTIVE';
 
 export interface UserProfile {

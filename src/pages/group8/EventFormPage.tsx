@@ -11,6 +11,7 @@ import {
   fromDateTimeLocal,
   toDateTimeLocal,
 } from '@/components/group8';
+import { G8_ELIGIBLE_ROLE_OPTIONS } from '@/config/group8Routes';
 import { createEvent, getEvent, updateEvent, validateVenue } from '@/services/group8';
 import type { EventMode, EventUpsertRequest, UserRole, VenueValidationResult } from '@/types';
 import { cn } from '@/utils';
@@ -34,7 +35,6 @@ interface FormState {
 
 type FieldErrors = Partial<Record<keyof FormState, string>>;
 
-const ELIGIBLE_ROLE_OPTIONS: UserRole[] = ['STUDENT', 'STAFF', 'HOD', 'DEAN', 'ADMIN'];
 
 const EMPTY_FORM: FormState = {
   title: '',
@@ -431,7 +431,7 @@ export const EventFormPage: React.FC = () => {
             <fieldset className="g8-fieldset">
               <legend className="form-label">Eligible roles</legend>
               <div className="g8-checkbox-row">
-                {ELIGIBLE_ROLE_OPTIONS.map((role) => (
+                {G8_ELIGIBLE_ROLE_OPTIONS.map((role) => (
                   <label key={role} className="g8-checkbox">
                     <input type="checkbox" checked={form.roles.includes(role)} onChange={() => toggleRole(role)} />
                     <span>{ROLE_LABELS[role]}</span>

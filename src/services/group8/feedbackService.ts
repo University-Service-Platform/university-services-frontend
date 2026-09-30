@@ -1,3 +1,4 @@
+import { G8_INSIGHT_ROLES } from '@/config/group8Routes';
 import type {
   ActivityType,
   EngagementSummary,
@@ -31,7 +32,7 @@ export const FEEDBACK_API = '/feedback';
 export const ENGAGEMENT_API = '/engagement';
 
 /** Roles allowed to view feedback summaries and the engagement dashboard (US8-13). */
-export const FEEDBACK_INSIGHT_ROLES: UserRole[] = ['ADMIN', 'STAFF', 'HOD', 'DEAN'];
+export const FEEDBACK_INSIGHT_ROLES: UserRole[] = G8_INSIGHT_ROLES;
 
 /** Group 7 statuses that make a service request eligible for feedback. */
 export const G7_FEEDBACK_ELIGIBLE_STATUSES = ['RESOLVED', 'CLOSED'];

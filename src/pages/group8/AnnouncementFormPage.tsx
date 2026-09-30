@@ -10,11 +10,12 @@ import {
   ROLE_LABELS,
   describeAudience,
 } from '@/components/group8';
+import { G8_ELIGIBLE_ROLE_OPTIONS } from '@/config/group8Routes';
 import { getFaculties } from '@/services/facultyService';
 import { getServiceUnits } from '@/services/serviceUnitService';
 import { createAnnouncement, previewAudience } from '@/services/group8';
 import { useAppDispatch, userActivityRecorded } from '@/store';
-import type { AudiencePreview, AudienceRule, AudienceType, UserRole } from '@/types';
+import type { AudiencePreview, AudienceRule, AudienceType } from '@/types';
 import { cn } from '@/utils';
 import './group8Pages.css';
 
@@ -31,7 +32,7 @@ const AUDIENCE_TYPES: Array<{ value: AudienceType; label: string; hint: string }
   { value: 'SERVICE_UNIT', label: 'By service unit', hint: 'Staff of the selected service units.' },
 ];
 
-const ROLE_OPTIONS: Option[] = (['STUDENT', 'STAFF', 'HOD', 'DEAN', 'ADMIN'] as UserRole[]).map((role) => ({
+const ROLE_OPTIONS: Option[] = G8_ELIGIBLE_ROLE_OPTIONS.map((role) => ({
   value: role,
   label: ROLE_LABELS[role],
 }));
