@@ -32,11 +32,10 @@ export const WorkOrdersPage: React.FC = () => {
 
   const loadWorkOrders = useCallback(async () => {
     setIsLoading(true);
-    setFetchError(null);
-
     const result = await getWorkOrders();
     if (result.success && result.data) {
       setWorkOrders(result.data);
+      setFetchError(null);
     } else {
       setFetchError(result.message || 'Unable to retrieve work orders.');
     }
@@ -44,8 +43,21 @@ export const WorkOrdersPage: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    loadWorkOrders();
-  }, [loadWorkOrders]);
+    let isMounted = true;
+    getWorkOrders().then((result) => {
+      if (!isMounted) return;
+      if (result.success && result.data) {
+        setWorkOrders(result.data);
+        setFetchError(null);
+      } else {
+        setFetchError(result.message || 'Unable to retrieve work orders.');
+      }
+      setIsLoading(false);
+    });
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const filteredWorkOrders = workOrders.filter((wo) => {
     const matchesStatus = statusFilter === 'ALL' || wo.status === statusFilter;

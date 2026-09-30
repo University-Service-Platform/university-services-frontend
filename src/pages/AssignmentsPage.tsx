@@ -40,8 +40,21 @@ export const AssignmentsPage: React.FC = () => {
   };
 
   useEffect(() => {
-    loadAssignments();
-  }, [loadAssignments]);
+    let isMounted = true;
+    getWorkOrders().then((result) => {
+      if (!isMounted) return;
+      if (result.success && result.data) {
+        setWorkOrders(result.data);
+        setFetchError(null);
+      } else {
+        setFetchError(result.message || 'Unable to load technician assignment data.');
+      }
+      setIsLoading(false);
+    });
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const filteredOrders = workOrders.filter((wo) => {
     const query = searchQuery.toLowerCase().trim();

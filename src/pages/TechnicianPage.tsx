@@ -71,8 +71,21 @@ export const TechnicianPage: React.FC = () => {
   }, [technicianId]);
 
   useEffect(() => {
-    loadTechnicianWorkOrders();
-  }, [loadTechnicianWorkOrders]);
+    let isMounted = true;
+    getWorkOrders({ technicianId }).then((result) => {
+      if (!isMounted) return;
+      if (result.success && result.data) {
+        setWorkOrders(result.data);
+        setFetchError(null);
+      } else {
+        setFetchError(result.message || 'Unable to load assigned work orders.');
+      }
+      setIsLoading(false);
+    });
+    return () => {
+      isMounted = false;
+    };
+  }, [technicianId]);
 
   const isAssignedToCurrentUser = (wo: WorkOrder): boolean => {
     if (!technicianId) return true;

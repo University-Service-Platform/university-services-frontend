@@ -104,8 +104,21 @@ export const TriagePage: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    loadRequests();
-  }, [loadRequests]);
+    let isMounted = true;
+    getMyServiceRequests().then((result) => {
+      if (!isMounted) return;
+      if (result.success && result.data) {
+        setRequests(result.data);
+        setFetchError(null);
+      } else {
+        setFetchError(result.message || 'Unable to connect to Service Request service.');
+      }
+      setIsLoading(false);
+    });
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const selectRequestForTriage = (req: ServiceRequest) => {
     setSelectedRequest(req);

@@ -83,12 +83,38 @@ export const ServiceDashboardPage: React.FC = () => {
   }, [srDimension, woDimension, fetchSrSummary, fetchWoSummary]);
 
   useEffect(() => {
-    fetchSrSummary(srDimension);
-  }, [srDimension, fetchSrSummary]);
+    let isMounted = true;
+    getServiceRequestSummary(srDimension).then((result) => {
+      if (!isMounted) return;
+      if (result.success && result.data) {
+        setSrSummaryData(result.data);
+        setSrFetchError(null);
+      } else {
+        setSrFetchError(result.message || `Unable to load service request summary grouped by ${srDimension}.`);
+      }
+      setIsSrLoading(false);
+    });
+    return () => {
+      isMounted = false;
+    };
+  }, [srDimension]);
 
   useEffect(() => {
-    fetchWoSummary(woDimension);
-  }, [woDimension, fetchWoSummary]);
+    let isMounted = true;
+    getWorkOrderSummary(woDimension).then((result) => {
+      if (!isMounted) return;
+      if (result.success && result.data) {
+        setWoSummaryData(result.data);
+        setWoFetchError(null);
+      } else {
+        setWoFetchError(result.message || `Unable to load work order summary grouped by ${woDimension}.`);
+      }
+      setIsWoLoading(false);
+    });
+    return () => {
+      isMounted = false;
+    };
+  }, [woDimension]);
 
   const srTotalCount = srSummaryData
     ? Object.values(srSummaryData).reduce((acc, count) => acc + (typeof count === 'number' ? count : 0), 0)
