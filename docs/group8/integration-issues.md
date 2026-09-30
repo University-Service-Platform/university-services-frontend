@@ -25,6 +25,7 @@ behaviour, **Low** = worked around in the frontend.
 | GW-2 | **High** | communication-feedback-service serves `/api/...`, not `/api/v1/...`. | Use the gateway's `_versioned(...)` rewrite for `announcements`, `notifications`, `feedback`. |
 | GW-3 | Medium | Engagement is served at `/api/engagement-dashboard/summary`; the gateway lists `/api/v1/engagement`. | Route `/api/v1/engagement-dashboard` -> `/api/engagement-dashboard`. |
 | GW-4 | Low | `/api/notifications/trigger` is service-to-service (X-Service-Key). | Do not expose it to browsers, or expose it only for Group 6/7 service calls. |
+| GW-5 | **High** | Deployed gateway (`university-api-gateway.onrender.com`, checked 30 Sep 2026): only Identity is connected; `GROUP8_SERVICE_URL` is not configured, so every Group 8 route answers `ROUTE_NOT_FOUND`. | Deploy both Group 8 services and set their URLs once GW-1/GW-2 are in place. |
 
 ## Open - communication-feedback-service (owners: Kasun / Isuru)
 
