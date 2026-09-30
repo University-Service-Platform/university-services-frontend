@@ -7,23 +7,26 @@ import type {
   AudienceRule,
   UserRole,
 } from '@/types';
-import { g8Fail, g8Ok, g8Request, getG8DemoIdentity, nextDemoId, type G8Result } from './g8Api';
+import { g8Fail, g8Ok, g8Request, g8RequestMapped, getG8DemoIdentity, nextDemoId, type G8Result } from './g8Api';
 
 /**
  * communication-feedback-service client - announcements & notifications (Group 8)
  *
- * GROUP 8 DRAFT CONTRACT - gateway paths:
- *   GET    /announcements                      announcements targeted at the caller (BR8-06, filtered server-side)
- *   GET    /announcements/managed              announcements the caller authored / may manage (staff)
- *   POST   /announcements                      create (optionally publish immediately)
- *   POST   /announcements/{id}/publish         publish a draft -> notifications for the audience
- *   POST   /announcements/audience-preview     estimated recipients for an audience rule (Group 5 directory)
- *   GET    /notifications/me                   caller's in-app notifications (newest first)
- *   PATCH  /notifications/{id}/read            mark one notification read
- *   PATCH  /notifications/me/read-all          mark all read
+ * Integrated with Notification-and-Feedback-Uni-Service-Management-System_Backend through the
+ * API Gateway (`/api/v1`). Backend shapes are translated to the UI model below.
  *
- * Provided to Groups 6/7 (service-to-service, not called by the frontend):
- *   POST   /notifications                      { recipientId, type, title, message, source, referenceId }
+ *   GET    /announcements                      announcements visible to the caller
+ *   POST   /announcements                      { title, content, audienceType, ruleValue } -> DRAFT
+ *   POST   /announcements/{id}/publish         publish (owner only)
+ *   GET    /notifications?page=&size=&unreadOnly=   Spring Page of the caller's notifications
+ *   PATCH  /notifications/{id}/read            mark one read
+ *
+ * Not offered by the service yet (integration-issues CF-7), handled here:
+ *   - "my announcements" = visible announcements created by the caller
+ *   - audience preview   = not available -> clear message
+ *   - mark all read      = one PATCH per unread notification
+ *
+ * Provided to Groups 6/7 (service-to-service): POST /notifications/trigger (X-Service-Key).
  */
 
 export const ANNOUNCEMENTS_API = '/announcements';
@@ -31,6 +34,38 @@ export const NOTIFICATIONS_API = '/notifications';
 
 /** Roles allowed to publish announcements (US8-08). Final check is server-side. */
 export const ANNOUNCER_ROLES: UserRole[] = G8_ANNOUNCER_ROLES;
+
+/* ------------------------------------------------------------------ */
+/* communication-feedback-service announcement shape                  */
+/* ------------------------------------------------------------------ */
+
+interface AnnouncementResponse {
+  id: string;
+  title: string;
+  content: string;
+  status: Announcement['status'];
+  createdBy: string;
+  audienceType: AudienceRule['type'];
+  ruleValue: string | null;
+  publishedAt: string | null;
+  createdAt: string;
+  updatedAt?: string;
+}
+
+function toUiAnnouncement(announcement: AnnouncementResponse): Announcement {
+  return {
+    id: announcement.id,
+    title: announcement.title,
+    content: announcement.content,
+    audience: { type: announcement.audienceType, values: announcement.ruleValue ? [announcement.ruleValue] : [] },
+    publisherId: announcement.createdBy,
+    // The service returns only the author's id; the feed shows a neutral publisher label.
+    publisherName: 'University staff',
+    status: announcement.status,
+    publishedAt: announcement.publishedAt ?? undefined,
+    createdAt: announcement.createdAt,
+  };
+}
 
 /* ------------------------------------------------------------------ */
 /* Synthetic demo data                                                 */
@@ -212,7 +247,7 @@ function validateAudience(audience: AudienceRule): string | null {
 /* ------------------------------------------------------------------ */
 
 export function listMyAnnouncements(): Promise<G8Result<Announcement[]>> {
-  return g8Request<Announcement[]>(ANNOUNCEMENTS_API, {
+  return g8RequestMapped<AnnouncementResponse[], Announcement[]>(ANNOUNCEMENTS_API, {
     demo: () =>
       g8Ok(
         demoAnnouncements
@@ -221,11 +256,15 @@ export function listMyAnnouncements(): Promise<G8Result<Announcement[]>> {
           .map((item) => ({ ...item })),
         true
       ),
-  });
+  }, (announcements) =>
+    announcements
+      .map(toUiAnnouncement)
+      .filter((item) => item.status === 'PUBLISHED')
+      .sort((a, b) => (b.publishedAt ?? '').localeCompare(a.publishedAt ?? '')));
 }
 
 export function listManagedAnnouncements(): Promise<G8Result<Announcement[]>> {
-  return g8Request<Announcement[]>(`${ANNOUNCEMENTS_API}/managed`, {
+  return g8RequestMapped<AnnouncementResponse[], Announcement[]>(ANNOUNCEMENTS_API, {
     demo: () => {
       if (!isDemoAnnouncer()) return g8Fail(403, 'Only authorized staff can manage announcements.', true);
       return g8Ok(
@@ -233,11 +272,18 @@ export function listManagedAnnouncements(): Promise<G8Result<Announcement[]>> {
         true
       );
     },
+  }, (announcements) => {
+    // No "my announcements" endpoint yet: show the visible announcements this user created.
+    const me = getG8DemoIdentity()?.id;
+    return announcements
+      .filter((item) => !me || item.createdBy === me)
+      .map(toUiAnnouncement)
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   });
 }
 
-export function previewAudience(audience: AudienceRule): Promise<G8Result<AudiencePreview>> {
-  return g8Request<AudiencePreview>(`${ANNOUNCEMENTS_API}/audience-preview`, {
+export async function previewAudience(audience: AudienceRule): Promise<G8Result<AudiencePreview>> {
+  const result = await g8Request<AudiencePreview>(`${ANNOUNCEMENTS_API}/audience-preview`, {
     method: 'POST',
     body: audience,
     demo: () => {
@@ -252,48 +298,64 @@ export function previewAudience(audience: AudienceRule): Promise<G8Result<Audien
       return g8Ok({ estimatedRecipients, description }, true);
     },
   });
+  if (!result.ok && !result.demo && (result.status === 404 || result.status === 405)) {
+    return g8Fail(404, 'Recipient estimate is not available from the communication service yet.');
+  }
+  return result;
 }
 
-export function createAnnouncement(request: AnnouncementCreateRequest): Promise<G8Result<Announcement>> {
-  return g8Request<Announcement>(ANNOUNCEMENTS_API, {
-    method: 'POST',
-    body: request,
-    demo: () => {
-      if (!isDemoAnnouncer()) return g8Fail(403, 'Only authorized staff can publish announcements.', true);
-      if (!request.title.trim()) return g8Fail(400, 'A title is required.', true);
-      if (request.content.trim().length < 10) return g8Fail(400, 'Announcement content is too short.', true);
-      const problem = validateAudience(request.audience);
-      if (problem) return g8Fail(400, problem, true);
-      const identity = getG8DemoIdentity();
-      const now = new Date().toISOString();
-      const announcement: Announcement = {
-        id: nextDemoId('ANN'),
-        title: request.title.trim(),
-        content: request.content.trim(),
-        audience: request.audience,
-        publisherId: identity?.id ?? 'demo-user',
-        publisherName: identity ? `${identity.firstName} ${identity.lastName}` : 'Demo Staff',
-        status: request.publishNow ? 'PUBLISHED' : 'DRAFT',
-        publishedAt: request.publishNow ? now : undefined,
-        createdAt: now,
-      };
-      demoAnnouncements.unshift(announcement);
-      if (request.publishNow && demoAudienceMatches(announcement.audience)) {
-        recordDemoNotification({
-          type: 'ANNOUNCEMENT_PUBLISHED',
-          title: 'New announcement',
-          message: announcement.title,
-          source: 'GROUP8_COMMS',
-          referenceId: announcement.id,
-        });
-      }
-      return g8Ok({ ...announcement }, true);
+export async function createAnnouncement(request: AnnouncementCreateRequest): Promise<G8Result<Announcement>> {
+  const created = await g8RequestMapped<AnnouncementResponse, Announcement>(
+    ANNOUNCEMENTS_API,
+    {
+      method: 'POST',
+      // The service holds one rule value per announcement; ALL must not carry one.
+      body: {
+        title: request.title,
+        content: request.content,
+        audienceType: request.audience.type,
+        ruleValue: request.audience.type === 'ALL' ? null : (request.audience.values[0] ?? null),
+      },
+      demo: () => {
+        if (!isDemoAnnouncer()) return g8Fail(403, 'Only authorized staff can publish announcements.', true);
+        if (!request.title.trim()) return g8Fail(400, 'A title is required.', true);
+        if (request.content.trim().length < 10) return g8Fail(400, 'Announcement content is too short.', true);
+        const problem = validateAudience(request.audience);
+        if (problem) return g8Fail(400, problem, true);
+        const identity = getG8DemoIdentity();
+        const now = new Date().toISOString();
+        const announcement: Announcement = {
+          id: nextDemoId('ANN'),
+          title: request.title.trim(),
+          content: request.content.trim(),
+          audience: request.audience,
+          publisherId: identity?.id ?? 'demo-user',
+          publisherName: identity ? `${identity.firstName} ${identity.lastName}` : 'Demo Staff',
+          status: request.publishNow ? 'PUBLISHED' : 'DRAFT',
+          publishedAt: request.publishNow ? now : undefined,
+          createdAt: now,
+        };
+        demoAnnouncements.unshift(announcement);
+        if (request.publishNow && demoAudienceMatches(announcement.audience)) {
+          recordDemoNotification({
+            type: 'ANNOUNCEMENT_PUBLISHED',
+            title: 'New announcement',
+            message: announcement.title,
+            source: 'GROUP8_COMMS',
+            referenceId: announcement.id,
+          });
+        }
+        return g8Ok({ ...announcement }, true);
+      },
     },
-  });
+    toUiAnnouncement
+  );
+  if (!created.ok || created.demo || !request.publishNow) return created;
+  return publishAnnouncement(created.data.id);
 }
 
 export function publishAnnouncement(announcementId: string): Promise<G8Result<Announcement>> {
-  return g8Request<Announcement>(`${ANNOUNCEMENTS_API}/${encodeURIComponent(announcementId)}/publish`, {
+  return g8RequestMapped<AnnouncementResponse, Announcement>(`${ANNOUNCEMENTS_API}/${encodeURIComponent(announcementId)}/publish`, {
     method: 'POST',
     demo: () => {
       const announcement = demoAnnouncements.find((item) => item.id === announcementId);
@@ -313,7 +375,7 @@ export function publishAnnouncement(announcementId: string): Promise<G8Result<An
       }
       return g8Ok({ ...announcement }, true);
     },
-  });
+  }, toUiAnnouncement);
 }
 
 /* ------------------------------------------------------------------ */
