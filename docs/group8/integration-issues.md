@@ -17,6 +17,16 @@ behaviour, **Low** = worked around in the frontend.
 | Frontend role names vs Group 5 roles | Group 8 frontend now uses Group 5 role names (`EVENT_ORGANIZER`, `ACADEMIC_STAFF`, `ADMINISTRATIVE_STAFF`, ...) matching event-service authorization. |
 | Frontend vs event-service API | Frontend integrated with the frozen event-service contract (`docs/event-service-openapi.json`) - paths, methods, fields, LocalDateTime and eligibility-rule JSON. |
 
+## Status update - 30 Sep 2026 (afternoon)
+
+| Item | Status |
+|---|---|
+| GW-1, GW-5 | **Fixed** - gateway PR #2 routes event-service and communication-feedback-service separately; both are connected on the deployed gateway (`/gateway/routes`, protected routes answer 401 without a token). |
+| GW-2 | Open - `/api/v1/announcements`, `/notifications`, `/feedback` are forwarded unchanged, but the service serves `/api/...`. |
+| GW-3 | Open - `/api/v1/engagement-dashboard/summary` answers `ROUTE_NOT_FOUND` (the frontend shows labelled demo data). |
+| CF-5 | Partly fixed - eligibility path now points at Group 5 (`/api/v1/validation/users/{userId}/eligibility`); `user-path` still `/api/users/{userId}`. |
+| CF-1, CF-2, CF-9, CF-10 | Still open on `main`. |
+
 ## Open - API Gateway (owner: gateway team; Group 8 Team Lead to raise)
 
 | # | Sev | Issue | Proposed fix |
