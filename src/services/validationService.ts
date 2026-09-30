@@ -191,7 +191,8 @@ export async function validateUserRole(
   requiredRoles: UserRole | UserRole[]
 ): Promise<ValidationResult<UserValidationData>> {
   const normalizedUserId = normalizeUserId(userId);
-  const rolesArray = Array.isArray(requiredRoles) ? requiredRoles : [requiredRoles];
+  // Duplicate roles add nothing to the check and would split the in-flight dedupe key.
+  const rolesArray = [...new Set(Array.isArray(requiredRoles) ? requiredRoles : [requiredRoles])];
 
   if (!normalizedUserId) {
     return {
