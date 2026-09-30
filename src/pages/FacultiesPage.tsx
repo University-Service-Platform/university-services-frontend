@@ -1,11 +1,24 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { GraduationCap, Plus, Edit2, Trash2, AlertCircle, CheckCircle, RefreshCw, Search } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import {
+  GraduationCap,
+  Plus,
+  Edit2,
+  Trash2,
+  AlertCircle,
+  CheckCircle,
+  RefreshCw,
+  Search,
+  Building2,
+  X,
+} from 'lucide-react';
 import {
   getFaculties,
   createFaculty,
   updateFaculty,
   deleteFaculty,
   type FacultyCreatePayload,
+  type FacultyUpdatePayload,
 } from '@/services/facultyService';
 import type { Faculty } from '@/types';
 import { useAuth } from '@/auth';
@@ -21,14 +34,9 @@ import {
 } from '@/components/ui';
 import './FacultiesPage.css';
 
-/**
- * UNCONFIRMED PLACEHOLDER INTEGRATION BOUNDARY PENDING OFFICIAL BACKEND CONTRACT:
- * The official backend Faculty management contract and DTO schema are not yet documented in the repository.
- * Form fields and API interactions serve strictly as an integration boundary ready for official backend endpoints.
- */
 export const FacultiesPage: React.FC = () => {
-  const { isAuthorized } = useAuth();
-  const canManageFaculties = isAuthorized(['ADMIN']);
+  const { isAuthorized, isAccountInactive } = useAuth();
+  const canManageFaculties = isAuthorized(['ADMIN']) && !isAccountInactive;
 
   const [faculties, setFaculties] = useState<Faculty[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -84,7 +92,7 @@ export const FacultiesPage: React.FC = () => {
     };
   }, []);
 
-  // Filter loaded faculties by search query (name or code)
+  // Filter loaded faculties by search query
   const filteredFaculties = useMemo(() => {
     if (!searchQuery.trim()) return faculties;
     const query = searchQuery.toLowerCase().trim();
@@ -144,25 +152,38 @@ export const FacultiesPage: React.FC = () => {
 
     setIsSaving(true);
 
-    const payload: FacultyCreatePayload = {
-      name: name.trim(),
-      code: code.trim(),
-      description: description.trim() || undefined,
-    };
-
-    let result;
     if (editingFaculty) {
-      result = await updateFaculty(editingFaculty.id, payload);
-    } else {
-      result = await createFaculty(payload);
-    }
+      const payload: FacultyUpdatePayload = {
+        name: name.trim(),
+        code: code.trim().toUpperCase(),
+        description: description.trim() || undefined,
+      };
 
-    if (result.success) {
-      setSuccessMessage(result.message || 'Faculty saved successfully.');
-      setIsFormModalOpen(false);
-      fetchFacultiesData();
+      const result = await updateFaculty(editingFaculty.id, payload);
+
+      if (result.success) {
+        setSuccessMessage(result.message || 'Faculty updated successfully.');
+        setIsFormModalOpen(false);
+        fetchFacultiesData();
+      } else {
+        setSaveError(result.message || 'Failed to update faculty.');
+      }
     } else {
-      setSaveError(result.message || 'Failed to save faculty. Unable to connect to backend.');
+      const payload: FacultyCreatePayload = {
+        name: name.trim(),
+        code: code.trim().toUpperCase(),
+        description: description.trim() || undefined,
+      };
+
+      const result = await createFaculty(payload);
+
+      if (result.success) {
+        setSuccessMessage(result.message || 'Faculty created successfully.');
+        setIsFormModalOpen(false);
+        fetchFacultiesData();
+      } else {
+        setSaveError(result.message || 'Failed to create faculty.');
+      }
     }
 
     setIsSaving(false);
@@ -182,7 +203,7 @@ export const FacultiesPage: React.FC = () => {
       setDeletingFaculty(null);
       fetchFacultiesData();
     } else {
-      setDeleteError(result.message || 'Failed to delete faculty. Unable to connect to backend.');
+      setDeleteError(result.message || 'Failed to delete faculty.');
     }
 
     setIsDeleting(false);
@@ -198,32 +219,50 @@ export const FacultiesPage: React.FC = () => {
         </div>
       )}
 
-      {/* Page Header Card */}
+      {/* Header Card */}
       <Card>
         <div className="faculties-header-card">
           <div className="faculties-header-text">
-            <h2 className="faculties-title">Faculty Management</h2>
+            <h2 className="faculties-title">Faculties Management</h2>
             <p className="faculties-subtitle">
-              Manage university faculties, organizational codes, and university directory structure.
+              Manage university faculties, academic divisions, and departmental hierarchies.
             </p>
           </div>
-          {canManageFaculties && (
-            <Button
-              variant="primary"
-              icon={<Plus size={16} />}
-              onClick={openCreateModal}
-            >
-              Add Faculty
-            </Button>
-          )}
+          <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
+            <Link to="/departments" style={{ textDecoration: 'none' }}>
+              <Button variant="outline" icon={<Building2 size={16} />}>
+                Manage Departments
+              </Button>
+            </Link>
+            {canManageFaculties && (
+              <Button variant="primary" icon={<Plus size={16} />} onClick={openCreateModal}>
+                Add Faculty
+              </Button>
+            )}
+          </div>
         </div>
       </Card>
 
-      {/* Search & Filter Bar */}
+      {/* Stats Bar */}
       {faculties.length > 0 && (
-        <Card className="faculties-controls-card" style={{ padding: '1rem 1.5rem' }}>
-          <div className="faculties-search-bar" style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-            <div className="faculties-search-input" style={{ flex: 1 }}>
+        <div className="faculties-stats-bar">
+          <div className="faculties-stat-pill">
+            <div className="faculties-stat-pill-icon">
+              <GraduationCap size={18} />
+            </div>
+            <div className="faculties-stat-pill-content">
+              <span className="faculties-stat-pill-count">{faculties.length}</span>
+              <span className="faculties-stat-pill-label">Registered Faculties</span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Search Controls */}
+      {faculties.length > 0 && (
+        <Card className="faculties-controls-card">
+          <div className="faculties-search-bar">
+            <div className="faculties-search-input">
               <Input
                 id="faculty-search-input"
                 placeholder="Search faculties by name, code, or description..."
@@ -232,66 +271,85 @@ export const FacultiesPage: React.FC = () => {
                 leftIcon={<Search size={18} />}
               />
             </div>
+            {searchQuery && (
+              <Button variant="ghost" size="sm" icon={<X size={14} />} onClick={() => setSearchQuery('')}>
+                Clear
+              </Button>
+            )}
           </div>
         </Card>
       )}
 
-      {/* Content Area: Loading / Empty / Loaded States */}
+      {/* Content Area */}
       {isLoading ? (
         <LoadingState
-          title="Loading University Faculties..."
-          description="Retrieving faculty records from the university directory."
+          title="Loading Faculties..."
+          description="Retrieving faculty records from identity directory."
         />
       ) : faculties.length > 0 ? (
-        <div className="faculties-grid">
-          {filteredFaculties.map((faculty) => (
-            <Card key={faculty.id} className="faculty-card">
-              <CardBody>
-                <div className="faculty-card-header">
-                  <h3 className="faculty-name">{faculty.name}</h3>
-                  <Badge variant="info">{faculty.code}</Badge>
-                </div>
-                <div className="faculty-meta">
-                  {faculty.description && (
-                    <p style={{ marginTop: '0.25rem', lineHeight: '1.5' }}>
-                      {faculty.description}
-                    </p>
-                  )}
-                </div>
-                {canManageFaculties && (
-                  <div className="faculty-card-actions">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      icon={<Edit2 size={16} />}
-                      onClick={() => openEditModal(faculty)}
-                    >
-                      Edit
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="btn-danger"
-                      icon={<Trash2 size={16} />}
-                      onClick={() => {
-                        setDeleteError(null);
-                        setDeletingFaculty(faculty);
-                      }}
-                    >
-                      Delete
-                    </Button>
+        filteredFaculties.length > 0 ? (
+          <div className="faculties-grid">
+            {filteredFaculties.map((faculty) => (
+              <Card key={faculty.id} className="faculty-card">
+                <CardBody>
+                  <div className="faculty-card-header">
+                    <h3 className="faculty-name">{faculty.name}</h3>
+                    <Badge variant="neutral">{faculty.code}</Badge>
                   </div>
-                )}
-              </CardBody>
-            </Card>
-          ))}
-        </div>
+
+                  <div className="faculty-meta">
+                    <p style={{ color: 'var(--color-neutral)', lineHeight: 1.4 }}>
+                      {faculty.description || 'No description provided.'}
+                    </p>
+                  </div>
+
+                  {canManageFaculties && (
+                    <div className="faculty-card-actions">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        icon={<Edit2 size={15} />}
+                        onClick={() => openEditModal(faculty)}
+                      >
+                        Edit
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="btn-danger"
+                        icon={<Trash2 size={15} />}
+                        onClick={() => setDeletingFaculty(faculty)}
+                      >
+                        Delete
+                      </Button>
+                    </div>
+                  )}
+                </CardBody>
+              </Card>
+            ))}
+          </div>
+        ) : (
+          <Card>
+            <CardBody>
+              <EmptyState
+                title="No Matching Faculties"
+                description="No academic faculties match your search query."
+                icon={<Search className="state-icon" />}
+                action={
+                  <Button variant="outline" icon={<RefreshCw size={16} />} onClick={() => setSearchQuery('')}>
+                    Reset Search
+                  </Button>
+                }
+              />
+            </CardBody>
+          </Card>
+        )
       ) : (
         <EmptyState
           title="Faculty Management API Integration Pending"
           description={
             fetchError ||
-            'The official backend Faculty Management API contract is not yet available in the repository. The faculty management interface and service layer boundary are prepared to connect to backend services.'
+            'The official backend Faculty Management API contract is not yet available in the repository. Faculty management interfaces and service boundaries are prepared to connect to backend services.'
           }
           icon={<GraduationCap className="state-icon" />}
           action={
@@ -301,7 +359,7 @@ export const FacultiesPage: React.FC = () => {
               </Button>
               {canManageFaculties && (
                 <Button variant="primary" icon={<Plus size={16} />} onClick={openCreateModal}>
-                  Open Create Modal
+                  Add Faculty
                 </Button>
               )}
             </div>
@@ -361,7 +419,7 @@ export const FacultiesPage: React.FC = () => {
           <Input
             id="faculty-code-input"
             label="Faculty Code"
-            placeholder="e.g. FSC"
+            placeholder="e.g. FOS"
             value={code}
             onChange={(e) => {
               setCode(e.target.value);
@@ -377,7 +435,7 @@ export const FacultiesPage: React.FC = () => {
           <Input
             id="faculty-description-input"
             label="Description (Optional)"
-            placeholder="Brief overview of the faculty..."
+            placeholder="Brief overview of faculty scope"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             disabled={isSaving}
@@ -385,11 +443,11 @@ export const FacultiesPage: React.FC = () => {
         </form>
       </Modal>
 
-      {/* Delete Confirmation Modal */}
+      {/* Delete Faculty Modal */}
       <Modal
         isOpen={Boolean(deletingFaculty)}
         onClose={() => setDeletingFaculty(null)}
-        title="Delete Faculty"
+        title="Confirm Faculty Deletion"
         footer={
           <>
             <Button
@@ -410,16 +468,18 @@ export const FacultiesPage: React.FC = () => {
           </>
         }
       >
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          {deleteError && (
-            <div className="faculties-alert faculties-alert-error" role="alert">
-              <AlertCircle size={18} />
-              <span>{deleteError}</span>
-            </div>
-          )}
-          <p style={{ color: 'var(--color-neutral)', lineHeight: '1.6' }}>
-            Are you sure you want to delete <strong>{deletingFaculty?.name}</strong>? This action cannot be undone.
-          </p>
+        {deleteError && (
+          <div className="faculties-alert faculties-alert-error" role="alert" style={{ marginBottom: '1rem' }}>
+            <AlertCircle size={18} />
+            <span>{deleteError}</span>
+          </div>
+        )}
+        <p style={{ color: 'var(--color-neutral)', marginBottom: '1rem' }}>
+          Are you sure you want to delete the faculty{' '}
+          <strong>{deletingFaculty?.name}</strong> ({deletingFaculty?.code})?
+        </p>
+        <div style={{ padding: '0.75rem', backgroundColor: 'var(--color-danger-bg)', borderRadius: 'var(--radius-md)', color: 'var(--color-danger-text)', fontSize: '0.875rem' }}>
+          This action will remove the faculty from the university directory.
         </div>
       </Modal>
     </div>

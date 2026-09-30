@@ -36,6 +36,21 @@ export interface Faculty {
 }
 
 /**
+ * Department DTO & UI Model
+ * Associated with parent Faculty
+ */
+export interface Department {
+  id: string;
+  name: string;
+  code: string;
+  facultyId: string;
+  facultyName?: string;
+  description?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+/**
  * UNCONFIRMED PLACEHOLDER INTEGRATION BOUNDARY PENDING OFFICIAL BACKEND DTO CONTRACT:
  * The official backend Service Unit DTO schema is not yet documented in the repository.
  * The fields below represent an unconfirmed placeholder UI/service boundary subject to change upon official contract.

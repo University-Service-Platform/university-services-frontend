@@ -5,6 +5,7 @@ export * from './ProfilePage';
 export * from './RolesPage';
 export * from './AccountInactivePage';
 export * from './FacultiesPage';
+export * from './DepartmentsPage';
 export * from './ServiceUnitsPage';
 export * from './UsersPage';
 export * from './AccountStatusPage';
