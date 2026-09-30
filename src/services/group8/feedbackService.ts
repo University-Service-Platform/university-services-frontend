@@ -31,7 +31,7 @@ import { g8Fail, g8Ok, g8Request, g8RequestMapped, getG8DemoIdentity, nextDemoId
  */
 
 export const FEEDBACK_API = '/feedback';
-export const ENGAGEMENT_API = '/engagement';
+export const ENGAGEMENT_API = '/engagement-dashboard';
 
 /** Roles allowed to view feedback summaries and the engagement dashboard (US8-13). */
 export const FEEDBACK_INSIGHT_ROLES: UserRole[] = G8_INSIGHT_ROLES;
@@ -365,8 +365,53 @@ export function createFeedbackForm(input: CreateFeedbackFormInput): Promise<G8Re
 /* Engagement                                                          */
 /* ------------------------------------------------------------------ */
 
+interface EngagementSummaryResponse {
+  publishedAnnouncementCount: number;
+  activeFeedbackFormCount: number;
+  feedbackResponseCount: number;
+  averageFeedbackRating: number | null;
+  notificationCount: number;
+  eventParticipationCount: number | null;
+  eventParticipationAvailable: boolean;
+}
+
+interface EventsOverview {
+  published: number;
+  confirmedRegistrations: number;
+}
+
+interface EventListItem {
+  id: string;
+  title: string;
+  capacity: number;
+}
+
+interface EventCapacitySummary {
+  capacity: number;
+  confirmed: number;
+}
+
+/** Event participation comes from event-service; roles without access simply get no rows. */
+async function loadEventParticipation(): Promise<{ overview?: EventsOverview; rows: EngagementSummary['eventParticipation'] }> {
+  const [overview, published] = await Promise.all([
+    g8Request<EventsOverview>('/events/summary'),
+    g8Request<EventListItem[]>('/events?status=PUBLISHED'),
+  ]);
+  const events = published.ok && !published.demo ? published.data.slice(0, 8) : [];
+  const summaries = await Promise.all(
+    events.map((event) => g8Request<EventCapacitySummary>(`/events/${encodeURIComponent(event.id)}/registrations`))
+  );
+  const rows = events.flatMap((event, index) => {
+    const summary = summaries[index];
+    return summary.ok && !summary.demo
+      ? [{ eventId: event.id, title: event.title, capacity: summary.data.capacity, confirmed: summary.data.confirmed }]
+      : [];
+  });
+  return { overview: overview.ok && !overview.demo ? overview.data : undefined, rows };
+}
+
 export function getEngagementSummary(): Promise<G8Result<EngagementSummary>> {
-  return g8Request<EngagementSummary>(`${ENGAGEMENT_API}/summary`, {
+  return g8RequestMapped<EngagementSummaryResponse, EngagementSummary>(`${ENGAGEMENT_API}/summary`, {
     demo: () => {
       if (!isDemoInsightUser()) return g8Fail(403, 'Only authorized staff can view the engagement dashboard.', true);
       const totalResponses = demoSummaries.reduce((sum, summary) => sum + summary.responseCount, 0);
@@ -397,5 +442,20 @@ export function getEngagementSummary(): Promise<G8Result<EngagementSummary>> {
         true
       );
     },
+  }, async (summary) => {
+    const participation = await loadEventParticipation();
+    return {
+      totals: {
+        publishedEvents: participation.overview?.published ?? participation.rows.length,
+        activeRegistrations:
+          participation.overview?.confirmedRegistrations ?? participation.rows.reduce((sum, row) => sum + row.confirmed, 0),
+        announcementsPublished: summary.publishedAnnouncementCount,
+        feedbackResponses: summary.feedbackResponseCount,
+        averageRating: summary.averageFeedbackRating ? Math.round(summary.averageFeedbackRating * 10) / 10 : 0,
+      },
+      eventParticipation: participation.rows,
+      announcementReachAvailable: false,
+      announcementReach: [],
+    };
   });
 }

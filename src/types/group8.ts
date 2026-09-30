@@ -255,6 +255,8 @@ export interface EngagementSummary {
     capacity: number;
     confirmed: number;
   }>;
+  /** false when the communication service does not report read statistics yet. */
+  announcementReachAvailable?: boolean;
   announcementReach: Array<{
     announcementId: string;
     title: string;
