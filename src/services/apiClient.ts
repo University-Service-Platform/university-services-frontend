@@ -1,18 +1,15 @@
 /**
- * Native Fetch API Client Foundation
+ * Shared native Fetch API client.
  *
- * Provides standard request wrapper for future backend services.
- * Does not implement backend logic or hardcoded mock API endpoints.
+ * All frontend service calls should pass through this wrapper so base URL,
+ * JSON headers, authentication, response parsing, and error handling remain consistent.
  */
-
 export interface ApiResponse<T = unknown> {
   data?: T;
   error?: string;
   status: number;
 }
 
-// Session-scoped token written by authService after login; sent as the Bearer credential
-// required by the confirmed cross-team validation contract.
 export const AUTH_TOKEN_STORAGE_KEY = 'university-services.auth.token';
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api/v1';

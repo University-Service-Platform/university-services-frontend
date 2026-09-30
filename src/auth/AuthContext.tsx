@@ -12,7 +12,7 @@ const initialAuthState: AuthState = {
   accountStatus: null,
   isAccountActive: false,
   isAccountInactive: false,
-  isLoading: false,
+  isLoading: true,
   error: null,
 };
 
@@ -38,10 +38,12 @@ function buildAuthenticatedState(user: UserProfile): AuthState {
   };
 }
 
-// Restore the session persisted by authService so a page reload keeps the user signed in.
+// Restore the persisted session synchronously so the first render already reflects it.
 function getInitialAuthState(): AuthState {
   const storedSession = getStoredAuthSession();
-  return storedSession ? buildAuthenticatedState(storedSession.user) : initialAuthState;
+  return storedSession
+    ? buildAuthenticatedState(storedSession.user)
+    : { ...initialAuthState, isLoading: false };
 }
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
@@ -50,7 +52,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const setAuthUser = useCallback((user: UserProfile | null) => {
     if (!user) {
       clearAuthSession();
-      setState(initialAuthState);
+      setState({ ...initialAuthState, isLoading: false });
       return;
     }
 
@@ -60,7 +62,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const logout = useCallback(() => {
     clearAuthSession();
-    setState(initialAuthState);
+    setState({ ...initialAuthState, isLoading: false });
   }, []);
 
   const hasRole = useCallback((requiredRoles: UserRole | UserRole[]): boolean => {
