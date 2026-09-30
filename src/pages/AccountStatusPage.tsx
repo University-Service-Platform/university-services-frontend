@@ -25,7 +25,7 @@ import './AccountStatusPage.css';
  */
 export const AccountStatusPage: React.FC = () => {
   const { user: currentUser, setAuthUser, isAuthorized } = useAuth();
-  const canManageStatus = isAuthorized(['ADMIN', 'STAFF']);
+  const canManageStatus = isAuthorized(['ADMIN']);
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
