@@ -1,67 +1,68 @@
 # Group 8 API contract register
 
-Jira: USMG8-165 (S3-07.1). Status: **v1.0 frozen for breaking changes** (sprint plan API freeze
-date: 16 Sep 2026). All paths are relative to the API Gateway base `/api/v1`.
+Jira: USMG8-165 (S3-07.1). Status: **v1.1 - aligned with the implemented services** (30 Sep 2026).
+Breaking changes need a change request (below). Browser paths go through the API Gateway base
+`/api/v1`; the gateway forwards to each service (see [integration-issues.md](integration-issues.md) GW-1..3).
 
-## Provided by Group 8
+## event-service (frozen contract: `docs/event-service-openapi.json` in the backend repo)
 
-### event-service
+Serves both `/api/...` and `/api/v1/...`. Errors: `{ success: false, error: { code, message } }`.
 
-| # | Method | Path | Consumers | Version | Notes |
-|---|---|---|---|---|---|
-| E1 | GET | `/events?status=&search=&scope=` | Shared frontend | 1.0 | Returns only events visible to the caller |
-| E2 | GET | `/events/{id}` | Shared frontend | 1.0 | |
-| E3 | POST | `/events` | Shared frontend | 1.0 | Creates DRAFT; organizer roles only |
-| E4 | PUT | `/events/{id}` | Shared frontend | 1.0 | 409 for cancelled/completed or capacity below confirmed |
-| E5 | POST | `/events/{id}/publish` | Shared frontend | 1.0 | Re-validates venue with Group 6 |
-| E6 | POST | `/events/{id}/cancel` | Shared frontend | 1.0 | Body `{ reason }`; cancels registrations and notifies |
-| E7 | GET | `/events/venues/{resourceId}/validation` | Shared frontend | 1.0 | Proxies Group 6 |
-| E8 | POST | `/events/{id}/registrations` | Shared frontend | 1.0 | 403 not eligible, 409 closed/full/duplicate, 503 Group 5 down |
-| E9 | GET | `/events/{id}/registrations/summary` | Shared frontend | 1.0 | Organizer only |
-| E10 | GET | `/registrations/me` | Shared frontend | 1.0 | |
-| E11 | POST | `/registrations/{id}/cancel` | Shared frontend | 1.0 | 409 after deadline |
+| # | Method | Path | Roles | Notes |
+|---|---|---|---|---|
+| E1 | GET | `/events?status=&from=&to=&upcoming=&mine=&page=&size=` | any signed-in | Drafts only for managers |
+| E2 | GET | `/events/{id}` | any signed-in | 403 `NOT_VISIBLE` |
+| E3 | POST | `/events` | EVENT_ORGANIZER, ACADEMIC_STAFF, ADMIN | Creates DRAFT |
+| E4 | PATCH | `/events/{id}` | same | Partial update |
+| E5 | PATCH | `/events/{id}/publish` | same | Group 6 venue check: 409 `VENUE_NOT_AVAILABLE`, 400 `VENUE_NOT_FOUND`, 503 `GROUP6_UNAVAILABLE` |
+| E6 | PATCH | `/events/{id}/cancel` | same | Cancels registrations, notifies |
+| E7 | PATCH | `/events/{id}/complete` | same | 400 `EVENT_NOT_STARTED` |
+| E8 | POST | `/events/{id}/registrations` | any signed-in | 403 `NOT_ELIGIBLE`, 409 `CAPACITY_REACHED`/`ALREADY_REGISTERED`, 400 `REGISTRATION_CLOSED`, 503 `GROUP5_UNAVAILABLE` |
+| E9 | GET | `/events/{id}/registrations` | organizer roles + ADMINISTRATIVE_STAFF | Counts summary |
+| E10 | GET | `/events/summary` | ADMIN, ADMINISTRATIVE_STAFF | Totals by status |
+| E11 | GET | `/registrations/mine` | any signed-in | |
+| E12 | PATCH | `/registrations/{id}/cancel` | owner | 400 `CANCELLATION_CLOSED` after the event starts |
 
-### communication-feedback-service
+Event body: `title, description, venue (Group 6 code), online, scheduleStart, scheduleEnd,
+registrationOpenAt, registrationCloseAt (LocalDateTime, no zone), capacity, eligibilityRule`
+(JSON string: `{"all": true}` or `{"roles": [...], "departmentId": "CS", "facultyId": "FSC"}`).
 
-| # | Method | Path | Consumers | Version | Notes |
-|---|---|---|---|---|---|
-| C1 | GET | `/announcements` | Shared frontend | 1.0 | Server-side audience filtering |
-| C2 | GET | `/announcements/managed` | Shared frontend | 1.0 | Staff only |
-| C3 | POST | `/announcements` | Shared frontend | 1.0 | `{ title, content, audience, publishNow }` |
-| C4 | POST | `/announcements/{id}/publish` | Shared frontend | 1.0 | |
-| C5 | POST | `/announcements/audience-preview` | Shared frontend | 1.0 | Estimated recipients |
-| C6 | GET | `/notifications/me` | Shared frontend | 1.0 | |
-| C7 | PATCH | `/notifications/{id}/read` | Shared frontend | 1.0 | |
-| C8 | PATCH | `/notifications/me/read-all` | Shared frontend | 1.0 | |
-| C9 | POST | `/notifications` | **Groups 6, 7**, event-service | 1.0 | See [notification-api-for-groups-6-7.md](notification-api-for-groups-6-7.md) |
-| C10 | GET | `/feedback/activities/me` | Shared frontend | 1.0 | |
-| C11 | GET | `/feedback/forms?activityType=&activityId=` | Shared frontend | 1.0 | 409 not eligible / already submitted |
-| C12 | POST | `/feedback/responses` | Shared frontend | 1.0 | One per user and activity |
-| C13 | GET | `/feedback/summaries?activityType=` | Shared frontend | 1.0 | Staff only |
-| C14 | GET | `/engagement/summary` | Shared frontend | 1.0 | Staff only |
+## communication-feedback-service
 
-Shared error behaviour for all endpoints: 400 validation, 401 session, 403 forbidden, 404 not found,
-409 conflict, 503 dependency unavailable (nothing saved). Frontend mapping: `src/services/group8/g8Api.ts`.
+Serves `/api/...`. Errors: `{ code }`.
+
+| # | Method | Path | Consumers | Notes |
+|---|---|---|---|---|
+| C1 | GET | `/announcements` | frontend | Announcements visible to the caller |
+| C2 | POST | `/announcements` | frontend | `{ title, content, audienceType, ruleValue }` - one rule value |
+| C3 | POST | `/announcements/{id}/publish` | frontend | Owner only |
+| C4 | POST | `/announcements/{id}/archive` | frontend | Owner only |
+| C5 | GET | `/notifications?unreadOnly=&page=&size=` | frontend | Spring `Page` (`content[]`) |
+| C6 | PATCH | `/notifications/{id}/read` | frontend | Recipient only |
+| C7 | POST | `/notifications/trigger` | **Groups 6, 7**, event-service | `X-Service-Key`; see [notification-api-for-groups-6-7.md](notification-api-for-groups-6-7.md) |
+| C8 | POST | `/feedback/forms` | frontend (organizers) | `{ activityType, activityId (UUID), title, questionsJson }` |
+| C9 | GET | `/feedback/forms` | frontend | Active forms |
+| C10 | GET | `/feedback/forms/{formId}` | frontend | |
+| C11 | POST | `/feedback/forms/{formId}/responses` | frontend | `{ rating 1-5, comment }`; 403 `FEEDBACK_NOT_ELIGIBLE`, 409 `FEEDBACK_ALREADY_SUBMITTED` |
+| C12 | GET | `/feedback/forms/{formId}/responses` | frontend | Form creator only |
+| C13 | GET | `/engagement-dashboard/summary` | frontend | Counts and average rating |
 
 ## Consumed by Group 8
 
-See [consumed-contracts.md](consumed-contracts.md): Group 5 eligibility, Group 6 venue validation,
-Group 7 completion status.
+See [consumed-contracts.md](consumed-contracts.md): Group 5 eligibility and JWKS, Group 6 venue
+validation, Group 7 completion status.
 
-## Change rules after the freeze
+## Change rules
 
 | Change | Allowed? | Process |
 |---|---|---|
-| Add an optional response field | Yes | Note it in this register; bump to 1.1 |
-| Add a new endpoint | Yes | Add a row; tell affected teams |
-| Rename/remove a field or endpoint, change a status code or meaning | **Only with a change request** | Jira change request (S3-07.4) with impact on each consumer, agreed by the affected teams' leads, before merging |
+| Add an optional response field or a new endpoint | Yes | Add it here; bump the minor version; tell affected teams |
+| Rename/remove a field or endpoint, change a status code or meaning | **Only with a change request** | Jira change request with impact per consumer, agreed by the affected leads, before merging |
 | Fix to match this register | Yes | Treat as a defect |
-
-Before release, backend owners (event-service: harshana, communication-feedback-service: Kasun)
-confirm that Swagger matches this register (USMG8-198).
 
 ## Version history
 
 | Version | Date | Change |
 |---|---|---|
-| 1.0 | 27 Sep 2026 | Register created from implemented frontend clients and the Group 8 draft contracts |
+| 1.0 | 27 Sep 2026 | Register created from the frontend draft contract |
+| 1.1 | 30 Sep 2026 | Replaced with the implemented event-service (frozen OpenAPI) and communication-feedback-service endpoints |
