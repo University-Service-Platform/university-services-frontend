@@ -14,6 +14,9 @@ export const AUTH_TOKEN_STORAGE_KEY = 'university-services.auth.token';
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api/v1';
 
+// Generous default so a sleeping gateway can still wake up, but a hung request never spins forever.
+const REQUEST_TIMEOUT_MS = Number(import.meta.env.VITE_API_TIMEOUT_MS) || 60000;
+
 function getStoredAuthToken(): string | null {
   if (typeof window === 'undefined') return null;
 
@@ -39,17 +42,38 @@ export async function apiFetch<T>(
     headers.set('Authorization', `Bearer ${token}`);
   }
 
+  // Abort on timeout, and still honour an abort signal passed in by the caller.
+  const controller = new AbortController();
+  let timedOut = false;
+  const timeoutId = setTimeout(() => {
+    timedOut = true;
+    controller.abort();
+  }, REQUEST_TIMEOUT_MS);
+  const callerSignal = options.signal;
+  if (callerSignal?.aborted) {
+    controller.abort();
+  } else {
+    callerSignal?.addEventListener('abort', () => controller.abort(), { once: true });
+  }
+
   let response: Response;
   try {
     response = await fetch(`${BASE_URL}${endpoint}`, {
       ...options,
       headers,
+      signal: controller.signal,
     });
   } catch (err) {
     return {
-      error: err instanceof Error ? err.message : 'Network error occurred',
+      error: timedOut
+        ? 'The server took too long to respond. Please try again.'
+        : err instanceof Error
+          ? err.message
+          : 'Network error occurred',
       status: 0,
     };
+  } finally {
+    clearTimeout(timeoutId);
   }
 
   const status = response.status;
