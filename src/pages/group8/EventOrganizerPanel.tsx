@@ -1,8 +1,8 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Ban, Send, Users } from 'lucide-react';
+import { Ban, CheckCircle2, Send, Users } from 'lucide-react';
 import { Button, Card, CardBody, CardHeader, EmptyState, ErrorState, LoadingState, Modal } from '@/components/ui';
 import { G8Alert, RegistrationStatusBadge, formatDateTime, type G8AlertTone } from '@/components/group8';
-import { cancelEvent, getRegistrationSummary, publishEvent } from '@/services/group8';
+import { cancelEvent, completeEvent, getRegistrationSummary, publishEvent } from '@/services/group8';
 import { useAppDispatch, userActivityRecorded } from '@/store';
 import type { RegistrationSummary, UniversityEvent } from '@/types';
 
@@ -12,7 +12,7 @@ interface EventOrganizerPanelProps {
 }
 
 /**
- * Organizer-only tools on the event page: publish, cancel and the
+ * Organizer-only tools on the event page: publish, cancel, complete and the
  * registration/capacity summary (US8-03, US8-07). Visibility here is UX only;
  * event-service enforces organizer authorization (BR8-01, BR8-09).
  */
@@ -23,9 +23,11 @@ export const EventOrganizerPanel: React.FC<EventOrganizerPanelProps> = ({ event,
   const [isSummaryLoading, setIsSummaryLoading] = useState(true);
   const [isPublishing, setIsPublishing] = useState(false);
   const [isCancelOpen, setIsCancelOpen] = useState(false);
-  const [cancelReason, setCancelReason] = useState('');
-  const [cancelReasonError, setCancelReasonError] = useState<string | null>(null);
+  const [cancelError, setCancelError] = useState<string | null>(null);
   const [isCancelling, setIsCancelling] = useState(false);
+  const [isCompleting, setIsCompleting] = useState(false);
+  // Reference time for "has the event started?" - captured once per mount.
+  const [now] = useState(() => Date.now());
   const [message, setMessage] = useState<{ tone: G8AlertTone; text: string } | null>(null);
 
   const loadSummary = useCallback(async () => {
@@ -58,16 +60,12 @@ export const EventOrganizerPanel: React.FC<EventOrganizerPanelProps> = ({ event,
   };
 
   const handleCancel = async () => {
-    if (cancelReason.trim().length < 10) {
-      setCancelReasonError('Give registrants a short reason (at least 10 characters).');
-      return;
-    }
     setIsCancelling(true);
-    const result = await cancelEvent(event.id, cancelReason.trim());
+    setCancelError(null);
+    const result = await cancelEvent(event.id);
     setIsCancelling(false);
     if (result.ok) {
       setIsCancelOpen(false);
-      setCancelReason('');
       onEventChanged(result.data);
       setMessage({
         tone: 'success',
@@ -75,12 +73,27 @@ export const EventOrganizerPanel: React.FC<EventOrganizerPanelProps> = ({ event,
       });
       dispatch(userActivityRecorded());
     } else {
-      setCancelReasonError(result.message);
+      setCancelError(result.message);
+    }
+  };
+
+  const handleComplete = async () => {
+    setIsCompleting(true);
+    setMessage(null);
+    const result = await completeEvent(event.id);
+    setIsCompleting(false);
+    if (result.ok) {
+      onEventChanged(result.data);
+      setMessage({ tone: 'success', text: 'Event marked as completed. Participants can now give feedback.' });
+      dispatch(userActivityRecorded());
+    } else {
+      setMessage({ tone: 'danger', text: result.message });
     }
   };
 
   const canPublish = event.status === 'DRAFT';
   const canCancel = event.status === 'DRAFT' || event.status === 'PUBLISHED';
+  const canComplete = event.status === 'PUBLISHED' && now >= new Date(event.startTime).getTime();
 
   return (
     <>
@@ -99,6 +112,11 @@ export const EventOrganizerPanel: React.FC<EventOrganizerPanelProps> = ({ event,
               {canPublish && (
                 <Button icon={<Send size={16} />} onClick={handlePublish} isLoading={isPublishing}>
                   Publish
+                </Button>
+              )}
+              {canComplete && (
+                <Button variant="outline" icon={<CheckCircle2 size={16} />} onClick={handleComplete} isLoading={isCompleting}>
+                  Mark as completed
                 </Button>
               )}
               {canCancel && (
@@ -134,7 +152,11 @@ export const EventOrganizerPanel: React.FC<EventOrganizerPanelProps> = ({ event,
                   <span className="g8-stat-label">Cancelled</span>
                 </div>
               </div>
-              {summary.registrants.length === 0 ? (
+              {summary.registrants.length === 0 && summary.confirmed > 0 ? (
+                <p className="g8-muted">
+                  The event service reports registration counts only; participant names are not shared with this screen.
+                </p>
+              ) : summary.registrants.length === 0 ? (
                 <EmptyState
                   icon={<Users className="state-icon" />}
                   title="No registrations yet"
@@ -197,31 +219,10 @@ export const EventOrganizerPanel: React.FC<EventOrganizerPanelProps> = ({ event,
         }
       >
         <p className="g8-modal-text">
-          Registration will close and all {event.confirmedCount} active registrations will be cancelled. Every registrant
-          receives an in-app notification with your reason. This cannot be undone.
+          Registration will close and {summary ? `all ${summary.confirmed}` : 'all'} active registrations will be
+          cancelled. Every registrant receives an in-app cancellation notice. This cannot be undone.
         </p>
-        <div className="form-group">
-          <label htmlFor="g8-cancel-reason" className="form-label">
-            Reason for cancellation
-          </label>
-          <textarea
-            id="g8-cancel-reason"
-            className="form-input g8-textarea"
-            rows={3}
-            value={cancelReason}
-            onChange={(e) => {
-              setCancelReason(e.target.value);
-              setCancelReasonError(null);
-            }}
-            aria-invalid={Boolean(cancelReasonError)}
-            aria-describedby={cancelReasonError ? 'g8-cancel-reason-error' : undefined}
-          />
-          {cancelReasonError && (
-            <span id="g8-cancel-reason-error" className="form-error-text" role="alert">
-              {cancelReasonError}
-            </span>
-          )}
-        </div>
+        {cancelError && <G8Alert tone="danger">{cancelError}</G8Alert>}
       </Modal>
     </>
   );

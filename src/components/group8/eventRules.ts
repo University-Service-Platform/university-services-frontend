@@ -27,7 +27,7 @@ export function getRegistrationAvailability(event: UniversityEvent, now = Date.n
   if (now > new Date(event.registrationClosesAt).getTime()) {
     return { open: false, reason: `Registration closed on ${formatDateTime(event.registrationClosesAt)}.` };
   }
-  if (event.confirmedCount >= event.capacity) {
+  if (event.confirmedCount !== undefined && event.confirmedCount >= event.capacity) {
     return { open: false, reason: 'Capacity reached - registration is closed.' };
   }
   return { open: true, reason: `Registration open until ${formatDateTime(event.registrationClosesAt)}.` };

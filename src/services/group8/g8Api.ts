@@ -203,6 +203,34 @@ export async function g8Request<T>(endpoint: string, options: G8RequestOptions<T
   return g8Fail<T>(response.status, backendError.message, false, backendError.code);
 }
 
+/**
+ * Calls a Group 8 service whose response shape differs from the UI model and converts live
+ * responses with `map`. Demo results are already in the UI shape, so they pass through unchanged.
+ */
+export async function g8RequestMapped<B, U>(
+  endpoint: string,
+  options: { method?: G8RequestOptions<U>['method']; body?: unknown; demo?: () => G8Result<U> },
+  map: (body: B) => U | Promise<U>
+): Promise<G8Result<U>> {
+  const result = await g8Request<B | U>(endpoint, {
+    method: options.method,
+    body: options.body,
+    demo: options.demo as (() => G8Result<B | U>) | undefined,
+  });
+  if (!result.ok || result.demo) return result as G8Result<U>;
+  return g8Ok(await map(result.data as B));
+}
+
+/**
+ * The Group 8 Java services use LocalDateTime (no time zone). Convert an ISO instant to the
+ * browser's local wall-clock time, e.g. "2026-10-05T10:00:00".
+ */
+export function toBackendLocalDateTime(iso: string): string {
+  const date = new Date(iso);
+  const pad = (value: number) => String(value).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}:00`;
+}
+
 /* ------------------------------------------------------------------ */
 /* Small shared helpers                                                */
 /* ------------------------------------------------------------------ */

@@ -44,7 +44,8 @@ export interface UniversityEvent {
   registrationOpensAt: string;
   registrationClosesAt: string;
   capacity: number;
-  confirmedCount: number;
+  /** Known to organizers (and demo data); the event-service does not expose it to other users. */
+  confirmedCount?: number;
   eligibility: EligibilityRule;
   status: EventStatus;
   createdAt?: string;

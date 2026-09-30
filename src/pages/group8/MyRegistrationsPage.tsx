@@ -31,17 +31,17 @@ function tabOf(registration: Registration, now: number): Tab {
   return 'UPCOMING';
 }
 
-/** Cancellation is allowed until registration closes (BR8-03). The backend applies the final rule. */
+/** The event-service allows cancelling until the event starts (CANCELLATION_CLOSED afterwards). */
 function cancellationState(registration: Registration, now: number): { allowed: boolean; note: string } {
   if (registration.status === 'CANCELLED') {
     return { allowed: false, note: registration.cancelledAt ? `Cancelled ${formatDateTime(registration.cancelledAt)}` : 'Cancelled' };
   }
   if (registration.eventStatus === 'CANCELLED') return { allowed: false, note: 'The event was cancelled by the organizer.' };
   if (registration.eventStatus === 'COMPLETED') return { allowed: false, note: 'Event completed.' };
-  if (now > new Date(registration.registrationClosesAt).getTime()) {
-    return { allowed: false, note: 'Cancellation deadline has passed.' };
+  if (now > new Date(registration.eventStartTime).getTime()) {
+    return { allowed: false, note: 'The event has started, so it can no longer be cancelled.' };
   }
-  return { allowed: true, note: `Cancel before ${formatDateTime(registration.registrationClosesAt)}` };
+  return { allowed: true, note: `Cancel before ${formatDateTime(registration.eventStartTime)}` };
 }
 
 export const MyRegistrationsPage: React.FC = () => {
@@ -90,7 +90,12 @@ export const MyRegistrationsPage: React.FC = () => {
     setPendingCancel(null);
 
     if (result.ok) {
-      setRegistrations((prev) => prev.map((item) => (item.id === result.data.id ? result.data : item)));
+      // Keep the event details already on screen; take status and timestamps from the service.
+      setRegistrations((prev) =>
+        prev.map((item) =>
+          item.id === result.data.id ? { ...item, status: result.data.status, cancelledAt: result.data.cancelledAt } : item
+        )
+      );
       setMessage({ tone: 'success', text: `Your registration for "${title}" was cancelled and your place released.` });
       dispatch(userActivityRecorded());
     } else {

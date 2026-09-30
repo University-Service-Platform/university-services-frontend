@@ -1,5 +1,6 @@
 import { G8_ORGANIZER_ROLES } from '@/config/group8Routes';
 import type {
+  EligibilityRule,
   EventStatus,
   EventUpsertRequest,
   Registration,
@@ -8,24 +9,38 @@ import type {
   UserRole,
   VenueValidationResult,
 } from '@/types';
-import { g8Fail, g8Ok, g8Request, getG8DemoIdentity, nextDemoId, toQuery, type G8Result } from './g8Api';
+import {
+  g8Fail,
+  g8Ok,
+  g8RequestMapped,
+  getG8DemoIdentity,
+  nextDemoId,
+  toBackendLocalDateTime,
+  toQuery,
+  type G8Result,
+} from './g8Api';
 import { recordDemoNotification } from './communicationService';
 
 /**
  * event-service client (Group 8)
  *
- * GROUP 8 DRAFT CONTRACT - gateway paths:
- *   GET    /events?status=&search=&scope=mine|all   list events visible to the caller
- *   GET    /events/{id}                             event detail
- *   POST   /events                                  create (DRAFT)
- *   PUT    /events/{id}                             update
- *   POST   /events/{id}/publish                     publish (venue re-validated with Group 6)
- *   POST   /events/{id}/cancel                      cancel + notify registrants (BR8-04)
- *   GET    /events/venues/{resourceId}/validation   Group 6 venue check proxied by event-service
- *   POST   /events/{id}/registrations               register current user (BR8-02/03/05, Group 5 eligibility)
- *   GET    /events/{id}/registrations/summary       organizer registration/capacity summary
- *   GET    /registrations/me                        current user's registrations
- *   POST   /registrations/{id}/cancel               cancel own registration
+ * Integrated with the Group 8 event-service (EventManagement-Uni-Service-Management-System_Backend)
+ * through the API Gateway (`/api/v1`). Backend shapes are translated to the UI model below.
+ *
+ *   GET    /events?status=&mine=                     events visible to the caller (search is client-side)
+ *   GET    /events/{id}
+ *   POST   /events                                   create (DRAFT) - EVENT_ORGANIZER / ACADEMIC_STAFF / ADMIN
+ *   PATCH  /events/{id}                              partial update
+ *   PATCH  /events/{id}/publish                      venue validated with Group 6 at publish
+ *   PATCH  /events/{id}/cancel                       cancels registrations and notifies (BR8-04)
+ *   PATCH  /events/{id}/complete                     marks a started event COMPLETED (opens feedback)
+ *   POST   /events/{id}/registrations                register the caller (Group 5 eligibility, capacity, window)
+ *   GET    /events/{id}/registrations                organizer capacity summary
+ *   GET    /registrations/mine                       the caller's registrations
+ *   PATCH  /registrations/{id}/cancel                cancel own registration (until the event starts)
+ *
+ * Venue check (Group 6 facility-resource-service via the gateway):
+ *   GET    /resources/code/{code}/validate
  */
 
 export const EVENTS_API = '/events';
@@ -33,6 +48,141 @@ export const REGISTRATIONS_API = '/registrations';
 
 /** Roles allowed to organise events (BR8-01). Final check is always server-side. */
 export const EVENT_ORGANIZER_ROLES: UserRole[] = G8_ORGANIZER_ROLES;
+
+/* ------------------------------------------------------------------ */
+/* event-service shapes and translation to the UI model               */
+/* ------------------------------------------------------------------ */
+
+interface EventResponse {
+  id: string;
+  title: string;
+  description: string | null;
+  organizerId: string;
+  venue: string | null;
+  online: boolean;
+  scheduleStart: string;
+  scheduleEnd: string;
+  capacity: number;
+  eligibilityRule: string;
+  registrationOpenAt: string;
+  registrationCloseAt: string;
+  status: EventStatus;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+interface RegistrationResponse {
+  id: string;
+  eventId: string;
+  userId: string;
+  status: Registration['status'];
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface EventRegistrationSummary {
+  eventId: string;
+  title: string;
+  status: EventStatus;
+  capacity: number;
+  confirmed: number;
+  cancelled: number;
+  remainingSeats: number;
+}
+
+interface Group6ValidationResponse {
+  data?: {
+    exists?: boolean;
+    validForReservation?: boolean;
+    capacity?: number | null;
+    resourceCode?: string | null;
+    message?: string;
+  };
+}
+
+/** `{"all": true}` or `{"roles": [...], "departmentId": "CS", "facultyId": "FSC"}` */
+function parseEligibilityRule(rule: string | null | undefined): EligibilityRule {
+  try {
+    const parsed = JSON.parse(rule || '{}') as { all?: boolean; roles?: string[]; departmentId?: string; facultyId?: string };
+    if (parsed.all) return { roles: [], facultyIds: [], departmentIds: [] };
+    return {
+      roles: (parsed.roles ?? []) as UserRole[],
+      facultyIds: parsed.facultyId ? [parsed.facultyId] : [],
+      departmentIds: parsed.departmentId ? [parsed.departmentId] : [],
+    };
+  } catch {
+    return { roles: [], facultyIds: [], departmentIds: [] };
+  }
+}
+
+/** The event-service rule holds one department and one faculty; the form allows only one of each. */
+function toEligibilityRule(rule: EligibilityRule): string {
+  if (!rule.roles.length && !rule.departmentIds.length && !rule.facultyIds.length) return JSON.stringify({ all: true });
+  return JSON.stringify({
+    ...(rule.roles.length ? { roles: rule.roles } : {}),
+    ...(rule.departmentIds[0] ? { departmentId: rule.departmentIds[0] } : {}),
+    ...(rule.facultyIds[0] ? { facultyId: rule.facultyIds[0] } : {}),
+  });
+}
+
+function toUiEvent(event: EventResponse): UniversityEvent {
+  return {
+    id: event.id,
+    title: event.title,
+    description: event.description ?? '',
+    organizerId: event.organizerId,
+    organizerName: event.organizerId,
+    mode: event.online ? 'ONLINE' : 'PHYSICAL',
+    venueResourceId: event.venue ?? undefined,
+    venueName: event.venue ?? undefined,
+    startTime: event.scheduleStart,
+    endTime: event.scheduleEnd,
+    registrationOpensAt: event.registrationOpenAt,
+    registrationClosesAt: event.registrationCloseAt,
+    capacity: event.capacity,
+    // Registration counts come only from the organizer summary endpoint.
+    confirmedCount: undefined,
+    eligibility: parseEligibilityRule(event.eligibilityRule),
+    status: event.status,
+    createdAt: event.createdAt,
+    updatedAt: event.updatedAt,
+  };
+}
+
+function toBackendEvent(request: EventUpsertRequest) {
+  return {
+    title: request.title,
+    description: request.description,
+    online: request.mode === 'ONLINE',
+    venue: request.mode === 'PHYSICAL' ? request.venueResourceId : null,
+    scheduleStart: toBackendLocalDateTime(request.startTime),
+    scheduleEnd: toBackendLocalDateTime(request.endTime),
+    registrationOpenAt: toBackendLocalDateTime(request.registrationOpensAt),
+    registrationCloseAt: toBackendLocalDateTime(request.registrationClosesAt),
+    capacity: request.capacity,
+    eligibilityRule: toEligibilityRule(request.eligibility),
+  };
+}
+
+async function toUiRegistration(registration: RegistrationResponse, known?: UniversityEvent): Promise<Registration> {
+  let event = known;
+  if (!event) {
+    const result = await getEvent(registration.eventId);
+    event = result.ok ? result.data : undefined;
+  }
+  return {
+    id: registration.id,
+    eventId: registration.eventId,
+    eventTitle: event?.title ?? 'Event',
+    eventStartTime: event?.startTime ?? registration.createdAt,
+    eventStatus: event?.status ?? 'PUBLISHED',
+    registrationClosesAt: event?.registrationClosesAt ?? registration.createdAt,
+    userId: registration.userId,
+    status: registration.status,
+    registeredAt: registration.createdAt,
+    cancelledAt: registration.status === 'CANCELLED' ? registration.updatedAt : undefined,
+  };
+}
 
 /* ------------------------------------------------------------------ */
 /* Synthetic demo data (used only when the gateway is unreachable)     */
@@ -51,6 +201,8 @@ const DEMO_VENUES: Record<string, VenueValidationResult> = {
   'RES-101': { valid: true, venueName: 'Science Auditorium', capacity: 300 },
   'RES-204': { valid: true, venueName: 'Computing Lab B-204', capacity: 40 },
   'RES-310': { valid: true, venueName: 'Main Library Seminar Room', capacity: 60 },
+  'LAB-101': { valid: true, venueName: 'LAB-101', capacity: 30 },
+  'AUD-A': { valid: true, venueName: 'AUD-A', capacity: 300 },
   'RES-555': { valid: false, venueName: 'Old Physics Hall', reason: 'Resource is inactive (under maintenance) in Facility Services.' },
 };
 
@@ -71,7 +223,7 @@ const demoEvents: UniversityEvent[] = [
     registrationClosesAt: at(4, 23),
     capacity: 40,
     confirmedCount: 18,
-    eligibility: { roles: ['STUDENT', 'STAFF'], facultyIds: [], departmentIds: [] },
+    eligibility: { roles: ['STUDENT', 'ACADEMIC_STAFF'], facultyIds: [], departmentIds: [] },
     status: 'PUBLISHED',
   },
   {
@@ -124,7 +276,7 @@ const demoEvents: UniversityEvent[] = [
     registrationClosesAt: at(4, 12),
     capacity: 100,
     confirmedCount: 22,
-    eligibility: { roles: ['STAFF', 'HOD', 'DEAN', 'ADMIN'], facultyIds: [], departmentIds: [] },
+    eligibility: { roles: ['ACADEMIC_STAFF', 'ADMINISTRATIVE_STAFF', 'EVENT_ORGANIZER', 'ADMIN'], facultyIds: [], departmentIds: [] },
     status: 'PUBLISHED',
   },
   {
@@ -177,7 +329,7 @@ const demoEvents: UniversityEvent[] = [
     registrationClosesAt: at(11),
     capacity: 25,
     confirmedCount: 0,
-    eligibility: { roles: ['STAFF'], facultyIds: [], departmentIds: [] },
+    eligibility: { roles: ['ACADEMIC_STAFF', 'EVENT_ORGANIZER'], facultyIds: [], departmentIds: [] },
     status: 'DRAFT',
   },
 ];
@@ -252,10 +404,12 @@ export interface EventListFilters {
 }
 
 export function listEvents(filters: EventListFilters = {}): Promise<G8Result<UniversityEvent[]>> {
-  const query = toQuery({ status: filters.status || undefined, search: filters.search?.trim(), scope: filters.scope });
-  return g8Request<UniversityEvent[]>(`${EVENTS_API}${query}`, {
+  const query = toQuery({ status: filters.status || undefined, mine: filters.scope === 'mine' ? 'true' : undefined });
+  const search = filters.search?.trim().toLowerCase();
+  return g8RequestMapped<EventResponse[], UniversityEvent[]>(
+    `${EVENTS_API}${query}`,
+    {
     demo: () => {
-      const search = filters.search?.trim().toLowerCase();
       const data = demoEvents.filter((event) => {
         // Drafts are only visible to organizers; published events only to eligible roles (US8-01 AC).
         if (event.status === 'DRAFT' && !isDemoOrganizer()) return false;
@@ -268,11 +422,19 @@ export function listEvents(filters: EventListFilters = {}): Promise<G8Result<Uni
       });
       return g8Ok([...data].sort((a, b) => a.startTime.localeCompare(b.startTime)), true);
     },
-  });
+    },
+    (events) =>
+      events
+        .map(toUiEvent)
+        .filter((event) => !search || `${event.title} ${event.description} ${event.venueName ?? ''}`.toLowerCase().includes(search))
+        .sort((a, b) => a.startTime.localeCompare(b.startTime))
+  );
 }
 
 export function getEvent(eventId: string): Promise<G8Result<UniversityEvent>> {
-  return g8Request<UniversityEvent>(`${EVENTS_API}/${encodeURIComponent(eventId)}`, {
+  return g8RequestMapped<EventResponse, UniversityEvent>(
+    `${EVENTS_API}/${encodeURIComponent(eventId)}`,
+    {
     demo: () => {
       const event = findDemoEvent(eventId);
       if (!event || (event.status === 'DRAFT' && !isDemoOrganizer())) {
@@ -280,13 +442,15 @@ export function getEvent(eventId: string): Promise<G8Result<UniversityEvent>> {
       }
       return g8Ok({ ...event }, true);
     },
-  });
+    },
+    toUiEvent
+  );
 }
 
 export function createEvent(request: EventUpsertRequest): Promise<G8Result<UniversityEvent>> {
-  return g8Request<UniversityEvent>(EVENTS_API, {
+  return g8RequestMapped<EventResponse, UniversityEvent>(EVENTS_API, {
     method: 'POST',
-    body: request,
+    body: toBackendEvent(request),
     demo: () => {
       if (!isDemoOrganizer()) return g8Fail(403, 'Only authorized event organizers can create events.', true);
       const problem = validateDemoUpsert(request);
@@ -306,13 +470,13 @@ export function createEvent(request: EventUpsertRequest): Promise<G8Result<Unive
       demoEvents.push(event);
       return g8Ok({ ...event }, true);
     },
-  });
+  }, toUiEvent);
 }
 
 export function updateEvent(eventId: string, request: EventUpsertRequest): Promise<G8Result<UniversityEvent>> {
-  return g8Request<UniversityEvent>(`${EVENTS_API}/${encodeURIComponent(eventId)}`, {
-    method: 'PUT',
-    body: request,
+  return g8RequestMapped<EventResponse, UniversityEvent>(`${EVENTS_API}/${encodeURIComponent(eventId)}`, {
+    method: 'PATCH',
+    body: toBackendEvent(request),
     demo: () => {
       const event = findDemoEvent(eventId);
       if (!event) return g8Fail(404, undefined, true);
@@ -322,19 +486,19 @@ export function updateEvent(eventId: string, request: EventUpsertRequest): Promi
       }
       const problem = validateDemoUpsert(request);
       if (problem) return g8Fail(400, problem, true);
-      if (request.capacity < event.confirmedCount) {
+      if (request.capacity < (event.confirmedCount ?? 0)) {
         return g8Fail(409, `Capacity cannot be lower than the ${event.confirmedCount} confirmed registrations.`, true);
       }
       const venue = request.venueResourceId ? DEMO_VENUES[request.venueResourceId] : undefined;
       Object.assign(event, request, { venueName: venue?.venueName, updatedAt: new Date().toISOString() });
       return g8Ok({ ...event }, true);
     },
-  });
+  }, toUiEvent);
 }
 
 export function publishEvent(eventId: string): Promise<G8Result<UniversityEvent>> {
-  return g8Request<UniversityEvent>(`${EVENTS_API}/${encodeURIComponent(eventId)}/publish`, {
-    method: 'POST',
+  return g8RequestMapped<EventResponse, UniversityEvent>(`${EVENTS_API}/${encodeURIComponent(eventId)}/publish`, {
+    method: 'PATCH',
     demo: () => {
       const event = findDemoEvent(eventId);
       if (!event) return g8Fail(404, undefined, true);
@@ -349,13 +513,12 @@ export function publishEvent(eventId: string): Promise<G8Result<UniversityEvent>
       event.status = 'PUBLISHED';
       return g8Ok({ ...event }, true);
     },
-  });
+  }, toUiEvent);
 }
 
-export function cancelEvent(eventId: string, reason: string): Promise<G8Result<UniversityEvent>> {
-  return g8Request<UniversityEvent>(`${EVENTS_API}/${encodeURIComponent(eventId)}/cancel`, {
-    method: 'POST',
-    body: { reason },
+export function cancelEvent(eventId: string): Promise<G8Result<UniversityEvent>> {
+  return g8RequestMapped<EventResponse, UniversityEvent>(`${EVENTS_API}/${encodeURIComponent(eventId)}/cancel`, {
+    method: 'PATCH',
     demo: () => {
       const event = findDemoEvent(eventId);
       if (!event) return g8Fail(404, undefined, true);
@@ -374,7 +537,7 @@ export function cancelEvent(eventId: string, reason: string): Promise<G8Result<U
           recordDemoNotification({
             type: 'EVENT_CANCELLED',
             title: 'Event cancelled',
-            message: `"${event.title}" was cancelled by the organizer: ${reason}`,
+            message: `"${event.title}" was cancelled by the organizer.`,
             source: 'GROUP8_EVENTS',
             referenceId: event.id,
           });
@@ -382,11 +545,33 @@ export function cancelEvent(eventId: string, reason: string): Promise<G8Result<U
       event.confirmedCount = 0;
       return g8Ok({ ...event }, true);
     },
-  });
+  }, toUiEvent);
+}
+
+export function completeEvent(eventId: string): Promise<G8Result<UniversityEvent>> {
+  return g8RequestMapped<EventResponse, UniversityEvent>(
+    `${EVENTS_API}/${encodeURIComponent(eventId)}/complete`,
+    {
+      method: 'PATCH',
+      demo: () => {
+        const event = findDemoEvent(eventId);
+        if (!event) return g8Fail(404, undefined, true);
+        if (!isDemoOrganizer()) return g8Fail(403, 'Only the organizer can complete this event.', true);
+        if (event.status !== 'PUBLISHED') return g8Fail(400, 'Only published events can be completed.', true);
+        if (Date.now() < new Date(event.startTime).getTime()) {
+          return g8Fail(400, 'An event cannot be completed before it starts.', true);
+        }
+        event.status = 'COMPLETED';
+        return g8Ok({ ...event }, true);
+      },
+    },
+    toUiEvent
+  );
 }
 
 export function validateVenue(resourceId: string): Promise<G8Result<VenueValidationResult>> {
-  return g8Request<VenueValidationResult>(`${EVENTS_API}/venues/${encodeURIComponent(resourceId)}/validation`, {
+  const code = resourceId.trim().toUpperCase();
+  return g8RequestMapped<Group6ValidationResponse, VenueValidationResult>(`/resources/code/${encodeURIComponent(code)}/validate`, {
     demo: () =>
       g8Ok(
         DEMO_VENUES[resourceId.trim().toUpperCase()] ?? {
@@ -395,7 +580,12 @@ export function validateVenue(resourceId: string): Promise<G8Result<VenueValidat
         },
         true
       ),
-  });
+  }, (response) => ({
+    valid: Boolean(response.data?.validForReservation),
+    venueName: response.data?.resourceCode ?? code,
+    capacity: response.data?.capacity ?? undefined,
+    reason: response.data?.validForReservation ? undefined : response.data?.message,
+  }));
 }
 
 /* ------------------------------------------------------------------ */
@@ -403,7 +593,7 @@ export function validateVenue(resourceId: string): Promise<G8Result<VenueValidat
 /* ------------------------------------------------------------------ */
 
 export function registerForEvent(eventId: string): Promise<G8Result<Registration>> {
-  return g8Request<Registration>(`${EVENTS_API}/${encodeURIComponent(eventId)}/registrations`, {
+  return g8RequestMapped<RegistrationResponse, Registration>(`${EVENTS_API}/${encodeURIComponent(eventId)}/registrations`, {
     method: 'POST',
     demo: () => {
       const event = findDemoEvent(eventId);
@@ -428,10 +618,10 @@ export function registerForEvent(eventId: string): Promise<G8Result<Registration
         (registration) => registration.eventId === eventId && registration.status !== 'CANCELLED'
       );
       if (existing) return g8Fail(409, 'You are already registered for this event.', true);
-      if (event.confirmedCount >= event.capacity) {
+      if ((event.confirmedCount ?? 0) >= event.capacity) {
         return g8Fail(409, 'Capacity reached - registration is closed for this event.', true);
       }
-      event.confirmedCount += 1;
+      event.confirmedCount = (event.confirmedCount ?? 0) + 1;
       const registration: Registration = {
         id: nextDemoId('REG'),
         eventId,
@@ -453,18 +643,24 @@ export function registerForEvent(eventId: string): Promise<G8Result<Registration
       });
       return g8Ok({ ...registration }, true);
     },
-  });
+  }, (registration) => toUiRegistration(registration));
 }
 
 export function getMyRegistrations(): Promise<G8Result<Registration[]>> {
-  return g8Request<Registration[]>(`${REGISTRATIONS_API}/me`, {
+  return g8RequestMapped<RegistrationResponse[], Registration[]>(`${REGISTRATIONS_API}/mine`, {
     demo: () => g8Ok(demoRegistrations.map((registration) => ({ ...registration })), true),
+  }, async (registrations) => {
+    // One event lookup per distinct event, then join titles/dates onto each registration.
+    const eventIds = [...new Set(registrations.map((registration) => registration.eventId))];
+    const events = await Promise.all(eventIds.map((id) => getEvent(id)));
+    const byId = new Map(events.flatMap((result) => (result.ok ? [[result.data.id, result.data] as const] : [])));
+    return Promise.all(registrations.map((registration) => toUiRegistration(registration, byId.get(registration.eventId))));
   });
 }
 
 export function cancelRegistration(registrationId: string): Promise<G8Result<Registration>> {
-  return g8Request<Registration>(`${REGISTRATIONS_API}/${encodeURIComponent(registrationId)}/cancel`, {
-    method: 'POST',
+  return g8RequestMapped<RegistrationResponse, Registration>(`${REGISTRATIONS_API}/${encodeURIComponent(registrationId)}/cancel`, {
+    method: 'PATCH',
     demo: () => {
       const registration = demoRegistrations.find((item) => item.id === registrationId);
       if (!registration) return g8Fail(404, undefined, true);
@@ -475,7 +671,7 @@ export function cancelRegistration(registrationId: string): Promise<G8Result<Reg
       registration.status = 'CANCELLED';
       registration.cancelledAt = new Date().toISOString();
       const event = findDemoEvent(registration.eventId);
-      if (event) event.confirmedCount = Math.max(0, event.confirmedCount - 1);
+      if (event) event.confirmedCount = Math.max(0, (event.confirmedCount ?? 0) - 1);
       recordDemoNotification({
         type: 'REGISTRATION_CANCELLED',
         title: 'Registration cancelled',
@@ -485,18 +681,18 @@ export function cancelRegistration(registrationId: string): Promise<G8Result<Reg
       });
       return g8Ok({ ...registration }, true);
     },
-  });
+  }, (registration) => toUiRegistration(registration));
 }
 
 export function getRegistrationSummary(eventId: string): Promise<G8Result<RegistrationSummary>> {
-  return g8Request<RegistrationSummary>(`${EVENTS_API}/${encodeURIComponent(eventId)}/registrations/summary`, {
+  return g8RequestMapped<EventRegistrationSummary, RegistrationSummary>(`${EVENTS_API}/${encodeURIComponent(eventId)}/registrations`, {
     demo: () => {
       const event = findDemoEvent(eventId);
       if (!event) return g8Fail(404, undefined, true);
       if (!isDemoOrganizer()) return g8Fail(403, 'Only organizers can view registration summaries.', true);
       const names = ['Nimal Silva', 'Ayesha Fernando', 'Kavindu Jayasuriya', 'Tharushi Perera', 'Sahan Rathnayake', 'Dilini Wickramasinghe'];
       const departments = ['Computing', 'Mathematics', 'Physics', 'Statistics'];
-      const shown = Math.min(event.confirmedCount, names.length);
+      const shown = Math.min(event.confirmedCount ?? 0, names.length);
       const registrants = Array.from({ length: shown }, (_, index) => ({
         registrationId: `REG-S${index + 1}`,
         userId: `USR-DEMO-${index + 1}`,
@@ -509,7 +705,7 @@ export function getRegistrationSummary(eventId: string): Promise<G8Result<Regist
         {
           eventId,
           capacity: event.capacity,
-          confirmed: event.confirmedCount,
+          confirmed: event.confirmedCount ?? 0,
           waitlisted: 0,
           cancelled: demoRegistrations.filter(
             (registration) => registration.eventId === eventId && registration.status === 'CANCELLED'
@@ -519,5 +715,13 @@ export function getRegistrationSummary(eventId: string): Promise<G8Result<Regist
         true
       );
     },
-  });
+  }, (summary) => ({
+    eventId: summary.eventId,
+    capacity: summary.capacity,
+    confirmed: summary.confirmed,
+    waitlisted: 0,
+    cancelled: summary.cancelled,
+    // The event-service summary gives counts only; it does not expose registrant names.
+    registrants: [],
+  }));
 }
