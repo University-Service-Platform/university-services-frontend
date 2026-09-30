@@ -112,6 +112,8 @@ export async function loginUser(credentials: LoginCredentials): Promise<AuthResu
   }
 
   if (response.data.success && response.data.user) {
+    // A new login replaces the whole session, so a previous user's token is never reused.
+    clearAuthSession();
     storeAuthSession(response.data.user, response.data.token);
 
     return {
