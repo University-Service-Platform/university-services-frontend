@@ -379,17 +379,98 @@ export function publishAnnouncement(announcementId: string): Promise<G8Result<An
 }
 
 /* ------------------------------------------------------------------ */
+/* communication-feedback-service notification shape                  */
+/* ------------------------------------------------------------------ */
+
+type BackendNotificationType = 'REGISTRATION_CONFIRMED' | 'REGISTRATION_CANCELLED' | 'EVENT_CANCELLED' | 'EVENT_UPDATED' | 'LEGACY';
+type RelatedType = 'EVENT' | 'REGISTRATION' | 'ANNOUNCEMENT' | 'RESERVATION' | 'SERVICE_REQUEST' | 'EXTERNAL';
+
+interface NotificationResponse {
+  id: string;
+  recipientId: string;
+  type: BackendNotificationType;
+  message: string;
+  relatedType: RelatedType;
+  relatedId: string | null;
+  sourceService: string;
+  isRead: boolean;
+  createdAt: string;
+}
+
+interface NotificationPage {
+  content: NotificationResponse[];
+}
+
+const NOTIFICATION_TITLES: Record<AppNotification['type'], string> = {
+  REGISTRATION_CONFIRMED: 'Registration confirmed',
+  REGISTRATION_CANCELLED: 'Registration cancelled',
+  EVENT_UPDATED: 'Event updated',
+  EVENT_CANCELLED: 'Event cancelled',
+  ANNOUNCEMENT_PUBLISHED: 'New announcement',
+  RESERVATION_STATUS: 'Reservation update',
+  SERVICE_REQUEST_STATUS: 'Service request update',
+  FEEDBACK_REQUESTED: 'Feedback requested',
+};
+
+/** Group 6/7 send LEGACY notifications; relatedType tells us what they are about. */
+function toUiType(notification: NotificationResponse): AppNotification['type'] {
+  if (notification.type !== 'LEGACY') return notification.type;
+  switch (notification.relatedType) {
+    case 'RESERVATION':
+      return 'RESERVATION_STATUS';
+    case 'SERVICE_REQUEST':
+      return 'SERVICE_REQUEST_STATUS';
+    case 'ANNOUNCEMENT':
+      return 'ANNOUNCEMENT_PUBLISHED';
+    default:
+      return 'EVENT_UPDATED';
+  }
+}
+
+function toUiSource(notification: NotificationResponse): AppNotification['source'] {
+  switch (notification.relatedType) {
+    case 'RESERVATION':
+      return 'GROUP6';
+    case 'SERVICE_REQUEST':
+      return 'GROUP7';
+    case 'ANNOUNCEMENT':
+      return 'GROUP8_COMMS';
+    default:
+      return 'GROUP8_EVENTS';
+  }
+}
+
+function toUiNotification(notification: NotificationResponse): AppNotification {
+  const type = toUiType(notification);
+  return {
+    id: notification.id,
+    recipientId: notification.recipientId,
+    type,
+    title: NOTIFICATION_TITLES[type],
+    message: notification.message,
+    source: toUiSource(notification),
+    // Deep links need an event or announcement id; registration ids do not open a page.
+    referenceId:
+      notification.relatedId && (notification.relatedType === 'EVENT' || notification.relatedType === 'ANNOUNCEMENT')
+        ? notification.relatedId
+        : undefined,
+    read: notification.isRead,
+    createdAt: notification.createdAt,
+  };
+}
+
+/* ------------------------------------------------------------------ */
 /* Notifications                                                       */
 /* ------------------------------------------------------------------ */
 
 export function getMyNotifications(): Promise<G8Result<AppNotification[]>> {
-  return g8Request<AppNotification[]>(`${NOTIFICATIONS_API}/me`, {
+  return g8RequestMapped<NotificationPage, AppNotification[]>(`${NOTIFICATIONS_API}?page=0&size=50`, {
     demo: () => g8Ok(demoNotifications.map((item) => ({ ...item })), true),
-  });
+  }, (page) => (page.content ?? []).map(toUiNotification));
 }
 
 export function markNotificationRead(notificationId: string): Promise<G8Result<AppNotification>> {
-  return g8Request<AppNotification>(`${NOTIFICATIONS_API}/${encodeURIComponent(notificationId)}/read`, {
+  return g8RequestMapped<NotificationResponse, AppNotification>(`${NOTIFICATIONS_API}/${encodeURIComponent(notificationId)}/read`, {
     method: 'PATCH',
     demo: () => {
       const notification = demoNotifications.find((item) => item.id === notificationId);
@@ -397,18 +478,29 @@ export function markNotificationRead(notificationId: string): Promise<G8Result<A
       notification.read = true;
       return g8Ok({ ...notification }, true);
     },
-  });
+  }, toUiNotification);
 }
 
-export function markAllNotificationsRead(): Promise<G8Result<{ updated: number }>> {
-  return g8Request<{ updated: number }>(`${NOTIFICATIONS_API}/me/read-all`, {
-    method: 'PATCH',
-    demo: () => {
-      const unread = demoNotifications.filter((item) => !item.read);
-      unread.forEach((item) => {
-        item.read = true;
-      });
-      return g8Ok({ updated: unread.length }, true);
+export async function markAllNotificationsRead(): Promise<G8Result<{ updated: number }>> {
+  // The service has no bulk endpoint: read the unread page, then mark each one.
+  const unread = await g8RequestMapped<NotificationPage, AppNotification[] | { updated: number }>(
+    `${NOTIFICATIONS_API}?unreadOnly=true&page=0&size=100`,
+    {
+      demo: () => {
+        const unread = demoNotifications.filter((item) => !item.read);
+        unread.forEach((item) => {
+          item.read = true;
+        });
+        return g8Ok({ updated: unread.length }, true);
+      },
     },
-  });
+    (page) => (page.content ?? []).map(toUiNotification)
+  );
+  if (!unread.ok) return unread as G8Result<{ updated: number }>;
+  if (unread.demo) return unread as G8Result<{ updated: number }>;
+  const items = unread.data as AppNotification[];
+  const results = await Promise.all(items.map((item) => markNotificationRead(item.id)));
+  const failed = results.find((result) => !result.ok);
+  if (failed && !failed.ok) return g8Fail(failed.status, failed.message, false, failed.code);
+  return g8Ok({ updated: items.length });
 }
