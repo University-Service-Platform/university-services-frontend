@@ -7,7 +7,7 @@ import { AppRoutes } from '../AppRoutes';
 import * as authModule from '@/auth';
 import * as serviceRequestService from '@/services/serviceRequestService';
 import * as workOrderService from '@/services/workOrderService';
-import type { UserRole } from '@/types';
+import type { UserRole, UserProfile } from '@/types';
 
 vi.mock('@/services/serviceRequestService');
 vi.mock('@/services/workOrderService');
@@ -18,9 +18,11 @@ function mockAuthForRole(role: UserRole) {
     user: {
       id: `USER-${role}`,
       email: `${role.toLowerCase()}@univ.edu`,
+      firstName: 'Test',
+      lastName: 'User',
       roles: [role],
       accountStatus: 'ACTIVE',
-    } as any,
+    } as UserProfile,
     roles: [role],
     permissions: [],
     accountStatus: 'ACTIVE',

@@ -33,7 +33,7 @@ describe('workOrderService Group 7 API Calls', () => {
         createdTime: '2026-09-29T10:00:00Z',
       },
     };
-    (apiFetch as any).mockResolvedValue(mockResponse);
+    vi.mocked(apiFetch).mockResolvedValue(mockResponse);
 
     const result = await createWorkOrder({
       requestId: 'REQ-101',
@@ -68,7 +68,7 @@ describe('workOrderService Group 7 API Calls', () => {
         },
       ],
     };
-    (apiFetch as any).mockResolvedValue(mockResponse);
+    vi.mocked(apiFetch).mockResolvedValue(mockResponse);
 
     const result = await getWorkOrders({ technicianId: 'TECH-001' });
 
@@ -91,7 +91,7 @@ describe('workOrderService Group 7 API Calls', () => {
         createdTime: '2026-09-29T11:00:00Z',
       },
     };
-    (apiFetch as any).mockResolvedValue(mockResponse);
+    vi.mocked(apiFetch).mockResolvedValue(mockResponse);
 
     const result = await getWorkOrderById('WO-2026-0002');
 
@@ -110,7 +110,7 @@ describe('workOrderService Group 7 API Calls', () => {
         status: 'IN_PROGRESS',
       },
     };
-    (apiFetch as any).mockResolvedValue(mockResponse);
+    vi.mocked(apiFetch).mockResolvedValue(mockResponse);
 
     const result = await startWorkOrder('WO-2026-0001');
 
@@ -130,7 +130,7 @@ describe('workOrderService Group 7 API Calls', () => {
         actionNotes: 'Replaced faulty capacitor',
       },
     };
-    (apiFetch as any).mockResolvedValue(mockResponse);
+    vi.mocked(apiFetch).mockResolvedValue(mockResponse);
 
     const result = await addWorkOrderProgressNote('WO-2026-0001', {
       note: 'Replaced faulty capacitor',
@@ -153,7 +153,7 @@ describe('workOrderService Group 7 API Calls', () => {
         resolution: 'Verified equipment operation and restored power',
       },
     };
-    (apiFetch as any).mockResolvedValue(mockResponse);
+    vi.mocked(apiFetch).mockResolvedValue(mockResponse);
 
     const result = await recordWorkOrderResolution('WO-2026-0001', {
       resolution: 'Verified equipment operation and restored power',
@@ -176,7 +176,7 @@ describe('workOrderService Group 7 API Calls', () => {
         RESOLVED: 10,
       },
     };
-    (apiFetch as any).mockResolvedValue(mockResponse);
+    vi.mocked(apiFetch).mockResolvedValue(mockResponse);
 
     const result = await getWorkOrderSummary('status');
 

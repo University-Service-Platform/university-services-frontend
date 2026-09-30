@@ -28,7 +28,7 @@ describe('serviceRequestService Group 7 API Calls', () => {
         status: 'ASSIGNED',
       },
     };
-    (apiFetch as any).mockResolvedValue(mockResponse);
+    vi.mocked(apiFetch).mockResolvedValue(mockResponse);
 
     const result = await triageServiceRequest('REQ-101', {
       category: 'IT',
@@ -57,7 +57,7 @@ describe('serviceRequestService Group 7 API Calls', () => {
         rejectionReason: 'Invalid location provided',
       },
     };
-    (apiFetch as any).mockResolvedValue(mockResponse);
+    vi.mocked(apiFetch).mockResolvedValue(mockResponse);
 
     const result = await rejectServiceRequest('REQ-102', {
       rejectionReason: 'Invalid location provided',
@@ -82,7 +82,7 @@ describe('serviceRequestService Group 7 API Calls', () => {
         responsibleServiceUnit: 'Executive IT Support',
       },
     };
-    (apiFetch as any).mockResolvedValue(mockResponse);
+    vi.mocked(apiFetch).mockResolvedValue(mockResponse);
 
     const result = await escalateServiceRequest('REQ-103', {
       responsibleServiceUnit: 'Executive IT Support',
@@ -107,7 +107,7 @@ describe('serviceRequestService Group 7 API Calls', () => {
         RESOLVED: 8,
       },
     };
-    (apiFetch as any).mockResolvedValue(mockResponse);
+    vi.mocked(apiFetch).mockResolvedValue(mockResponse);
 
     const result = await getServiceRequestSummary('status');
 
