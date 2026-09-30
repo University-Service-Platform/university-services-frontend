@@ -34,7 +34,7 @@ export type G8ErrorKind =
 
 export type G8Result<T> =
   | { ok: true; data: T; demo: boolean }
-  | { ok: false; status: number; kind: G8ErrorKind; message: string; demo: boolean };
+  | { ok: false; status: number; kind: G8ErrorKind; message: string; demo: boolean; code?: string };
 
 export const G8_DEMO_MODE_ENABLED = import.meta.env.VITE_G8_DEMO_MODE !== 'false';
 
@@ -62,20 +62,71 @@ export function kindFromStatus(status: number): G8ErrorKind {
 }
 
 /** Builds a failed result with a user-facing message (used by demo handlers too). */
-export function g8Fail<T>(status: number, message?: string, demo = false): G8Result<T> {
+export function g8Fail<T>(status: number, message?: string, demo = false, code?: string): G8Result<T> {
   const kind = kindFromStatus(status);
-  return { ok: false, status, kind, message: message || DEFAULT_MESSAGES[kind], demo };
+  return { ok: false, status, kind, message: message || DEFAULT_MESSAGES[kind], demo, code };
+}
+
+/**
+ * User-facing wording for backend error codes. event-service sends its own message as well;
+ * communication-feedback-service sends only `{ code }`, so its codes need wording here.
+ */
+const BACKEND_CODE_MESSAGES: Record<string, string> = {
+  // event-service
+  CAPACITY_REACHED: 'Capacity reached - registration is closed for this event.',
+  ALREADY_REGISTERED: 'You are already registered for this event.',
+  REGISTRATION_CLOSED: 'Registration is not open for this event right now.',
+  EVENT_NOT_PUBLISHED: 'This event is not open for registration.',
+  CANCELLATION_CLOSED: 'This registration can no longer be cancelled because the event has started.',
+  NOT_VISIBLE: 'You do not have access to this event.',
+  INVALID_USER: 'Your account could not be verified with University Identity Services.',
+  GROUP5_UNAVAILABLE: 'University Identity Services is unavailable, so eligibility could not be checked. Nothing was saved.',
+  GROUP6_UNAVAILABLE: 'Facility Services is unavailable, so the venue could not be checked. Nothing was saved.',
+  // communication-feedback-service
+  ANNOUNCEMENT_FORBIDDEN: 'You are not allowed to publish announcements.',
+  ANNOUNCEMENT_NOT_DRAFT: 'Only draft announcements can be published.',
+  ANNOUNCEMENT_NOT_FOUND: 'This announcement no longer exists.',
+  TARGETED_AUDIENCE_REQUIRES_RULE_VALUE: 'Choose who the announcement is for (a role, faculty, department or service unit).',
+  ALL_AUDIENCE_MUST_NOT_HAVE_RULE_VALUE: 'An announcement for everyone cannot also target a specific group.',
+  FEEDBACK_NOT_ELIGIBLE: 'You can give feedback only for completed activities you took part in.',
+  FEEDBACK_ALREADY_SUBMITTED: 'You have already submitted feedback for this activity.',
+  FEEDBACK_FORM_INACTIVE: 'This feedback form is closed.',
+  FEEDBACK_FORM_NOT_FOUND: 'This feedback form no longer exists.',
+  FEEDBACK_RESPONSES_FORBIDDEN: 'Only authorized staff can view feedback responses.',
+  NOTIFICATION_FORBIDDEN: 'This notification belongs to another user.',
+  NOTIFICATION_NOT_FOUND: 'This notification no longer exists.',
+  INVALID_USER_ID: 'Your session could not be matched to a Group 8 user. Please sign in again.',
+  RECIPIENT_DIRECTORY_UNAVAILABLE: 'University Identity Services is unavailable. Please try again shortly.',
+  FACILITY_DIRECTORY_UNAVAILABLE: 'Facility Services is unavailable. Please try again shortly.',
+  VALIDATION_FAILED: 'Some details are invalid. Please review them and try again.',
+};
+
+/** Reads `{ error: { code, message } }` (event-service, gateway), `{ code }` (communication service) or `{ message }`. */
+function readBackendError(data: unknown, fallback?: string): { code?: string; message?: string } {
+  const body = (data ?? {}) as { code?: unknown; message?: unknown; error?: unknown };
+  const nested = typeof body.error === 'object' && body.error !== null ? (body.error as { code?: unknown; message?: unknown }) : undefined;
+  const code = [nested?.code, body.code].find((value): value is string => typeof value === 'string');
+  const serverMessage = [nested?.message, body.message, typeof body.error === 'string' ? body.error : undefined].find(
+    (value): value is string => typeof value === 'string' && value.length > 0 && value !== code
+  );
+  const mapped = code ? BACKEND_CODE_MESSAGES[code] : undefined;
+  // The client's fallback is usually just the HTTP status text, so it comes last.
+  const usableFallback = fallback && fallback !== 'API Request Failed' && !/^API request failed/.test(fallback) ? fallback : undefined;
+  // Prefer the service's own sentence, then our wording for code-only services, then the status text.
+  return { code, message: serverMessage ?? mapped ?? (code ? undefined : usableFallback) };
 }
 
 export function g8Ok<T>(data: T, demo = false): G8Result<T> {
   return { ok: true, data, demo };
 }
 
-function isGatewayUnreachable(status: number, error?: string): boolean {
+function isGatewayUnreachable(status: number, error?: string, code?: string): boolean {
   if (status === 0 || status === 502 || status === 504) return true;
-  // A 404 without a JSON error body means the gateway route is not registered yet,
-  // as opposed to a service-level "event not found" which carries a message.
-  return status === 404 && (!error || error === 'Not Found');
+  // The API Gateway answers ROUTE_NOT_FOUND while a Group 8 service is not connected yet.
+  if (status === 404 && code === 'ROUTE_NOT_FOUND') return true;
+  // A 404 without a JSON error body means the route is not served at all (e.g. no gateway in dev),
+  // as opposed to a service-level "event not found" which carries a code or message.
+  return status === 404 && !code && (!error || error === 'Not Found');
 }
 
 /* ------------------------------------------------------------------ */
@@ -131,7 +182,9 @@ export async function g8Request<T>(endpoint: string, options: G8RequestOptions<T
     return g8Ok(response.data as T);
   }
 
-  const unreachable = servedByFallback || isGatewayUnreachable(response.status, response.error);
+  const backendError = readBackendError(response.data, typeof response.error === 'string' ? response.error : undefined);
+  const unreachable =
+    servedByFallback || isGatewayUnreachable(response.status, typeof response.error === 'string' ? response.error : undefined, backendError.code);
 
   if (demo && G8_DEMO_MODE_ENABLED && unreachable) {
     // Simulated latency keeps loading states visible during UI review.
@@ -147,8 +200,7 @@ export async function g8Request<T>(endpoint: string, options: G8RequestOptions<T
     return g8Fail<T>(404, 'This Group 8 service route is not registered on the API Gateway.');
   }
 
-  const genericError = !response.error || response.error === 'API Request Failed';
-  return g8Fail<T>(response.status, genericError ? undefined : response.error);
+  return g8Fail<T>(response.status, backendError.message, false, backendError.code);
 }
 
 /* ------------------------------------------------------------------ */
