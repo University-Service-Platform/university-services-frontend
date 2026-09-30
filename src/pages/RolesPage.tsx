@@ -262,9 +262,11 @@ export const RolesPage: React.FC = () => {
               <Button variant="outline" icon={<RefreshCw size={16} />} onClick={fetchData}>
                 Retry Connection
               </Button>
-              <Button variant="primary" icon={<UserPlus size={16} />} onClick={openAssignmentModal}>
-                Open Assignment Modal
-              </Button>
+              {canManageRoles && (
+                <Button variant="primary" icon={<UserPlus size={16} />} onClick={openAssignmentModal}>
+                  Open Assignment Modal
+                </Button>
+              )}
             </div>
           }
         />

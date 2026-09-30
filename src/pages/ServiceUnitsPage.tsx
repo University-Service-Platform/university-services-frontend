@@ -28,7 +28,7 @@ import './ServiceUnitsPage.css';
  */
 export const ServiceUnitsPage: React.FC = () => {
   const { isAuthorized } = useAuth();
-  const canManageServiceUnits = isAuthorized(['ADMIN', 'STAFF']);
+  const canManageServiceUnits = isAuthorized(['ADMIN']);
 
   const [serviceUnits, setServiceUnits] = useState<ServiceUnit[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -299,9 +299,11 @@ export const ServiceUnitsPage: React.FC = () => {
               <Button variant="outline" icon={<RefreshCw size={16} />} onClick={fetchServiceUnitsData}>
                 Retry Connection
               </Button>
-              <Button variant="primary" icon={<Plus size={16} />} onClick={openCreateModal}>
-                Open Create Modal
-              </Button>
+              {canManageServiceUnits && (
+                <Button variant="primary" icon={<Plus size={16} />} onClick={openCreateModal}>
+                  Open Create Modal
+                </Button>
+              )}
             </div>
           }
         />

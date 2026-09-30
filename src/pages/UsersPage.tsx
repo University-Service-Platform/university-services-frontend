@@ -32,7 +32,7 @@ import './UsersPage.css';
  */
 export const UsersPage: React.FC = () => {
   const { isAuthorized, hasRole } = useAuth();
-  const canManageUsers = isAuthorized(['ADMIN', 'STAFF']);
+  const canManageUsers = isAuthorized(['ADMIN']);
   const canDeleteUsers = hasRole('ADMIN');
 
   const [users, setUsers] = useState<UserProfile[]>([]);
@@ -362,9 +362,11 @@ export const UsersPage: React.FC = () => {
               <Button variant="outline" icon={<RefreshCw size={16} />} onClick={fetchUsersData}>
                 Retry Connection
               </Button>
-              <Button variant="primary" icon={<Plus size={16} />} onClick={openCreateModal}>
-                Open Create Modal
-              </Button>
+              {canManageUsers && (
+                <Button variant="primary" icon={<Plus size={16} />} onClick={openCreateModal}>
+                  Open Create Modal
+                </Button>
+              )}
             </div>
           }
         />

@@ -40,7 +40,7 @@ export const APP_ROUTES_CONFIG: RouteNavigationConfig[] = [
     path: '/users',
     label: 'Users',
     iconName: 'Users',
-    requiredRoles: ['ADMIN', 'STAFF'],
+    requiredRoles: ['ADMIN'],
     showInNav: true,
   },
   {
@@ -48,7 +48,7 @@ export const APP_ROUTES_CONFIG: RouteNavigationConfig[] = [
     path: '/users/account-status',
     label: 'Account Status',
     iconName: 'UserCheck',
-    requiredRoles: ['ADMIN', 'STAFF'],
+    requiredRoles: ['ADMIN'],
     showInNav: true,
   },
 
@@ -73,7 +73,7 @@ export const APP_ROUTES_CONFIG: RouteNavigationConfig[] = [
     path: '/departments',
     label: 'Departments',
     iconName: 'Building2',
-    requiredRoles: ['ADMIN', 'DEAN', 'HOD'],
+    requiredRoles: ['ADMIN'],
     showInNav: true,
   },
   {
@@ -81,7 +81,7 @@ export const APP_ROUTES_CONFIG: RouteNavigationConfig[] = [
     path: '/service-units',
     label: 'Service Units',
     iconName: 'Layers',
-    requiredRoles: ['ADMIN', 'STAFF'],
+    requiredRoles: ['ADMIN'],
     showInNav: true,
   },
   // Group 8 - Events, Communications & Feedback

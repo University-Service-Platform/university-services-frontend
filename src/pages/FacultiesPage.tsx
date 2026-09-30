@@ -299,9 +299,11 @@ export const FacultiesPage: React.FC = () => {
               <Button variant="outline" icon={<RefreshCw size={16} />} onClick={fetchFacultiesData}>
                 Retry Connection
               </Button>
-              <Button variant="primary" icon={<Plus size={16} />} onClick={openCreateModal}>
-                Open Create Modal
-              </Button>
+              {canManageFaculties && (
+                <Button variant="primary" icon={<Plus size={16} />} onClick={openCreateModal}>
+                  Open Create Modal
+                </Button>
+              )}
             </div>
           }
         />
