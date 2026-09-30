@@ -177,6 +177,9 @@ export async function getCurrentUser(): Promise<AuthResult> {
 }
 
 export async function loginUser(credentials: LoginCredentials): Promise<AuthResult> {
+  // Drop any previous session first so apiFetch does not attach the old user's Bearer token to the login call.
+  clearAuthSession();
+
   const response = await apiFetch<AuthResponse>(AUTH_LOGIN_API_ENDPOINT, {
     method: 'POST',
     body: JSON.stringify({

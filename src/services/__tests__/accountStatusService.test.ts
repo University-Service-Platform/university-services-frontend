@@ -1,38 +1,26 @@
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { checkAccountStatus, updateAccountStatus } from '../accountStatusService';
+import { mockFetch } from './testUtils';
 
-function assertEqual<T>(actual: T, expected: T, testName: string): void {
-  if (actual !== expected) {
-    throw new Error(`[TEST FAILED] ${testName}: Expected ${String(expected)}, got ${String(actual)}`);
-  }
-}
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
 
 /**
  * Lightweight input checks for the account status service that do not call the backend.
  */
-export async function runAccountStatusServiceTests(): Promise<boolean> {
-  try {
-    const emptyCheck = await checkAccountStatus('');
-    assertEqual(emptyCheck.success, false, 'Empty User ID check - success status');
+describe('account status input validation', () => {
+  it('rejects empty and blank user IDs without calling the backend', async () => {
+    const fetchMock = mockFetch();
 
-    const blankCheck = await checkAccountStatus('   ');
-    assertEqual(blankCheck.success, false, 'Whitespace User ID check - success status');
-
-    const emptyUpdate = await updateAccountStatus('', 'ACTIVE');
-    assertEqual(emptyUpdate.success, false, 'Empty User ID update - success status');
+    expect((await checkAccountStatus('')).success).toBe(false);
+    expect((await checkAccountStatus('   ')).success).toBe(false);
+    expect((await updateAccountStatus('', 'ACTIVE')).success).toBe(false);
 
     const blankUpdate = await updateAccountStatus('  \t', 'INACTIVE');
-    assertEqual(blankUpdate.success, false, 'Whitespace User ID update - success status');
-    assertEqual(
-      blankUpdate.message,
-      'User ID is required to update account status.',
-      'Whitespace User ID update - message'
-    );
+    expect(blankUpdate.success).toBe(false);
+    expect(blankUpdate.message).toBe('User ID is required to update account status.');
 
-    return true;
-  } catch (error) {
-    if (error instanceof Error) {
-      console.error(error.message);
-    }
-    return false;
-  }
-}
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+});
