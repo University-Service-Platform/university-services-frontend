@@ -1,8 +1,14 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import type { UserProfile, UserRole, AccountStatus } from '@/types';
 import { AuthContext } from './context';
 import type { AuthState, AuthContextType } from './types';
-import { clearAuthSession, getStoredAuthSession, storeAuthSession } from '@/services/authService';
+import {
+  clearAuthSession,
+  getCurrentUser,
+  getStoredAuthSession,
+  storeAuthSession,
+} from '@/services/authService';
+import { getStoredAuthToken } from '@/services/apiClient';
 
 const initialAuthState: AuthState = {
   isAuthenticated: false,
@@ -38,14 +44,59 @@ function buildAuthenticatedState(user: UserProfile): AuthState {
   };
 }
 
-// Restore the session persisted by authService so a page reload keeps the user signed in.
 function getInitialAuthState(): AuthState {
+  const token = getStoredAuthToken();
+  if (!token) return initialAuthState;
+
   const storedSession = getStoredAuthSession();
-  return storedSession ? buildAuthenticatedState(storedSession.user) : initialAuthState;
+  if (storedSession) {
+    return {
+      ...buildAuthenticatedState(storedSession.user),
+      isLoading: true,
+    };
+  }
+
+  return {
+    ...initialAuthState,
+    isLoading: true,
+  };
 }
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [state, setState] = useState<AuthState>(getInitialAuthState);
+  const isRestoringRef = useRef(false);
+
+  useEffect(() => {
+    const token = getStoredAuthToken();
+    if (!token) return;
+
+    if (isRestoringRef.current) return;
+    isRestoringRef.current = true;
+
+    let isMounted = true;
+
+    getCurrentUser()
+      .then((result) => {
+        if (!isMounted) return;
+
+        if (result.success && result.user) {
+          setState(buildAuthenticatedState(result.user));
+        } else {
+          clearAuthSession();
+          setState(initialAuthState);
+        }
+      })
+      .catch(() => {
+        if (!isMounted) return;
+
+        clearAuthSession();
+        setState(initialAuthState);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const setAuthUser = useCallback((user: UserProfile | null) => {
     if (!user) {
@@ -63,37 +114,46 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setState(initialAuthState);
   }, []);
 
-  const hasRole = useCallback((requiredRoles: UserRole | UserRole[]): boolean => {
-    if (!state.isAuthenticated || state.isAccountInactive || !state.roles.length) return false;
-    const targetRoles = Array.isArray(requiredRoles) ? requiredRoles : [requiredRoles];
-    return targetRoles.some((role) => state.roles.includes(role));
-  }, [state.isAuthenticated, state.isAccountInactive, state.roles]);
+  const hasRole = useCallback(
+    (requiredRoles: UserRole | UserRole[]): boolean => {
+      if (!state.isAuthenticated || state.isAccountInactive || !state.roles.length) return false;
+      const targetRoles = Array.isArray(requiredRoles) ? requiredRoles : [requiredRoles];
+      return targetRoles.some((role) => state.roles.includes(role));
+    },
+    [state.isAuthenticated, state.isAccountInactive, state.roles]
+  );
 
-  const hasPermission = useCallback((requiredPermissions: string | string[]): boolean => {
-    if (!state.isAuthenticated || state.isAccountInactive || !state.permissions.length) return false;
-    const targetPermissions = Array.isArray(requiredPermissions) ? requiredPermissions : [requiredPermissions];
-    return targetPermissions.some((perm) => state.permissions.includes(perm));
-  }, [state.isAuthenticated, state.isAccountInactive, state.permissions]);
+  const hasPermission = useCallback(
+    (requiredPermissions: string | string[]): boolean => {
+      if (!state.isAuthenticated || state.isAccountInactive || !state.permissions.length) return false;
+      const targetPermissions = Array.isArray(requiredPermissions) ? requiredPermissions : [requiredPermissions];
+      return targetPermissions.some((perm) => state.permissions.includes(perm));
+    },
+    [state.isAuthenticated, state.isAccountInactive, state.permissions]
+  );
 
-  const isAuthorized = useCallback((requiredRoles?: UserRole[], requiredPermissions?: string[]): boolean => {
-    if (!state.isAuthenticated || state.isAccountInactive) return false;
-    
-    if ((!requiredRoles || requiredRoles.length === 0) && (!requiredPermissions || requiredPermissions.length === 0)) {
-      return true;
-    }
+  const isAuthorized = useCallback(
+    (requiredRoles?: UserRole[], requiredPermissions?: string[]): boolean => {
+      if (!state.isAuthenticated || state.isAccountInactive) return false;
 
-    let roleAuthorized = true;
-    if (requiredRoles && requiredRoles.length > 0) {
-      roleAuthorized = hasRole(requiredRoles);
-    }
+      if ((!requiredRoles || requiredRoles.length === 0) && (!requiredPermissions || requiredPermissions.length === 0)) {
+        return true;
+      }
 
-    let permAuthorized = true;
-    if (requiredPermissions && requiredPermissions.length > 0) {
-      permAuthorized = hasPermission(requiredPermissions);
-    }
+      let roleAuthorized = true;
+      if (requiredRoles && requiredRoles.length > 0) {
+        roleAuthorized = hasRole(requiredRoles);
+      }
 
-    return roleAuthorized && permAuthorized;
-  }, [state.isAuthenticated, state.isAccountInactive, hasRole, hasPermission]);
+      let permAuthorized = true;
+      if (requiredPermissions && requiredPermissions.length > 0) {
+        permAuthorized = hasPermission(requiredPermissions);
+      }
+
+      return roleAuthorized && permAuthorized;
+    },
+    [state.isAuthenticated, state.isAccountInactive, hasRole, hasPermission]
+  );
 
   const contextValue = useMemo<AuthContextType>(
     () => ({

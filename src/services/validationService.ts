@@ -1,45 +1,16 @@
 import { apiFetch } from './apiClient';
 import type { UserRole, AccountStatus } from '@/types';
 
-/**
- * Confirmed by docs/CROSS_TEAM_VALIDATION_API.md and
- * docs/openapi-cross-team-validation.yaml.
- *
- * These endpoints are the Group 5 cross-service validation boundary. External
- * services must use these APIs rather than accessing Group 5 identity data directly.
- *
- * Confirmed operations used here:
- *   GET  /users/validate/{userId}        (validateUserIdentity)
- *   POST /users/validate/roles           (validateUserRole)
- *   GET  /users/account-status/{userId}  (validateAccountStatus)
- *
- * Authentication: the published contract accepts `Authorization: Bearer <token>` or
- * `X-Service-Api-Key`. The browser only sends the Bearer token attached by apiFetch;
- * a service API key is a server-side secret and is never sent from the frontend.
- *
- * UNCONFIRMED PLACEHOLDER INTEGRATION BOUNDARY PENDING OFFICIAL BACKEND CONTRACT:
- * Service responsibility validation (system role + department/service-unit
- * responsibility) is not part of the published contract above. docs/group8/consumed-contracts.md
- * records a different Group 5 eligibility endpoint (/validation/users/{user_id}/eligibility)
- * whose source document is not in this repository and whose open points are not agreed,
- * so it is intentionally not implemented here.
- */
-export interface UserValidationRequest {
-  userId: string;
-  requiredRoles?: UserRole[];
-}
-
 export interface UserValidationData {
   valid: boolean;
   userId: string;
   email?: string;
-  accountStatus: AccountStatus;
-  isAccountActive: boolean;
-  roles: UserRole[];
+  accountStatus?: AccountStatus;
+  isAccountActive?: boolean;
+  roles?: UserRole[];
   departmentId?: string;
   facultyId?: string;
   serviceUnitId?: string;
-  /** Present in the published role-validation example; optional because the OpenAPI schema does not declare it. */
   isRoleAuthorized?: boolean;
 }
 
@@ -49,6 +20,39 @@ export interface AccountStatusValidationData {
   isInactive: boolean;
 }
 
+export interface DepartmentValidationData {
+  valid: boolean;
+  departmentId: string;
+  name?: string;
+  facultyId?: string;
+}
+
+export interface FacultyValidationData {
+  valid: boolean;
+  facultyId: string;
+  name?: string;
+}
+
+export interface ServiceUnitValidationData {
+  valid: boolean;
+  unitId: string;
+  name?: string;
+}
+
+export interface UserAffiliationValidationData {
+  valid: boolean;
+  userId: string;
+  facultyId?: string;
+  departmentId?: string;
+  serviceUnitId?: string;
+}
+
+export interface UserResponsibilitiesValidationData {
+  valid: boolean;
+  userId: string;
+  responsibilities?: string[] | Record<string, unknown>[];
+}
+
 export interface ValidationResult<T = UserValidationData> {
   success: boolean;
   data?: T;
@@ -56,22 +60,12 @@ export interface ValidationResult<T = UserValidationData> {
   status: number;
 }
 
-export const VALIDATION_API_ENDPOINT =
-  import.meta.env.VITE_VALIDATION_API_ENDPOINT || '/users/validate';
-
-export const ACCOUNT_STATUS_VALIDATION_API_ENDPOINT =
-  import.meta.env.VITE_ACCOUNT_STATUS_VALIDATION_API_ENDPOINT || '/users/account-status';
-
-function invalidUserIdMessage(): string {
-  return 'User ID is required for cross-team validation.';
-}
-
 function normalizeUserId(userId: string): string | null {
   const normalized = typeof userId === 'string' ? userId.trim() : '';
   return normalized ? normalized : null;
 }
 
-// Identical validation requests already in flight share one backend call.
+// In-flight validation request deduplication map
 const inFlightValidations = new Map<string, Promise<unknown>>();
 
 function dedupeValidation<T>(key: string, request: () => Promise<T>): Promise<T> {
@@ -86,90 +80,63 @@ function dedupeValidation<T>(key: string, request: () => Promise<T>): Promise<T>
 }
 
 /**
- * Validate user identity, account status, roles, and organizational scope.
- *
- * The departmentId, facultyId, and serviceUnitId values are returned by the
- * official identity-validation contract. No additional organizational rules
- * are assumed on the frontend.
+ * Official Identity Validation endpoint:
+ * GET /validation/users/{user_id}?required_role=...
  */
-export async function validateUserIdentity(userId: string): Promise<ValidationResult<UserValidationData>> {
+export async function validateUserIdentity(
+  userId: string,
+  requiredRole?: string
+): Promise<ValidationResult<UserValidationData>> {
   const normalizedUserId = normalizeUserId(userId);
 
   if (!normalizedUserId) {
     return {
       success: false,
       status: 400,
-      message: 'User ID is required for cross-team identity validation.',
+      message: 'User ID is required for identity validation.',
     };
   }
 
-  const endpoint = `${VALIDATION_API_ENDPOINT}/${encodeURIComponent(normalizedUserId)}`;
+  const query = requiredRole ? `?required_role=${encodeURIComponent(requiredRole)}` : '';
+  const endpoint = `/validation/users/${encodeURIComponent(normalizedUserId)}${query}`;
+
   const response = await dedupeValidation(`GET ${endpoint}`, () =>
-    apiFetch<UserValidationData>(endpoint, { method: 'GET' })
+    apiFetch<Record<string, unknown>>(endpoint, { method: 'GET' })
   );
-
-  if (response.status === 400) {
-    return {
-      success: false,
-      status: 400,
-      message: response.error || 'Invalid user ID for cross-team identity validation.',
-    };
-  }
-
-  if (response.status === 401) {
-    return {
-      success: false,
-      status: 401,
-      message: response.error || 'Unauthenticated API access. Consuming service credentials are invalid or missing.',
-    };
-  }
-
-  if (response.status === 403) {
-    return {
-      success: false,
-      status: 403,
-      message: response.error || 'User account is inactive or access to identity validation was denied.',
-      data: response.data,
-    };
-  }
-
-  if (response.status === 404) {
-    return {
-      success: false,
-      status: 404,
-      message: response.error || 'Target user identity record was not found in the university identity directory.',
-    };
-  }
 
   if (response.error || !response.data) {
     return {
       success: false,
       status: response.status || 500,
-      message: response.error || 'Unable to connect to the cross-team validation API.',
+      message: response.error || 'Unable to connect to identity validation service.',
     };
   }
 
-  if (!response.data.valid || !response.data.isAccountActive || response.data.accountStatus !== 'ACTIVE') {
-    return {
-      success: false,
-      status: response.status || 403,
-      data: response.data,
-      message: 'User identity validation failed because the account is not active or valid.',
-    };
-  }
+  const body = response.data;
+  const dataObj = (body.data || body) as Record<string, unknown>;
+
+  const validationData: UserValidationData = {
+    valid: Boolean(dataObj.valid ?? true),
+    userId: String(dataObj.userId || dataObj.user_id || normalizedUserId),
+    email: dataObj.email ? String(dataObj.email) : undefined,
+    accountStatus: dataObj.accountStatus as AccountStatus | undefined,
+    isAccountActive: typeof dataObj.isAccountActive === 'boolean' ? dataObj.isAccountActive : undefined,
+    roles: Array.isArray(dataObj.roles) ? (dataObj.roles as UserRole[]) : undefined,
+    departmentId: dataObj.departmentId ? String(dataObj.departmentId) : undefined,
+    facultyId: dataObj.facultyId ? String(dataObj.facultyId) : undefined,
+    serviceUnitId: dataObj.serviceUnitId ? String(dataObj.serviceUnitId) : undefined,
+    isRoleAuthorized: typeof dataObj.isRoleAuthorized === 'boolean' ? dataObj.isRoleAuthorized : undefined,
+  };
 
   return {
     success: true,
     status: response.status,
-    data: response.data,
+    data: validationData,
   };
 }
 
 /**
- * Validate whether a user possesses one or more required system roles.
- *
- * Role values are limited to the UserRole values already defined by the
- * frontend and the published Group 5 contract.
+ * Role validation wrapper using GET /validation/users/{user_id}?required_role=...
  */
 export async function validateUserRole(
   userId: string,
@@ -194,129 +161,12 @@ export async function validateUserRole(
     };
   }
 
-  const body = JSON.stringify({
-    userId: normalizedUserId,
-    requiredRoles: rolesArray,
-  });
-  const response = await dedupeValidation(`POST ${VALIDATION_API_ENDPOINT}/roles ${body}`, () =>
-    apiFetch<UserValidationData>(`${VALIDATION_API_ENDPOINT}/roles`, {
-      method: 'POST',
-      body,
-    })
-  );
-
-  if (response.status === 400) {
-    return {
-      success: false,
-      status: 400,
-      message: response.error || 'Invalid role validation request.',
-    };
-  }
-
-  if (response.status === 401) {
-    return {
-      success: false,
-      status: 401,
-      message: response.error || 'Unauthenticated API access. Consuming service credentials are invalid or missing.',
-    };
-  }
-
-  if (response.status === 403) {
-    return {
-      success: false,
-      status: 403,
-      data: response.data,
-      message: response.error || 'User does not possess the required role(s) or the account is inactive.',
-    };
-  }
-
-  if (response.error || !response.data) {
-    return {
-      success: false,
-      status: response.status || 500,
-      message: response.error || 'Role validation request failed. Unable to connect to the backend validation service.',
-    };
-  }
-
-  // The contract answers inactive accounts with 403; a 200 body reporting an inactive
-  // account is still treated as a failure rather than silently authorized.
-  if (response.data.isAccountActive === false || (response.data.accountStatus && response.data.accountStatus !== 'ACTIVE')) {
-    return {
-      success: false,
-      status: response.status || 403,
-      data: response.data,
-      message: 'Role validation failed because the user account is not active.',
-    };
-  }
-
-  const roleAuthorized = response.data.isRoleAuthorized ?? response.data.valid;
-  if (!roleAuthorized) {
-    return {
-      success: false,
-      status: response.status || 403,
-      data: response.data,
-      message: 'Role validation failed. The user does not satisfy the required role(s).',
-    };
-  }
-
-  return {
-    success: true,
-    status: response.status,
-    data: response.data,
-  };
-}
-
-export interface UserAffiliationExpectation {
-  facultyId?: string;
-  departmentId?: string;
-  serviceUnitId?: string;
+  return validateUserIdentity(normalizedUserId, rolesArray[0]);
 }
 
 /**
- * Validate optional affiliation references against the identity data returned by
- * the official validation endpoint. No affiliation is required unless the caller
- * explicitly provides an expected value.
- */
-export async function validateUserAffiliation(
-  userId: string,
-  expected: UserAffiliationExpectation
-): Promise<ValidationResult<UserValidationData>> {
-  const identityResult = await validateUserIdentity(userId);
-
-  if (!identityResult.success || !identityResult.data) {
-    return identityResult;
-  }
-
-  const actual = identityResult.data;
-  const mismatches: string[] = [];
-
-  if (expected.facultyId && actual.facultyId !== expected.facultyId) {
-    mismatches.push('faculty affiliation');
-  }
-
-  if (expected.departmentId && actual.departmentId !== expected.departmentId) {
-    mismatches.push('department affiliation');
-  }
-
-  if (expected.serviceUnitId && actual.serviceUnitId !== expected.serviceUnitId) {
-    mismatches.push('service unit affiliation');
-  }
-
-  if (mismatches.length > 0) {
-    return {
-      success: false,
-      status: 403,
-      data: actual,
-      message: `User affiliation validation failed for ${mismatches.join(', ')}.`,
-    };
-  }
-
-  return identityResult;
-}
-
-
-/**
- * Verify account activation using the dedicated published account-status endpoint.
+ * Account Status Validation:
+ * GET /users/{userId}/status
  */
 export async function validateAccountStatus(
   userId: string
@@ -327,68 +177,232 @@ export async function validateAccountStatus(
     return {
       success: false,
       status: 400,
-      message: invalidUserIdMessage(),
+      message: 'User ID is required for account status validation.',
     };
   }
 
-  const endpoint = `${ACCOUNT_STATUS_VALIDATION_API_ENDPOINT}/${encodeURIComponent(normalizedUserId)}`;
+  const endpoint = `/users/${encodeURIComponent(normalizedUserId)}/status`;
   const response = await dedupeValidation(`GET ${endpoint}`, () =>
-    apiFetch<AccountStatusValidationData>(endpoint, { method: 'GET' })
+    apiFetch<Record<string, unknown>>(endpoint, { method: 'GET' })
   );
-
-  if (response.status === 400) {
-    return {
-      success: false,
-      status: 400,
-      message: response.error || 'Invalid user ID for account status validation.',
-    };
-  }
-
-  if (response.status === 401) {
-    return {
-      success: false,
-      status: 401,
-      message: response.error || 'Unauthenticated API access. Consuming service credentials are invalid or missing.',
-    };
-  }
-
-  if (response.status === 403) {
-    return {
-      success: false,
-      status: 403,
-      data: response.data,
-      message: response.error || 'Account status validation was denied because the account is inactive.',
-    };
-  }
-
-  if (response.status === 404) {
-    return {
-      success: false,
-      status: 404,
-      message: response.error || 'Target user identity record was not found in the university identity directory.',
-    };
-  }
 
   if (response.error || !response.data) {
     return {
       success: false,
       status: response.status || 500,
-      message: response.error || 'Unable to connect to account status verification service.',
+      message: response.error || 'Unable to connect to account status validation service.',
     };
   }
 
-  if (response.data.accountStatus !== 'ACTIVE' || response.data.isInactive) {
-    return {
-      success: false,
-      status: response.status || 403,
-      data: response.data,
-      message: 'Account status validation failed: the user account is INACTIVE.',
-    };
-  }
+  const body = response.data;
+  const dataObj = (body.data || body) as Record<string, unknown>;
+  const rawStatus = String(dataObj.status || dataObj.accountStatus || 'ACTIVE').toUpperCase() as AccountStatus;
 
   return {
     success: true,
     status: response.status,
-    data: response.data,
+    data: {
+      userId: normalizedUserId,
+      accountStatus: rawStatus,
+      isInactive: rawStatus !== 'ACTIVE',
+    },
+  };
+}
+
+/**
+ * Official Directory Validation:
+ * GET /validation/departments/{department_id}
+ */
+export async function validateDepartment(
+  departmentId: string
+): Promise<ValidationResult<DepartmentValidationData>> {
+  const normalizedId = normalizeUserId(departmentId);
+  if (!normalizedId) {
+    return {
+      success: false,
+      status: 400,
+      message: 'Department ID is required for department validation.',
+    };
+  }
+
+  const endpoint = `/validation/departments/${encodeURIComponent(normalizedId)}`;
+  const response = await apiFetch<Record<string, unknown>>(endpoint, { method: 'GET' });
+
+  if (response.error || !response.data) {
+    return {
+      success: false,
+      status: response.status || 500,
+      message: response.error || 'Department validation failed.',
+    };
+  }
+
+  const dataObj = (response.data.data || response.data) as Record<string, unknown>;
+  return {
+    success: true,
+    status: response.status,
+    data: {
+      valid: Boolean(dataObj.valid ?? true),
+      departmentId: normalizedId,
+      name: dataObj.name ? String(dataObj.name) : undefined,
+      facultyId: dataObj.facultyId ? String(dataObj.facultyId) : undefined,
+    },
+  };
+}
+
+/**
+ * Official Directory Validation:
+ * GET /validation/faculties/{faculty_id}
+ */
+export async function validateFaculty(
+  facultyId: string
+): Promise<ValidationResult<FacultyValidationData>> {
+  const normalizedId = normalizeUserId(facultyId);
+  if (!normalizedId) {
+    return {
+      success: false,
+      status: 400,
+      message: 'Faculty ID is required for faculty validation.',
+    };
+  }
+
+  const endpoint = `/validation/faculties/${encodeURIComponent(normalizedId)}`;
+  const response = await apiFetch<Record<string, unknown>>(endpoint, { method: 'GET' });
+
+  if (response.error || !response.data) {
+    return {
+      success: false,
+      status: response.status || 500,
+      message: response.error || 'Faculty validation failed.',
+    };
+  }
+
+  const dataObj = (response.data.data || response.data) as Record<string, unknown>;
+  return {
+    success: true,
+    status: response.status,
+    data: {
+      valid: Boolean(dataObj.valid ?? true),
+      facultyId: normalizedId,
+      name: dataObj.name ? String(dataObj.name) : undefined,
+    },
+  };
+}
+
+/**
+ * Official Directory Validation:
+ * GET /validation/service-units/{unit_id}
+ */
+export async function validateServiceUnit(
+  unitId: string
+): Promise<ValidationResult<ServiceUnitValidationData>> {
+  const normalizedId = normalizeUserId(unitId);
+  if (!normalizedId) {
+    return {
+      success: false,
+      status: 400,
+      message: 'Service unit ID is required for service unit validation.',
+    };
+  }
+
+  const endpoint = `/validation/service-units/${encodeURIComponent(normalizedId)}`;
+  const response = await apiFetch<Record<string, unknown>>(endpoint, { method: 'GET' });
+
+  if (response.error || !response.data) {
+    return {
+      success: false,
+      status: response.status || 500,
+      message: response.error || 'Service unit validation failed.',
+    };
+  }
+
+  const dataObj = (response.data.data || response.data) as Record<string, unknown>;
+  return {
+    success: true,
+    status: response.status,
+    data: {
+      valid: Boolean(dataObj.valid ?? true),
+      unitId: normalizedId,
+      name: dataObj.name ? String(dataObj.name) : undefined,
+    },
+  };
+}
+
+/**
+ * Official Directory Validation:
+ * GET /validation/users/{user_id}/affiliation
+ */
+export async function validateUserAffiliation(
+  userId: string
+): Promise<ValidationResult<UserAffiliationValidationData>> {
+  const normalizedUserId = normalizeUserId(userId);
+  if (!normalizedUserId) {
+    return {
+      success: false,
+      status: 400,
+      message: 'User ID is required for affiliation validation.',
+    };
+  }
+
+  const endpoint = `/validation/users/${encodeURIComponent(normalizedUserId)}/affiliation`;
+  const response = await apiFetch<Record<string, unknown>>(endpoint, { method: 'GET' });
+
+  if (response.error || !response.data) {
+    return {
+      success: false,
+      status: response.status || 500,
+      message: response.error || 'Affiliation validation failed.',
+    };
+  }
+
+  const dataObj = (response.data.data || response.data) as Record<string, unknown>;
+  return {
+    success: true,
+    status: response.status,
+    data: {
+      valid: Boolean(dataObj.valid ?? true),
+      userId: normalizedUserId,
+      facultyId: dataObj.facultyId ? String(dataObj.facultyId) : undefined,
+      departmentId: dataObj.departmentId ? String(dataObj.departmentId) : undefined,
+      serviceUnitId: dataObj.serviceUnitId ? String(dataObj.serviceUnitId) : undefined,
+    },
+  };
+}
+
+/**
+ * Official Directory Validation:
+ * GET /validation/users/{user_id}/responsibilities
+ */
+export async function validateUserResponsibilities(
+  userId: string
+): Promise<ValidationResult<UserResponsibilitiesValidationData>> {
+  const normalizedUserId = normalizeUserId(userId);
+  if (!normalizedUserId) {
+    return {
+      success: false,
+      status: 400,
+      message: 'User ID is required for responsibilities validation.',
+    };
+  }
+
+  const endpoint = `/validation/users/${encodeURIComponent(normalizedUserId)}/responsibilities`;
+  const response = await apiFetch<Record<string, unknown>>(endpoint, { method: 'GET' });
+
+  if (response.error || !response.data) {
+    return {
+      success: false,
+      status: response.status || 500,
+      message: response.error || 'Responsibilities validation failed.',
+    };
+  }
+
+  const dataObj = (response.data.data || response.data) as Record<string, unknown>;
+  return {
+    success: true,
+    status: response.status,
+    data: {
+      valid: Boolean(dataObj.valid ?? true),
+      userId: normalizedUserId,
+      responsibilities: Array.isArray(dataObj.responsibilities) ? dataObj.responsibilities : undefined,
+    },
   };
 }

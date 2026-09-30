@@ -26,10 +26,15 @@ import {
   type UserCreatePayload,
   type UserUpdatePayload,
 } from '@/services/userService';
+import {
+  getAffiliations,
+  createAffiliation,
+  updateAffiliation,
+} from '@/services/affiliationService';
 import { getFaculties } from '@/services/facultyService';
 import { getDepartments } from '@/services/departmentService';
 import { getServiceUnits } from '@/services/serviceUnitService';
-import type { UserProfile, UserRole, AccountStatus, Faculty, Department, ServiceUnit } from '@/types';
+import type { UserProfile, UserRole, AccountStatus, Faculty, Department, ServiceUnit, Affiliation } from '@/types';
 import {
   Card,
   CardBody,
@@ -45,11 +50,6 @@ import {
 import { formatRole } from '@/utils';
 import './UsersPage.css';
 
-/**
- * UNCONFIRMED PLACEHOLDER INTEGRATION BOUNDARY PENDING OFFICIAL BACKEND CONTRACT:
- * The official backend User Management contract and DTO schema are not yet documented in the repository.
- * Form fields and API interactions serve strictly as an integration boundary ready for official backend endpoints.
- */
 export const UsersPage: React.FC = () => {
   const { isAuthorized, hasRole } = useAuth();
   const canManageUsers = isAuthorized(['ADMIN']);
@@ -57,6 +57,7 @@ export const UsersPage: React.FC = () => {
 
   // User list state
   const [users, setUsers] = useState<UserProfile[]>([]);
+  const [affiliations, setAffiliations] = useState<Affiliation[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
 
@@ -77,10 +78,9 @@ export const UsersPage: React.FC = () => {
   const [email, setEmail] = useState<string>('');
   const [phone, setPhone] = useState<string>('');
 
-  // Affiliation Form Fields
+  // Affiliation Form Fields (User -> Department -> Faculty)
   const [facultyId, setFacultyId] = useState<string>('');
   const [departmentId, setDepartmentId] = useState<string>('');
-  const [serviceUnitId, setServiceUnitId] = useState<string>('');
 
   const [isSaving, setIsSaving] = useState<boolean>(false);
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -94,23 +94,27 @@ export const UsersPage: React.FC = () => {
   // Status Banners
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-  // Load user records and directory lists safely
+  // Load user records, affiliations, and directory lists safely
   const fetchUsersData = useCallback(async () => {
     setIsLoading(true);
     setFetchError(null);
 
-    const [usersRes, facultiesRes, deptsRes, unitsRes] = await Promise.all([
+    const [usersRes, affsRes, facultiesRes, deptsRes, unitsRes] = await Promise.all([
       getUsers(),
+      getAffiliations(),
       getFaculties(),
       getDepartments(),
       getServiceUnits(),
     ]);
 
-    // A successful empty list is a valid empty state, not a connection error.
     if (usersRes.success && usersRes.data) {
       setUsers(usersRes.data);
     } else {
       setFetchError(usersRes.message || 'Unable to connect to User Management service.');
+    }
+
+    if (affsRes.success && affsRes.data) {
+      setAffiliations(affsRes.data);
     }
 
     if (facultiesRes.success && facultiesRes.data) {
@@ -138,14 +142,32 @@ export const UsersPage: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    fetchUsersData();
+    let isMounted = true;
+    Promise.resolve().then(() => {
+      if (isMounted) fetchUsersData();
+    });
+    return () => {
+      isMounted = false;
+    };
   }, [fetchUsersData]);
 
-  // Lookup maps for resolving affiliation names from IDs when missing from UserProfile
+  // Lookup maps
   const facultyMap = useMemo(() => new Map(faculties.map((f) => [f.id, f.name])), [faculties]);
   const departmentMap = useMemo(() => new Map(departments.map((d) => [d.id, d.name])), [departments]);
   const serviceUnitMap = useMemo(() => new Map(serviceUnits.map((s) => [s.id, s.name])), [serviceUnits]);
+
+  // Map user ID to array of official affiliation records (preserves multi-affiliation)
+  const userAffiliationsMap = useMemo(() => {
+    const map = new Map<string, Affiliation[]>();
+    affiliations.forEach((aff) => {
+      if (aff.userId) {
+        const list = map.get(aff.userId) || [];
+        list.push(aff);
+        map.set(aff.userId, list);
+      }
+    });
+    return map;
+  }, [affiliations]);
 
   // Dynamic dropdown options
   const facultyOptions = useMemo(() => {
@@ -167,18 +189,8 @@ export const UsersPage: React.FC = () => {
     }));
   }, [departments, facultyId]);
 
-  const serviceUnitOptions = useMemo(() => {
-    return serviceUnits.map((s) => ({
-      value: s.id,
-      label: `${s.name} (${s.code})`,
-    }));
-  }, [serviceUnits]);
-
-  // Handle Faculty change with relationship cascade
   const handleFacultyChange = (newFacultyId: string) => {
     setFacultyId(newFacultyId);
-
-    // Cascade: If selected department does not belong to the new faculty, clear departmentId selection
     if (departmentId && newFacultyId) {
       const currentDept = departments.find((d) => d.id === departmentId);
       if (currentDept && currentDept.facultyId !== newFacultyId) {
@@ -187,21 +199,27 @@ export const UsersPage: React.FC = () => {
     }
   };
 
-  // Client-side filtering for loaded user records
   const filteredUsers = useMemo(() => {
     if (!searchQuery.trim()) return users;
     const query = searchQuery.toLowerCase().trim();
-    return users.filter(
-      (user) =>
+    return users.filter((user) => {
+      const affList = userAffiliationsMap.get(user.id) || [];
+      const firstAff = affList[0];
+      const facName = firstAff?.facultyName || (firstAff?.facultyId ? facultyMap.get(firstAff.facultyId) : undefined) || user.facultyName || '';
+      const deptName = firstAff?.departmentName || (firstAff?.departmentId ? departmentMap.get(firstAff.departmentId) : undefined) || user.departmentName || '';
+      const unitName = user.serviceUnitName || (user.serviceUnitId ? serviceUnitMap.get(user.serviceUnitId) : undefined) || '';
+
+      return (
         (user.firstName || '').toLowerCase().includes(query) ||
         (user.lastName || '').toLowerCase().includes(query) ||
         (user.email || '').toLowerCase().includes(query) ||
         (user.id || '').toLowerCase().includes(query) ||
-        (user.facultyName && user.facultyName.toLowerCase().includes(query)) ||
-        (user.departmentName && user.departmentName.toLowerCase().includes(query)) ||
-        (user.serviceUnitName && user.serviceUnitName.toLowerCase().includes(query))
-    );
-  }, [users, searchQuery]);
+        facName.toLowerCase().includes(query) ||
+        deptName.toLowerCase().includes(query) ||
+        unitName.toLowerCase().includes(query)
+      );
+    });
+  }, [users, searchQuery, userAffiliationsMap, facultyMap, departmentMap, serviceUnitMap]);
 
   const openCreateModal = () => {
     setEditingUser(null);
@@ -211,7 +229,6 @@ export const UsersPage: React.FC = () => {
     setPhone('');
     setFacultyId('');
     setDepartmentId('');
-    setServiceUnitId('');
     setFieldErrors({});
     setSaveError(null);
     setSuccessMessage(null);
@@ -224,9 +241,12 @@ export const UsersPage: React.FC = () => {
     setLastName(user.lastName || '');
     setEmail(user.email || '');
     setPhone(user.phone || '');
-    setFacultyId(user.facultyId || '');
-    setDepartmentId(user.departmentId || '');
-    setServiceUnitId(user.serviceUnitId || '');
+
+    const affList = userAffiliationsMap.get(user.id) || [];
+    const firstAff = affList[0];
+    setFacultyId(firstAff?.facultyId || user.facultyId || '');
+    setDepartmentId(firstAff?.departmentId || user.departmentId || '');
+
     setFieldErrors({});
     setSaveError(null);
     setSuccessMessage(null);
@@ -256,7 +276,7 @@ export const UsersPage: React.FC = () => {
 
   const handleSaveUser = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (isSaving) return;
+    if (isSaving || !canManageUsers) return;
     setSaveError(null);
     setSuccessMessage(null);
 
@@ -266,36 +286,60 @@ export const UsersPage: React.FC = () => {
 
     setIsSaving(true);
 
-    const payload: UserCreatePayload | UserUpdatePayload = {
+    const userPayload: UserCreatePayload | UserUpdatePayload = {
       firstName: firstName.trim(),
       lastName: lastName.trim(),
       email: email.trim(),
       phone: phone.trim() || undefined,
-      facultyId: facultyId.trim() || undefined,
-      departmentId: departmentId.trim() || undefined,
-      serviceUnitId: serviceUnitId.trim() || undefined,
     };
 
-    let result;
+    let userResult;
+    let savedUserId = editingUser?.id;
+
     if (editingUser) {
-      result = await updateUser(editingUser.id, payload as UserUpdatePayload);
+      userResult = await updateUser(editingUser.id, userPayload as UserUpdatePayload);
     } else {
-      result = await createUser(payload as UserCreatePayload);
+      userResult = await createUser(userPayload as UserCreatePayload);
+      if (userResult.success && userResult.data?.id) {
+        savedUserId = userResult.data.id;
+      }
     }
 
-    if (result.success) {
-      setSuccessMessage(result.message || (editingUser ? 'User updated successfully.' : 'User created successfully.'));
-      setIsFormModalOpen(false);
-      fetchUsersData();
-    } else {
-      setSaveError(result.message || 'Failed to save user account. Unable to connect to backend.');
+    if (!userResult.success) {
+      setSaveError(userResult.message || 'Failed to save user account.');
+      setIsSaving(false);
+      return;
     }
 
+    // Affiliation CRUD via dedicated affiliationService (User -> Department -> Faculty)
+    if (savedUserId && departmentId) {
+      const userAffList = userAffiliationsMap.get(savedUserId) || [];
+      const existingAff = userAffList[0];
+
+      if (existingAff?.id) {
+        await updateAffiliation(existingAff.id, {
+          departmentId,
+          facultyId: facultyId || undefined,
+        });
+      } else {
+        await createAffiliation({
+          userId: savedUserId,
+          departmentId,
+          facultyId: facultyId || undefined,
+        });
+      }
+    }
+
+    setSuccessMessage(
+      userResult.message || (editingUser ? 'User updated successfully.' : 'User created successfully.')
+    );
+    setIsFormModalOpen(false);
+    fetchUsersData();
     setIsSaving(false);
   };
 
   const handleDeleteUser = async () => {
-    if (!deletingUser || isDeleting) return;
+    if (!deletingUser || isDeleting || !canDeleteUsers) return;
 
     setIsDeleting(true);
     setDeleteError(null);
@@ -392,7 +436,7 @@ export const UsersPage: React.FC = () => {
         </div>
       )}
 
-      {/* Content Area: Loading / Error / Empty / Loaded States */}
+      {/* Content Area */}
       {isLoading ? (
         <LoadingState
           title="Loading University Users..."
@@ -407,8 +451,10 @@ export const UsersPage: React.FC = () => {
       ) : users.length > 0 ? (
         <div className="users-grid">
           {filteredUsers.map((user) => {
-            const resolvedFacultyName = user.facultyName || (user.facultyId ? facultyMap.get(user.facultyId) : undefined);
-            const resolvedDepartmentName = user.departmentName || (user.departmentId ? departmentMap.get(user.departmentId) : undefined);
+            const affList = userAffiliationsMap.get(user.id) || [];
+            const firstAff = affList[0];
+            const resolvedFacultyName = firstAff?.facultyName || (firstAff?.facultyId ? facultyMap.get(firstAff.facultyId) : undefined) || user.facultyName || (user.facultyId ? facultyMap.get(user.facultyId) : undefined);
+            const resolvedDepartmentName = firstAff?.departmentName || (firstAff?.departmentId ? departmentMap.get(firstAff.departmentId) : undefined) || user.departmentName || (user.departmentId ? departmentMap.get(user.departmentId) : undefined);
             const resolvedServiceUnitName = user.serviceUnitName || (user.serviceUnitId ? serviceUnitMap.get(user.serviceUnitId) : undefined);
 
             return (
@@ -617,7 +663,7 @@ export const UsersPage: React.FC = () => {
             disabled={isSaving}
           />
 
-          {/* User Affiliation Selectors */}
+          {/* User Affiliation Selectors: User -> Department -> Faculty */}
           <Select
             id="user-faculty-select"
             label="Faculty Affiliation (Optional)"
@@ -630,7 +676,7 @@ export const UsersPage: React.FC = () => {
 
           <Select
             id="user-department-select"
-            label="Department Affiliation (Optional)"
+            label="Department Affiliation"
             options={filteredDepartmentOptions}
             placeholder={
               facultyId && filteredDepartmentOptions.length === 0
@@ -639,16 +685,6 @@ export const UsersPage: React.FC = () => {
             }
             value={departmentId}
             onChange={(e) => setDepartmentId(e.target.value)}
-            disabled={isSaving}
-          />
-
-          <Select
-            id="user-service-unit-select"
-            label="Service Unit Affiliation (Optional)"
-            options={serviceUnitOptions}
-            placeholder="None / Select Service Unit..."
-            value={serviceUnitId}
-            onChange={(e) => setServiceUnitId(e.target.value)}
             disabled={isSaving}
           />
         </form>
