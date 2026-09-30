@@ -85,7 +85,7 @@ export function clearAuthSession(): void {
   }
 }
 
-function mapBackendUserToProfile(raw: Record<string, unknown>): UserProfile {
+export function mapBackendUserToProfile(raw: Record<string, unknown>): UserProfile {
   const id = String(raw.id || raw.user_id || raw.userId || '');
   const email = String(raw.email || '');
   const firstName = String(raw.firstName || raw.first_name || '');

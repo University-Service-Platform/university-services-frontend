@@ -1,4 +1,5 @@
-import { apiFetch } from './apiClient';
+import { apiFetch, unwrapData, unwrapList } from './apiClient';
+import { mapBackendUserToProfile } from './authService';
 import type { UserProfile } from '@/types';
 
 export interface UserCreatePayload {
@@ -28,7 +29,8 @@ export async function getUsers(): Promise<UserServiceResult<UserProfile[]>> {
     method: 'GET',
   });
 
-  if (response.error || !Array.isArray(response.data)) {
+  const list = unwrapList(response.data);
+  if (response.error || !list) {
     return {
       success: false,
       message: response.error || 'Unable to connect to User Management service.',
@@ -37,7 +39,7 @@ export async function getUsers(): Promise<UserServiceResult<UserProfile[]>> {
 
   return {
     success: true,
-    data: response.data,
+    data: list.map(mapBackendUserToProfile),
   };
 }
 
@@ -56,7 +58,7 @@ export async function createUser(payload: UserCreatePayload): Promise<UserServic
 
   return {
     success: true,
-    data: response.data,
+    data: mapBackendUserToProfile(unwrapData<Record<string, unknown>>(response.data) ?? {}),
     message: 'User created successfully.',
   };
 }
@@ -76,7 +78,7 @@ export async function updateUser(id: string, payload: UserUpdatePayload): Promis
 
   return {
     success: true,
-    data: response.data,
+    data: mapBackendUserToProfile(unwrapData<Record<string, unknown>>(response.data) ?? {}),
     message: 'User updated successfully.',
   };
 }

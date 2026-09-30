@@ -1,4 +1,5 @@
-import { apiFetch } from './apiClient';
+import { apiFetch, unwrapData, unwrapList } from './apiClient';
+import { mapDepartment } from './directoryMappers';
 import type {
   Department,
   DepartmentCreatePayload,
@@ -19,7 +20,8 @@ export async function getDepartments(): Promise<DepartmentServiceResult<Departme
     method: 'GET',
   });
 
-  if (response.error || !Array.isArray(response.data)) {
+  const list = unwrapList(response.data);
+  if (response.error || !list) {
     return {
       success: false,
       message: response.error || 'Unable to connect to Department Management service. Official backend contract is pending integration.',
@@ -28,7 +30,7 @@ export async function getDepartments(): Promise<DepartmentServiceResult<Departme
 
   return {
     success: true,
-    data: response.data,
+    data: list.map(mapDepartment),
   };
 }
 
@@ -47,7 +49,7 @@ export async function createDepartment(payload: DepartmentCreatePayload): Promis
 
   return {
     success: true,
-    data: response.data,
+    data: mapDepartment(unwrapData<Record<string, unknown>>(response.data) ?? {}),
     message: 'Department created successfully.',
   };
 }
@@ -67,7 +69,7 @@ export async function updateDepartment(id: string, payload: DepartmentUpdatePayl
 
   return {
     success: true,
-    data: response.data,
+    data: mapDepartment(unwrapData<Record<string, unknown>>(response.data) ?? {}),
     message: 'Department updated successfully.',
   };
 }
