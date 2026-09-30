@@ -34,7 +34,7 @@ import {
 import { getFaculties } from '@/services/facultyService';
 import { getDepartments } from '@/services/departmentService';
 import { getServiceUnits } from '@/services/serviceUnitService';
-import type { UserProfile, UserRole, AccountStatus, Faculty, Department, ServiceUnit, Affiliation } from '@/types';
+import type { AccountType, UserProfile, UserRole, AccountStatus, Faculty, Department, ServiceUnit, Affiliation } from '@/types';
 import {
   Card,
   CardBody,
@@ -76,7 +76,9 @@ export const UsersPage: React.FC = () => {
   const [firstName, setFirstName] = useState<string>('');
   const [lastName, setLastName] = useState<string>('');
   const [email, setEmail] = useState<string>('');
-  const [phone, setPhone] = useState<string>('');
+  const [universityId, setUniversityId] = useState<string>('');
+  const [accountType, setAccountType] = useState<AccountType>('STUDENT');
+  const [password, setPassword] = useState<string>('');
 
   // Affiliation Form Fields (User -> Department -> Faculty)
   const [facultyId, setFacultyId] = useState<string>('');
@@ -84,7 +86,7 @@ export const UsersPage: React.FC = () => {
 
   const [isSaving, setIsSaving] = useState<boolean>(false);
   const [saveError, setSaveError] = useState<string | null>(null);
-  const [fieldErrors, setFieldErrors] = useState<{ firstName?: string; lastName?: string; email?: string }>({});
+  const [fieldErrors, setFieldErrors] = useState<{ universityId?: string; firstName?: string; lastName?: string; email?: string; password?: string }>({});
 
   // Delete Modal State
   const [deletingUser, setDeletingUser] = useState<UserProfile | null>(null);
@@ -226,7 +228,9 @@ export const UsersPage: React.FC = () => {
     setFirstName('');
     setLastName('');
     setEmail('');
-    setPhone('');
+    setUniversityId('');
+    setAccountType('STUDENT');
+    setPassword('');
     setFacultyId('');
     setDepartmentId('');
     setFieldErrors({});
@@ -240,7 +244,9 @@ export const UsersPage: React.FC = () => {
     setFirstName(user.firstName || '');
     setLastName(user.lastName || '');
     setEmail(user.email || '');
-    setPhone(user.phone || '');
+    setUniversityId(user.universityId || '');
+    setAccountType(user.accountType || 'STUDENT');
+    setPassword('');
 
     const affList = userAffiliationsMap.get(user.id) || [];
     const firstAff = affList[0];
@@ -254,7 +260,15 @@ export const UsersPage: React.FC = () => {
   };
 
   const validateForm = (): boolean => {
-    const errors: { firstName?: string; lastName?: string; email?: string } = {};
+    const errors: { universityId?: string; firstName?: string; lastName?: string; email?: string; password?: string } = {};
+
+    if (!editingUser && universityId.trim().length < 3) {
+      errors.universityId = 'University ID is required (e.g. STU010).';
+    }
+
+    if (!editingUser && password && password.length < 8) {
+      errors.password = 'Use at least 8 characters, or leave it empty to set one later.';
+    }
 
     if (!firstName.trim()) {
       errors.firstName = 'First name is required.';
@@ -286,20 +300,27 @@ export const UsersPage: React.FC = () => {
 
     setIsSaving(true);
 
-    const userPayload: UserCreatePayload | UserUpdatePayload = {
-      firstName: firstName.trim(),
-      lastName: lastName.trim(),
-      email: email.trim(),
-      phone: phone.trim() || undefined,
-    };
-
     let userResult;
     let savedUserId = editingUser?.id;
 
     if (editingUser) {
-      userResult = await updateUser(editingUser.id, userPayload as UserUpdatePayload);
+      const updatePayload: UserUpdatePayload = {
+        firstName: firstName.trim(),
+        lastName: lastName.trim(),
+        email: email.trim(),
+        accountType,
+      };
+      userResult = await updateUser(editingUser.id, updatePayload);
     } else {
-      userResult = await createUser(userPayload as UserCreatePayload);
+      const createPayload: UserCreatePayload = {
+        universityId: universityId.trim(),
+        firstName: firstName.trim(),
+        lastName: lastName.trim(),
+        email: email.trim(),
+        accountType,
+        password: password || undefined,
+      };
+      userResult = await createUser(createPayload);
       if (userResult.success && userResult.data?.id) {
         savedUserId = userResult.data.id;
       }
@@ -312,26 +333,29 @@ export const UsersPage: React.FC = () => {
     }
 
     // Affiliation CRUD via dedicated affiliationService (User -> Department -> Faculty)
+    let affiliationWarning = '';
     if (savedUserId && departmentId) {
       const userAffList = userAffiliationsMap.get(savedUserId) || [];
       const existingAff = userAffList[0];
 
-      if (existingAff?.id) {
-        await updateAffiliation(existingAff.id, {
-          departmentId,
-          facultyId: facultyId || undefined,
-        });
-      } else {
-        await createAffiliation({
-          userId: savedUserId,
-          departmentId,
-          facultyId: facultyId || undefined,
-        });
+      const affiliationResult = existingAff?.id
+        ? await updateAffiliation(existingAff.id, {
+            departmentId,
+            facultyId: facultyId || undefined,
+          })
+        : await createAffiliation({
+            userId: savedUserId,
+            departmentId,
+            facultyId: facultyId || undefined,
+          });
+      if (!affiliationResult.success) {
+        affiliationWarning = ` The department could not be saved: ${affiliationResult.message || 'please try again.'}`;
       }
     }
 
     setSuccessMessage(
-      userResult.message || (editingUser ? 'User updated successfully.' : 'User created successfully.')
+      (userResult.message || (editingUser ? 'User updated successfully.' : 'User created successfully.')) +
+        affiliationWarning
     );
     setIsFormModalOpen(false);
     fetchUsersData();
@@ -604,6 +628,34 @@ export const UsersPage: React.FC = () => {
           )}
 
           <Input
+            id="user-university-id-input"
+            label="University ID"
+            placeholder="e.g. STU010"
+            value={universityId}
+            onChange={(e) => {
+              setUniversityId(e.target.value);
+              if (fieldErrors.universityId) {
+                setFieldErrors((prev) => ({ ...prev, universityId: undefined }));
+              }
+            }}
+            error={fieldErrors.universityId}
+            disabled={isSaving || Boolean(editingUser)}
+            required={!editingUser}
+          />
+
+          <Select
+            id="user-account-type-select"
+            label="Account Type"
+            options={[
+              { label: 'Student', value: 'STUDENT' },
+              { label: 'Staff', value: 'STAFF' },
+            ]}
+            value={accountType}
+            onChange={(e) => setAccountType(e.target.value as AccountType)}
+            disabled={isSaving}
+          />
+
+          <Input
             id="user-first-name-input"
             label="First Name"
             placeholder="e.g. Priyantha"
@@ -653,15 +705,24 @@ export const UsersPage: React.FC = () => {
             required
           />
 
-          <Input
-            id="user-phone-input"
-            label="Phone Number (Optional)"
-            placeholder="e.g. +94 71 234 5678"
-            value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-            leftIcon={<Phone size={18} />}
-            disabled={isSaving}
-          />
+          {!editingUser && (
+            <Input
+              id="user-password-input"
+              label="Initial Password (Optional)"
+              type="password"
+              placeholder="At least 8 characters"
+              value={password}
+              onChange={(e) => {
+                setPassword(e.target.value);
+                if (fieldErrors.password) {
+                  setFieldErrors((prev) => ({ ...prev, password: undefined }));
+                }
+              }}
+              error={fieldErrors.password}
+              helperText="Without a password the user can't sign in until an administrator sets one."
+              disabled={isSaving}
+            />
+          )}
 
           {/* User Affiliation Selectors: User -> Department -> Faculty */}
           <Select

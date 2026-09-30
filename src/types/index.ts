@@ -17,9 +17,12 @@ export type UserRole =
   | 'TECHNICIAN'
   | 'RESOURCE_MANAGER';
 export type AccountStatus = 'ACTIVE' | 'INACTIVE';
+export type AccountType = 'STUDENT' | 'STAFF';
 
 export interface UserProfile {
   id: string;
+  universityId?: string;
+  accountType?: AccountType;
   email: string;
   firstName: string;
   lastName: string;

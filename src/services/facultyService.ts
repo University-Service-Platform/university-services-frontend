@@ -42,7 +42,7 @@ export async function getFaculties(): Promise<FacultyServiceResult<Faculty[]>> {
   if (response.error || !list) {
     return {
       success: false,
-      message: response.error || 'Unable to connect to Faculty Management service. Official backend contract is pending integration.',
+      message: response.error || 'Unable to load faculties right now. Please try again in a moment.',
     };
   }
 

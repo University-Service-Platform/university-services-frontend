@@ -24,7 +24,7 @@ export async function getDepartments(): Promise<DepartmentServiceResult<Departme
   if (response.error || !list) {
     return {
       success: false,
-      message: response.error || 'Unable to connect to Department Management service. Official backend contract is pending integration.',
+      message: response.error || 'Unable to load departments right now. Please try again in a moment.',
     };
   }
 

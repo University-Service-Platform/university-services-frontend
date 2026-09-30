@@ -4,7 +4,7 @@ import { getDepartments } from '../departmentService';
 import { getFaculties } from '../facultyService';
 import { getProfile } from '../profileService';
 import { getServiceUnits } from '../serviceUnitService';
-import { getUsers } from '../userService';
+import { createUser, getUsers, updateUser } from '../userService';
 import { jsonResponse, mockFetch } from './testUtils';
 
 afterEach(() => {
@@ -39,8 +39,8 @@ describe('list pages read the gateway responses', () => {
 
     expect(result.success).toBe(true);
     expect(result.data).toEqual([{
-      id: 'usr-student-001', email: 'stu001@university.example', firstName: 'Demo', lastName: 'Student',
-      roles: ['STUDENT'], accountStatus: 'ACTIVE',
+      id: 'usr-student-001', universityId: 'STU001', email: 'stu001@university.example', firstName: 'Demo',
+      lastName: 'Student', roles: ['STUDENT'], accountStatus: 'ACTIVE',
     }]);
   });
 
@@ -65,5 +65,35 @@ describe('list pages read the gateway responses', () => {
     } }));
 
     expect((await getProfile()).data).toMatchObject({ id: 'usr-student-001', firstName: 'Demo', lastName: 'Student' });
+  });
+});
+
+describe('user create and update send the Identity Service fields', () => {
+  it('creates with university ID, one full name and the account type', async () => {
+    const fetchMock = mockFetch(jsonResponse(201, { success: true, data: {
+      id: 'usr-1', university_id: 'STU010', name: 'Nimal Perera', email: 'n@university.example',
+      account_type: 'STUDENT', status: 'ACTIVE', roles: [],
+    } }));
+
+    const result = await createUser({
+      universityId: ' STU010 ', firstName: 'Nimal', lastName: 'Perera', email: 'n@university.example',
+      accountType: 'STUDENT', password: 'Initial-Pass-1',
+    });
+
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toEqual({
+      university_id: 'STU010', name: 'Nimal Perera', email: 'n@university.example',
+      account_type: 'STUDENT', password: 'Initial-Pass-1',
+    });
+    expect(result.data).toMatchObject({ id: 'usr-1', universityId: 'STU010', accountType: 'STUDENT' });
+  });
+
+  it('updates the name as one field', async () => {
+    const fetchMock = mockFetch(jsonResponse(200, { success: true, data: { id: 'usr-1', name: 'A B' } }));
+
+    await updateUser('usr-1', { firstName: 'A', lastName: 'B', email: 'a@university.example', accountType: 'STAFF' });
+
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toEqual({
+      name: 'A B', email: 'a@university.example', account_type: 'STAFF',
+    });
   });
 });

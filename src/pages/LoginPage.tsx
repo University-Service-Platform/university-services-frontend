@@ -85,19 +85,10 @@ export const LoginPage: React.FC = () => {
           </div>
           <h1 className="brand-title">University of Kelaniya</h1>
           <p className="brand-tagline">One Platform. Many Possibilities.</p>
-
-          <div className="brand-portals-group">
-            <a href="#student-portal" className="portal-pill" onClick={(e) => e.preventDefault()}>
-              Student Portal &gt;
-            </a>
-            <a href="#staff-portal" className="portal-pill" onClick={(e) => e.preventDefault()}>
-              Staff Portal &gt;
-            </a>
-          </div>
         </div>
 
         <footer className="brand-panel-footer">
-          © 2025 University of Kelaniya • Learn • Belong • Thrive
+          © 2026 University of Kelaniya • Learn • Belong • Thrive
         </footer>
       </section>
 
@@ -107,11 +98,11 @@ export const LoginPage: React.FC = () => {
           <header className="auth-header">
             <div className="auth-badge">
               <span className="auth-badge-dot" aria-hidden="true" />
-              <span>University of Kelaniya Identity Core</span>
+              <span>University Services Platform</span>
             </div>
-            <h2 className="auth-heading">Welcome to University of Kelaniya LMS</h2>
+            <h2 className="auth-heading">Sign in</h2>
             <p className="auth-subheading">
-              Sign in with your University of Kelaniya credentials to access academic portal, student information, email, and campus resources.
+              Use your university ID or email to access events, announcements, facilities and service requests.
             </p>
           </header>
 
@@ -129,7 +120,7 @@ export const LoginPage: React.FC = () => {
               id="university-id"
               label="University ID / Email"
               type="email"
-              placeholder="student@kln.ac.lk"
+              placeholder="e.g. STU001 or name@university.example"
               value={identifier}
               onChange={(e) => {
                 setIdentifier(e.target.value);
