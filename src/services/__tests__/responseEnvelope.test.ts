@@ -1,0 +1,69 @@
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { unwrapData, unwrapList } from '../apiClient';
+import { getDepartments } from '../departmentService';
+import { getFaculties } from '../facultyService';
+import { getProfile } from '../profileService';
+import { getServiceUnits } from '../serviceUnitService';
+import { getUsers } from '../userService';
+import { jsonResponse, mockFetch } from './testUtils';
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
+
+describe('unwrapData / unwrapList', () => {
+  it('reads the payload inside the { success, data } envelope', () => {
+    expect(unwrapData({ success: true, data: { id: 'x' } })).toEqual({ id: 'x' });
+    expect(unwrapList({ success: true, data: [{ id: 'x' }] })).toEqual([{ id: 'x' }]);
+  });
+
+  it('accepts payloads sent without an envelope', () => {
+    expect(unwrapData({ id: 'x' })).toEqual({ id: 'x' });
+    expect(unwrapList([{ id: 'x' }])).toEqual([{ id: 'x' }]);
+  });
+
+  it('returns null when there is no list', () => {
+    expect(unwrapList({ success: true, data: { id: 'x' } })).toBeNull();
+    expect(unwrapList(undefined)).toBeNull();
+  });
+});
+
+describe('list pages read the gateway responses', () => {
+  it('loads users from GET /users and maps the Identity fields', async () => {
+    mockFetch(jsonResponse(200, { success: true, data: [{
+      id: 'usr-student-001', university_id: 'STU001', name: 'Demo Student', first_name: 'Demo',
+      last_name: 'Student', email: 'stu001@university.example', status: 'ACTIVE', roles: ['STUDENT'],
+    }] }));
+
+    const result = await getUsers();
+
+    expect(result.success).toBe(true);
+    expect(result.data).toEqual([{
+      id: 'usr-student-001', email: 'stu001@university.example', firstName: 'Demo', lastName: 'Student',
+      roles: ['STUDENT'], accountStatus: 'ACTIVE',
+    }]);
+  });
+
+  it('loads faculties, departments and service units from the Directory Service', async () => {
+    mockFetch(
+      jsonResponse(200, { success: true, data: [{ id: 'fac-1', code: 'FCT', name: 'Computing', created_at: '2026-09-30' }] }),
+      jsonResponse(200, { success: true, data: [{ id: 'dept-1', code: 'CS', name: 'Computer Science', faculty_id: 'fac-1' }] }),
+      jsonResponse(200, { success: true, data: [{ id: 'unit-1', code: 'EVT', name: 'Events Office' }] }),
+    );
+
+    expect((await getFaculties()).data).toEqual([
+      { id: 'fac-1', code: 'FCT', name: 'Computing', createdAt: '2026-09-30', description: undefined, updatedAt: undefined },
+    ]);
+    expect((await getDepartments()).data?.[0]).toMatchObject({ id: 'dept-1', facultyId: 'fac-1' });
+    expect((await getServiceUnits()).data?.[0]).toMatchObject({ id: 'unit-1', name: 'Events Office' });
+  });
+
+  it('loads the own profile from GET /users/profile', async () => {
+    mockFetch(jsonResponse(200, { success: true, data: {
+      user_id: 'usr-student-001', email: 'stu001@university.example', first_name: 'Demo', last_name: 'Student',
+      roles: ['STUDENT'], status: 'ACTIVE',
+    } }));
+
+    expect((await getProfile()).data).toMatchObject({ id: 'usr-student-001', firstName: 'Demo', lastName: 'Student' });
+  });
+});

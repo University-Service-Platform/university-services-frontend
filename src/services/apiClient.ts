@@ -175,3 +175,20 @@ export async function apiFetch<T>(
 
   return { data, status };
 }
+
+/**
+ * The platform's services answer `{ success, data }`. Returns `data` from that envelope,
+ * or the body itself when a service sends its payload unwrapped.
+ */
+export function unwrapData<T>(body: unknown): T | undefined {
+  if (body && typeof body === 'object' && !Array.isArray(body) && 'data' in body) {
+    return (body as { data?: T }).data;
+  }
+  return body as T | undefined;
+}
+
+/** The list in a response body, wrapped or not; null when the body holds no list. */
+export function unwrapList(body: unknown): Record<string, unknown>[] | null {
+  const data = unwrapData<unknown>(body);
+  return Array.isArray(data) ? (data as Record<string, unknown>[]) : null;
+}

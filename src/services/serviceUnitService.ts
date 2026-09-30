@@ -1,4 +1,5 @@
-import { apiFetch } from './apiClient';
+import { apiFetch, unwrapData, unwrapList } from './apiClient';
+import { mapServiceUnit } from './directoryMappers';
 import type { ServiceUnit } from '@/types';
 
 /**
@@ -37,7 +38,8 @@ export async function getServiceUnits(): Promise<ServiceUnitServiceResult<Servic
     method: 'GET',
   });
 
-  if (response.error || !Array.isArray(response.data)) {
+  const list = unwrapList(response.data);
+  if (response.error || !list) {
     return {
       success: false,
       message: response.error || 'Unable to connect to Service Unit Management service. Official backend contract is pending integration.',
@@ -46,7 +48,7 @@ export async function getServiceUnits(): Promise<ServiceUnitServiceResult<Servic
 
   return {
     success: true,
-    data: response.data,
+    data: list.map(mapServiceUnit),
   };
 }
 
@@ -65,7 +67,7 @@ export async function createServiceUnit(payload: ServiceUnitCreatePayload): Prom
 
   return {
     success: true,
-    data: response.data,
+    data: mapServiceUnit(unwrapData<Record<string, unknown>>(response.data) ?? {}),
     message: 'Service unit created successfully.',
   };
 }
@@ -85,7 +87,7 @@ export async function updateServiceUnit(id: string, payload: ServiceUnitUpdatePa
 
   return {
     success: true,
-    data: response.data,
+    data: mapServiceUnit(unwrapData<Record<string, unknown>>(response.data) ?? {}),
     message: 'Service unit updated successfully.',
   };
 }

@@ -1,4 +1,5 @@
-import { apiFetch } from './apiClient';
+import { apiFetch, unwrapData } from './apiClient';
+import { mapBackendUserToProfile } from './authService';
 import type { UserProfile } from '@/types';
 
 /**
@@ -48,7 +49,7 @@ export async function getProfile(): Promise<ProfileServiceResult<UserProfile>> {
 
   return {
     success: true,
-    data: response.data,
+    data: mapBackendUserToProfile(unwrapData<Record<string, unknown>>(response.data) ?? {}),
   };
 }
 
@@ -79,7 +80,7 @@ export async function updateProfile(payload: ProfileUpdatePayload): Promise<Prof
 
   return {
     success: true,
-    data: response.data,
+    data: mapBackendUserToProfile(unwrapData<Record<string, unknown>>(response.data) ?? {}),
     message: 'Profile updated successfully.',
   };
 }
