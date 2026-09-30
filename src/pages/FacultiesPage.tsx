@@ -20,7 +20,8 @@ import {
   type FacultyCreatePayload,
   type FacultyUpdatePayload,
 } from '@/services/facultyService';
-import type { Faculty } from '@/types';
+import { getDepartments } from '@/services/departmentService';
+import type { Faculty, Department } from '@/types';
 import { useAuth } from '@/auth';
 import {
   Card,
@@ -39,6 +40,7 @@ export const FacultiesPage: React.FC = () => {
   const canManageFaculties = isAuthorized(['ADMIN']) && !isAccountInactive;
 
   const [faculties, setFaculties] = useState<Faculty[]>([]);
+  const [departments, setDepartments] = useState<Department[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
 
@@ -66,24 +68,37 @@ export const FacultiesPage: React.FC = () => {
   const fetchFacultiesData = useCallback(() => {
     setIsLoading(true);
     setFetchError(null);
-    getFaculties().then((result) => {
-      if (result.success && result.data && result.data.length > 0) {
-        setFaculties(result.data);
-      } else {
-        setFetchError(result.message || 'Unable to connect to Faculty Management service.');
-      }
-      setIsLoading(false);
-    });
+    Promise.all([getFaculties(), getDepartments()])
+      .then(([facRes, deptRes]) => {
+        if (facRes.success && facRes.data && facRes.data.length > 0) {
+          setFaculties(facRes.data);
+        } else {
+          setFetchError(facRes.message || 'Unable to connect to Faculty Management service.');
+        }
+
+        if (deptRes.success && deptRes.data) {
+          setDepartments(deptRes.data);
+        }
+        setIsLoading(false);
+      })
+      .catch(() => {
+        setFetchError('Unable to connect to Faculty Management service.');
+        setIsLoading(false);
+      });
   }, []);
 
   useEffect(() => {
     let isMounted = true;
-    getFaculties().then((result) => {
+    Promise.all([getFaculties(), getDepartments()]).then(([facRes, deptRes]) => {
       if (!isMounted) return;
-      if (result.success && result.data && result.data.length > 0) {
-        setFaculties(result.data);
+      if (facRes.success && facRes.data && facRes.data.length > 0) {
+        setFaculties(facRes.data);
       } else {
-        setFetchError(result.message || 'Unable to connect to Faculty Management service.');
+        setFetchError(facRes.message || 'Unable to connect to Faculty Management service.');
+      }
+
+      if (deptRes.success && deptRes.data) {
+        setDepartments(deptRes.data);
       }
       setIsLoading(false);
     });
@@ -255,6 +270,16 @@ export const FacultiesPage: React.FC = () => {
               <span className="faculties-stat-pill-label">Registered Faculties</span>
             </div>
           </div>
+
+          <div className="faculties-stat-pill">
+            <div className="faculties-stat-pill-icon" style={{ backgroundColor: 'var(--color-info-bg)', color: 'var(--color-info)' }}>
+              <Building2 size={18} />
+            </div>
+            <div className="faculties-stat-pill-content">
+              <span className="faculties-stat-pill-count">{departments.length}</span>
+              <span className="faculties-stat-pill-label">Total Departments</span>
+            </div>
+          </div>
         </div>
       )}
 
@@ -289,44 +314,54 @@ export const FacultiesPage: React.FC = () => {
       ) : faculties.length > 0 ? (
         filteredFaculties.length > 0 ? (
           <div className="faculties-grid">
-            {filteredFaculties.map((faculty) => (
-              <Card key={faculty.id} className="faculty-card">
-                <CardBody>
-                  <div className="faculty-card-header">
-                    <h3 className="faculty-name">{faculty.name}</h3>
-                    <Badge variant="neutral">{faculty.code}</Badge>
-                  </div>
-
-                  <div className="faculty-meta">
-                    <p style={{ color: 'var(--color-neutral)', lineHeight: 1.4 }}>
-                      {faculty.description || 'No description provided.'}
-                    </p>
-                  </div>
-
-                  {canManageFaculties && (
-                    <div className="faculty-card-actions">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        icon={<Edit2 size={15} />}
-                        onClick={() => openEditModal(faculty)}
-                      >
-                        Edit
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="btn-danger"
-                        icon={<Trash2 size={15} />}
-                        onClick={() => setDeletingFaculty(faculty)}
-                      >
-                        Delete
-                      </Button>
+            {filteredFaculties.map((faculty) => {
+              const facultyDepts = departments.filter((d) => d.facultyId === faculty.id);
+              return (
+                <Card key={faculty.id} className="faculty-card">
+                  <CardBody>
+                    <div className="faculty-card-header">
+                      <h3 className="faculty-name">{faculty.name}</h3>
+                      <Badge variant="neutral">{faculty.code}</Badge>
                     </div>
-                  )}
-                </CardBody>
-              </Card>
-            ))}
+
+                    <div style={{ marginBottom: '0.75rem' }}>
+                      <Badge variant="info">
+                        <Building2 size={12} style={{ marginRight: '0.25rem' }} />
+                        {facultyDepts.length} {facultyDepts.length === 1 ? 'Department' : 'Departments'}
+                      </Badge>
+                    </div>
+
+                    <div className="faculty-meta">
+                      <p style={{ color: 'var(--color-neutral)', lineHeight: 1.4 }}>
+                        {faculty.description || 'No description provided.'}
+                      </p>
+                    </div>
+
+                    {canManageFaculties && (
+                      <div className="faculty-card-actions">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          icon={<Edit2 size={15} />}
+                          onClick={() => openEditModal(faculty)}
+                        >
+                          Edit
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="btn-danger"
+                          icon={<Trash2 size={15} />}
+                          onClick={() => setDeletingFaculty(faculty)}
+                        >
+                          Delete
+                        </Button>
+                      </div>
+                    )}
+                  </CardBody>
+                </Card>
+              );
+            })}
           </div>
         ) : (
           <Card>
