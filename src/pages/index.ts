@@ -2,6 +2,8 @@ export * from './HomePage';
 export * from './LoginPage';
 export * from './UnauthorizedPage';
 export * from './NotFoundPage';
+export * from './ForgotPasswordPage';
+export * from './ResetPasswordPage';
 export * from './ProfilePage';
 export * from './RolesPage';
 export * from './AccountInactivePage';

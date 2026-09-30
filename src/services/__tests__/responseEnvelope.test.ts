@@ -5,6 +5,7 @@ import { getFaculties } from '../facultyService';
 import { getProfile } from '../profileService';
 import { getServiceUnits } from '../serviceUnitService';
 import { createUser, getUsers, updateUser } from '../userService';
+import { requestPasswordReset, resetPassword } from '../passwordResetService';
 import { jsonResponse, mockFetch } from './testUtils';
 
 afterEach(() => {
@@ -95,5 +96,27 @@ describe('user create and update send the Identity Service fields', () => {
     expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toEqual({
       name: 'A B', email: 'a@university.example', account_type: 'STAFF',
     });
+  });
+});
+
+describe('password reset', () => {
+  it('asks for a reset link by email and shows the service message', async () => {
+    const fetchMock = mockFetch(jsonResponse(200, { success: true, data: { message: 'Check your inbox.' } }));
+
+    const result = await requestPasswordReset(' n@university.example ');
+
+    expect(fetchMock.mock.calls[0][0]).toMatch(/\/auth\/forgot-password$/);
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toEqual({ email: 'n@university.example' });
+    expect(result).toEqual({ success: true, message: 'Check your inbox.' });
+  });
+
+  it('sends the token and new password, and reports an expired link', async () => {
+    const fetchMock = mockFetch(jsonResponse(400, { success: false, error: {
+      code: 'INVALID_RESET_TOKEN', message: 'This password reset link is invalid or has expired.' } }));
+
+    const result = await resetPassword('tok-123', 'New-Pass-456');
+
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toEqual({ token: 'tok-123', new_password: 'New-Pass-456' });
+    expect(result).toEqual({ success: false, message: 'This password reset link is invalid or has expired.' });
   });
 });
