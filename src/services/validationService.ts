@@ -1,4 +1,4 @@
-import { apiFetch } from './apiClient';
+import { apiFetch, type ApiResponse } from './apiClient';
 import type { UserRole, AccountStatus } from '@/types';
 
 export interface UserValidationData {
@@ -53,6 +53,12 @@ export interface UserResponsibilitiesValidationData {
   responsibilities?: string[] | Record<string, unknown>[];
 }
 
+export interface UserAffiliationExpectation {
+  facultyId?: string;
+  departmentId?: string;
+  serviceUnitId?: string;
+}
+
 export interface ValidationResult<T = UserValidationData> {
   success: boolean;
   data?: T;
@@ -77,6 +83,51 @@ function dedupeValidation<T>(key: string, request: () => Promise<T>): Promise<T>
   });
   inFlightValidations.set(key, pending);
   return pending;
+}
+
+const UNAUTHENTICATED_MESSAGE =
+  'Unauthenticated API access. Consuming service credentials are invalid or missing.';
+
+interface FailureMessages {
+  badRequest: string;
+  forbidden: string;
+  notFound?: string;
+  unavailable: string;
+}
+
+type HttpOutcome<TTarget> =
+  | { data: Record<string, unknown>; failure?: undefined }
+  | { data?: undefined; failure: ValidationResult<TTarget> };
+
+function mapHttpOutcome<TTarget>(
+  response: ApiResponse<Record<string, unknown>>,
+  messages: FailureMessages
+): HttpOutcome<TTarget> {
+  if (response.status === 400) {
+    return { failure: { success: false, status: 400, message: response.error || messages.badRequest } };
+  }
+
+  if (response.status === 401) {
+    return { failure: { success: false, status: 401, message: response.error || UNAUTHENTICATED_MESSAGE } };
+  }
+
+  if (response.status === 403) {
+    return {
+      failure: { success: false, status: 403, message: response.error || messages.forbidden },
+    };
+  }
+
+  if (response.status === 404 && messages.notFound) {
+    return { failure: { success: false, status: 404, message: response.error || messages.notFound } };
+  }
+
+  if (response.error || !response.data) {
+    return {
+      failure: { success: false, status: response.status || 500, message: response.error || messages.unavailable },
+    };
+  }
+
+  return { data: response.data };
 }
 
 /**
@@ -104,15 +155,15 @@ export async function validateUserIdentity(
     apiFetch<Record<string, unknown>>(endpoint, { method: 'GET' })
   );
 
-  if (response.error || !response.data) {
-    return {
-      success: false,
-      status: response.status || 500,
-      message: response.error || 'Unable to connect to identity validation service.',
-    };
-  }
+  const outcome = mapHttpOutcome<UserValidationData>(response, {
+    badRequest: 'Invalid user ID for identity validation.',
+    forbidden: 'User account is inactive or access to identity validation was denied.',
+    notFound: 'Target user identity record was not found in the university identity directory.',
+    unavailable: 'Unable to connect to identity validation service.',
+  });
+  if (outcome.failure) return outcome.failure;
 
-  const body = response.data;
+  const body = outcome.data;
   const dataObj = (body.data || body) as Record<string, unknown>;
 
   const validationData: UserValidationData = {
@@ -137,13 +188,14 @@ export async function validateUserIdentity(
 
 /**
  * Role validation wrapper using GET /validation/users/{user_id}?required_role=...
+ * Normalizes roles and prevents duplicates.
  */
 export async function validateUserRole(
   userId: string,
   requiredRoles: UserRole | UserRole[]
 ): Promise<ValidationResult<UserValidationData>> {
   const normalizedUserId = normalizeUserId(userId);
-  const rolesArray = Array.isArray(requiredRoles) ? requiredRoles : [requiredRoles];
+  const rolesArray = [...new Set(Array.isArray(requiredRoles) ? requiredRoles : [requiredRoles])];
 
   if (!normalizedUserId) {
     return {
@@ -186,15 +238,15 @@ export async function validateAccountStatus(
     apiFetch<Record<string, unknown>>(endpoint, { method: 'GET' })
   );
 
-  if (response.error || !response.data) {
-    return {
-      success: false,
-      status: response.status || 500,
-      message: response.error || 'Unable to connect to account status validation service.',
-    };
-  }
+  const outcome = mapHttpOutcome<AccountStatusValidationData>(response, {
+    badRequest: 'Invalid user ID for account status validation.',
+    forbidden: 'Account status validation was denied because the account is inactive.',
+    notFound: 'Target user identity record was not found in the university identity directory.',
+    unavailable: 'Unable to connect to account status validation service.',
+  });
+  if (outcome.failure) return outcome.failure;
 
-  const body = response.data;
+  const body = outcome.data;
   const dataObj = (body.data || body) as Record<string, unknown>;
   const rawStatus = String(dataObj.status || dataObj.accountStatus || 'ACTIVE').toUpperCase() as AccountStatus;
 
@@ -228,15 +280,15 @@ export async function validateDepartment(
   const endpoint = `/validation/departments/${encodeURIComponent(normalizedId)}`;
   const response = await apiFetch<Record<string, unknown>>(endpoint, { method: 'GET' });
 
-  if (response.error || !response.data) {
-    return {
-      success: false,
-      status: response.status || 500,
-      message: response.error || 'Department validation failed.',
-    };
-  }
+  const outcome = mapHttpOutcome<DepartmentValidationData>(response, {
+    badRequest: 'Department ID is required for department validation.',
+    forbidden: 'Department validation access denied.',
+    notFound: 'Department not found.',
+    unavailable: 'Department validation failed.',
+  });
+  if (outcome.failure) return outcome.failure;
 
-  const dataObj = (response.data.data || response.data) as Record<string, unknown>;
+  const dataObj = (outcome.data.data || outcome.data) as Record<string, unknown>;
   return {
     success: true,
     status: response.status,
@@ -268,15 +320,15 @@ export async function validateFaculty(
   const endpoint = `/validation/faculties/${encodeURIComponent(normalizedId)}`;
   const response = await apiFetch<Record<string, unknown>>(endpoint, { method: 'GET' });
 
-  if (response.error || !response.data) {
-    return {
-      success: false,
-      status: response.status || 500,
-      message: response.error || 'Faculty validation failed.',
-    };
-  }
+  const outcome = mapHttpOutcome<FacultyValidationData>(response, {
+    badRequest: 'Faculty ID is required for faculty validation.',
+    forbidden: 'Faculty validation access denied.',
+    notFound: 'Faculty not found.',
+    unavailable: 'Faculty validation failed.',
+  });
+  if (outcome.failure) return outcome.failure;
 
-  const dataObj = (response.data.data || response.data) as Record<string, unknown>;
+  const dataObj = (outcome.data.data || outcome.data) as Record<string, unknown>;
   return {
     success: true,
     status: response.status,
@@ -307,15 +359,15 @@ export async function validateServiceUnit(
   const endpoint = `/validation/service-units/${encodeURIComponent(normalizedId)}`;
   const response = await apiFetch<Record<string, unknown>>(endpoint, { method: 'GET' });
 
-  if (response.error || !response.data) {
-    return {
-      success: false,
-      status: response.status || 500,
-      message: response.error || 'Service unit validation failed.',
-    };
-  }
+  const outcome = mapHttpOutcome<ServiceUnitValidationData>(response, {
+    badRequest: 'Service unit ID is required for service unit validation.',
+    forbidden: 'Service unit validation access denied.',
+    notFound: 'Service unit not found.',
+    unavailable: 'Service unit validation failed.',
+  });
+  if (outcome.failure) return outcome.failure;
 
-  const dataObj = (response.data.data || response.data) as Record<string, unknown>;
+  const dataObj = (outcome.data.data || outcome.data) as Record<string, unknown>;
   return {
     success: true,
     status: response.status,
@@ -332,7 +384,8 @@ export async function validateServiceUnit(
  * GET /validation/users/{user_id}/affiliation
  */
 export async function validateUserAffiliation(
-  userId: string
+  userId: string,
+  expected?: UserAffiliationExpectation
 ): Promise<ValidationResult<UserAffiliationValidationData>> {
   const normalizedUserId = normalizeUserId(userId);
   if (!normalizedUserId) {
@@ -346,25 +399,48 @@ export async function validateUserAffiliation(
   const endpoint = `/validation/users/${encodeURIComponent(normalizedUserId)}/affiliation`;
   const response = await apiFetch<Record<string, unknown>>(endpoint, { method: 'GET' });
 
-  if (response.error || !response.data) {
-    return {
-      success: false,
-      status: response.status || 500,
-      message: response.error || 'Affiliation validation failed.',
-    };
+  const outcome = mapHttpOutcome<UserAffiliationValidationData>(response, {
+    badRequest: 'User ID is required for affiliation validation.',
+    forbidden: 'Affiliation validation access denied.',
+    notFound: 'User affiliation not found.',
+    unavailable: 'Affiliation validation failed.',
+  });
+  if (outcome.failure) return outcome.failure;
+
+  const dataObj = (outcome.data.data || outcome.data) as Record<string, unknown>;
+  const affiliationData: UserAffiliationValidationData = {
+    valid: Boolean(dataObj.valid ?? true),
+    userId: normalizedUserId,
+    facultyId: dataObj.facultyId ? String(dataObj.facultyId) : undefined,
+    departmentId: dataObj.departmentId ? String(dataObj.departmentId) : undefined,
+    serviceUnitId: dataObj.serviceUnitId ? String(dataObj.serviceUnitId) : undefined,
+  };
+
+  if (expected) {
+    const mismatches: string[] = [];
+    if (expected.facultyId && affiliationData.facultyId !== expected.facultyId) {
+      mismatches.push('faculty affiliation');
+    }
+    if (expected.departmentId && affiliationData.departmentId !== expected.departmentId) {
+      mismatches.push('department affiliation');
+    }
+    if (expected.serviceUnitId && affiliationData.serviceUnitId !== expected.serviceUnitId) {
+      mismatches.push('service unit affiliation');
+    }
+    if (mismatches.length > 0) {
+      return {
+        success: false,
+        status: 403,
+        data: affiliationData,
+        message: `User affiliation validation failed for ${mismatches.join(', ')}.`,
+      };
+    }
   }
 
-  const dataObj = (response.data.data || response.data) as Record<string, unknown>;
   return {
     success: true,
     status: response.status,
-    data: {
-      valid: Boolean(dataObj.valid ?? true),
-      userId: normalizedUserId,
-      facultyId: dataObj.facultyId ? String(dataObj.facultyId) : undefined,
-      departmentId: dataObj.departmentId ? String(dataObj.departmentId) : undefined,
-      serviceUnitId: dataObj.serviceUnitId ? String(dataObj.serviceUnitId) : undefined,
-    },
+    data: affiliationData,
   };
 }
 
@@ -387,15 +463,15 @@ export async function validateUserResponsibilities(
   const endpoint = `/validation/users/${encodeURIComponent(normalizedUserId)}/responsibilities`;
   const response = await apiFetch<Record<string, unknown>>(endpoint, { method: 'GET' });
 
-  if (response.error || !response.data) {
-    return {
-      success: false,
-      status: response.status || 500,
-      message: response.error || 'Responsibilities validation failed.',
-    };
-  }
+  const outcome = mapHttpOutcome<UserResponsibilitiesValidationData>(response, {
+    badRequest: 'User ID is required for responsibilities validation.',
+    forbidden: 'Responsibilities validation access denied.',
+    notFound: 'User responsibilities not found.',
+    unavailable: 'Responsibilities validation failed.',
+  });
+  if (outcome.failure) return outcome.failure;
 
-  const dataObj = (response.data.data || response.data) as Record<string, unknown>;
+  const dataObj = (outcome.data.data || outcome.data) as Record<string, unknown>;
   return {
     success: true,
     status: response.status,

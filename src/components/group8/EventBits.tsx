@@ -33,7 +33,16 @@ export const RegistrationStatusBadge: React.FC<{ status: RegistrationStatus }> =
   </Badge>
 );
 
-export const CapacityMeter: React.FC<{ confirmed: number; capacity: number }> = ({ confirmed, capacity }) => {
+export const CapacityMeter: React.FC<{ confirmed?: number; capacity: number }> = ({ confirmed, capacity }) => {
+  if (confirmed === undefined) {
+    return (
+      <div className="g8-capacity">
+        <div className="g8-capacity-label">
+          <span>Capacity: {capacity} places</span>
+        </div>
+      </div>
+    );
+  }
   const ratio = capacity > 0 ? Math.min(confirmed / capacity, 1) : 0;
   const remaining = Math.max(capacity - confirmed, 0);
   return (

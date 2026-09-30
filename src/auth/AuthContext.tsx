@@ -18,7 +18,7 @@ const initialAuthState: AuthState = {
   accountStatus: null,
   isAccountActive: false,
   isAccountInactive: false,
-  isLoading: false,
+  isLoading: true,
   error: null,
 };
 
@@ -46,7 +46,7 @@ function buildAuthenticatedState(user: UserProfile): AuthState {
 
 function getInitialAuthState(): AuthState {
   const token = getStoredAuthToken();
-  if (!token) return initialAuthState;
+  if (!token) return { ...initialAuthState, isLoading: false };
 
   const storedSession = getStoredAuthSession();
   if (storedSession) {
@@ -83,14 +83,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           setState(buildAuthenticatedState(result.user));
         } else {
           clearAuthSession();
-          setState(initialAuthState);
+          setState({ ...initialAuthState, isLoading: false });
         }
       })
       .catch(() => {
         if (!isMounted) return;
 
         clearAuthSession();
-        setState(initialAuthState);
+        setState({ ...initialAuthState, isLoading: false });
       });
 
     return () => {
@@ -101,7 +101,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const setAuthUser = useCallback((user: UserProfile | null) => {
     if (!user) {
       clearAuthSession();
-      setState(initialAuthState);
+      setState({ ...initialAuthState, isLoading: false });
       return;
     }
 
@@ -111,7 +111,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const logout = useCallback(() => {
     clearAuthSession();
-    setState(initialAuthState);
+    setState({ ...initialAuthState, isLoading: false });
   }, []);
 
   const hasRole = useCallback(

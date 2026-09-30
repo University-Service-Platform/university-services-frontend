@@ -2,6 +2,7 @@ import {
   validateUserIdentity,
   validateUserRole,
   validateAccountStatus,
+  validateUserAffiliation,
 } from '../validationService';
 
 function assertEqual<T>(actual: T, expected: T, testName: string): void {
@@ -11,29 +12,41 @@ function assertEqual<T>(actual: T, expected: T, testName: string): void {
 }
 
 /**
- * Task 3 Integration Test Suite for Cross-Team Validation API Service
+ * Lightweight integration-boundary checks that do not call the backend.
  */
 export async function runValidationServiceTests(): Promise<boolean> {
   try {
-    // 1. Invalid input validation test (HTTP 400 Bad Request)
     const emptyResult = await validateUserIdentity('');
     assertEqual(emptyResult.success, false, 'Invalid User ID - success status');
     assertEqual(emptyResult.status, 400, 'Invalid User ID - HTTP status');
 
-    // 2. Role validation invalid input test
     const emptyRoleResult = await validateUserRole('', ['STUDENT']);
     assertEqual(emptyRoleResult.success, false, 'Invalid User ID Role - success status');
     assertEqual(emptyRoleResult.status, 400, 'Invalid User ID Role - HTTP status');
 
-    // 3. Role validation with no required roles
     const emptyRolesResult = await validateUserRole('USER-1001', []);
     assertEqual(emptyRolesResult.success, false, 'Empty role list - success status');
     assertEqual(emptyRolesResult.status, 400, 'Empty role list - HTTP status');
 
-    // 4. Account status validation invalid input test
     const emptyStatusResult = await validateAccountStatus('');
     assertEqual(emptyStatusResult.success, false, 'Invalid User ID Account Status - success status');
     assertEqual(emptyStatusResult.status, 400, 'Invalid User ID Account Status - HTTP status');
+
+    const blankIdentityResult = await validateUserIdentity('   ');
+    assertEqual(blankIdentityResult.success, false, 'Whitespace User ID - success status');
+    assertEqual(blankIdentityResult.status, 400, 'Whitespace User ID - HTTP status');
+
+    const blankStatusResult = await validateAccountStatus('\t ');
+    assertEqual(blankStatusResult.success, false, 'Whitespace User ID Account Status - success status');
+    assertEqual(blankStatusResult.status, 400, 'Whitespace User ID Account Status - HTTP status');
+
+    const singleRoleResult = await validateUserRole(' ', 'STUDENT');
+    assertEqual(singleRoleResult.success, false, 'Single role with blank User ID - success status');
+    assertEqual(singleRoleResult.status, 400, 'Single role with blank User ID - HTTP status');
+
+    const emptyAffiliationResult = await validateUserAffiliation('', { departmentId: 'DEPT-1' });
+    assertEqual(emptyAffiliationResult.success, false, 'Invalid User ID Affiliation - success status');
+    assertEqual(emptyAffiliationResult.status, 400, 'Invalid User ID Affiliation - HTTP status');
 
     return true;
   } catch (error) {

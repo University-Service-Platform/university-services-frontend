@@ -222,6 +222,8 @@ export async function loginUser(credentials: LoginCredentials): Promise<AuthResu
     };
   }
 
+  // A new login replaces the whole session, so a previous user's token is never reused.
+  clearAuthSession();
   try {
     sessionStorage.setItem(AUTH_TOKEN_STORAGE_KEY, accessToken);
   } catch {

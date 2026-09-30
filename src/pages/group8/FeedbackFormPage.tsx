@@ -147,8 +147,8 @@ export const FeedbackFormPage: React.FC = () => {
 
     if (result.ok) {
       dispatch(userActivityRecorded());
-      const activityLabel = type === 'EVENT' ? `event ${activityId}` : `service request ${activityId}`;
-      navigate('/feedback', { state: { flash: `Thank you! Your feedback on ${activityLabel} has been recorded.` } });
+      // Name the activity by the form title; ids are internal (form UUIDs on the live service).
+      navigate('/feedback', { state: { flash: `Thank you! Your feedback on "${form.title}" has been recorded.` } });
       return;
     }
     setSubmitError(result.message);
