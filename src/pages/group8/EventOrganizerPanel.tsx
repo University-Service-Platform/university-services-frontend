@@ -1,8 +1,8 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Ban, CheckCircle2, Send, Users } from 'lucide-react';
+import { Ban, CheckCircle2, MessageSquarePlus, Send, Users } from 'lucide-react';
 import { Button, Card, CardBody, CardHeader, EmptyState, ErrorState, LoadingState, Modal } from '@/components/ui';
 import { G8Alert, RegistrationStatusBadge, formatDateTime, type G8AlertTone } from '@/components/group8';
-import { cancelEvent, completeEvent, getRegistrationSummary, publishEvent } from '@/services/group8';
+import { cancelEvent, completeEvent, createFeedbackForm, getRegistrationSummary, publishEvent } from '@/services/group8';
 import { useAppDispatch, userActivityRecorded } from '@/store';
 import type { RegistrationSummary, UniversityEvent } from '@/types';
 
@@ -26,6 +26,7 @@ export const EventOrganizerPanel: React.FC<EventOrganizerPanelProps> = ({ event,
   const [cancelError, setCancelError] = useState<string | null>(null);
   const [isCancelling, setIsCancelling] = useState(false);
   const [isCompleting, setIsCompleting] = useState(false);
+  const [isOpeningFeedback, setIsOpeningFeedback] = useState(false);
   // Reference time for "has the event started?" - captured once per mount.
   const [now] = useState(() => Date.now());
   const [message, setMessage] = useState<{ tone: G8AlertTone; text: string } | null>(null);
@@ -91,6 +92,28 @@ export const EventOrganizerPanel: React.FC<EventOrganizerPanelProps> = ({ event,
     }
   };
 
+  // Feedback is collected per form: opening one lets participants answer it in Feedback (US8-12).
+  const handleOpenFeedback = async () => {
+    setIsOpeningFeedback(true);
+    setMessage(null);
+    const result = await createFeedbackForm({
+      activityType: 'EVENT',
+      activityId: event.id,
+      title: `Feedback: ${event.title}`,
+      ratingLabel: 'Overall, how would you rate this event?',
+      commentLabel: 'What could we improve?',
+    });
+    setIsOpeningFeedback(false);
+    if (result.ok) {
+      setMessage({ tone: 'success', text: 'Feedback form opened. Participants can now answer it from the Feedback page.' });
+      dispatch(userActivityRecorded());
+    } else if (result.code === 'FEEDBACK_FORM_ALREADY_EXISTS') {
+      setMessage({ tone: 'info', text: 'A feedback form is already open for this event.' });
+    } else {
+      setMessage({ tone: result.kind === 'dependency_unavailable' ? 'warning' : 'danger', text: result.message });
+    }
+  };
+
   const canPublish = event.status === 'DRAFT';
   const canCancel = event.status === 'DRAFT' || event.status === 'PUBLISHED';
   const canComplete = event.status === 'PUBLISHED' && now >= new Date(event.startTime).getTime();
@@ -117,6 +140,11 @@ export const EventOrganizerPanel: React.FC<EventOrganizerPanelProps> = ({ event,
               {canComplete && (
                 <Button variant="outline" icon={<CheckCircle2 size={16} />} onClick={handleComplete} isLoading={isCompleting}>
                   Mark as completed
+                </Button>
+              )}
+              {event.status === 'COMPLETED' && (
+                <Button icon={<MessageSquarePlus size={16} />} onClick={handleOpenFeedback} isLoading={isOpeningFeedback}>
+                  Open feedback form
                 </Button>
               )}
               {canCancel && (
