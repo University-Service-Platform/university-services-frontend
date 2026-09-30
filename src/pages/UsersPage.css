@@ -146,6 +146,81 @@
   align-items: center;
 }
 
+.users-view-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  background-color: var(--color-neutral-light);
+  padding: 0.25rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+}
+
+.users-view-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.875rem;
+  height: 1.875rem;
+  border-radius: var(--radius-sm);
+  border: none;
+  background: transparent;
+  color: var(--color-neutral);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.users-view-btn:hover {
+  color: var(--color-neutral-heading);
+}
+
+.users-view-btn.active {
+  background-color: var(--color-surface);
+  color: var(--color-primary);
+  box-shadow: var(--shadow-sm);
+}
+
+/* Users Table View */
+.users-table-wrapper {
+  overflow-x: auto;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background-color: var(--color-surface);
+}
+
+.users-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 0.875rem;
+}
+
+.users-table th {
+  background-color: var(--color-neutral-light);
+  padding: 0.75rem 1rem;
+  font-weight: 600;
+  color: var(--color-neutral-heading);
+  border-bottom: 1px solid var(--color-border);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.users-table td {
+  padding: 0.875rem 1rem;
+  border-bottom: 1px solid var(--color-border);
+  color: var(--color-neutral-heading);
+  vertical-align: middle;
+}
+
+.users-table tbody tr:hover {
+  background-color: var(--color-surface-hover);
+}
+
+.users-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
 /* Users Grid / List */
 .users-grid {
   display: grid;

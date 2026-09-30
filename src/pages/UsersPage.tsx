@@ -20,6 +20,8 @@ import {
   UserX,
   GraduationCap,
   Building2,
+  LayoutGrid,
+  List,
 } from 'lucide-react';
 
 import { useAuth } from '@/auth';
@@ -69,6 +71,7 @@ export const UsersPage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [selectedRoleFilter, setSelectedRoleFilter] = useState<string>('ALL');
   const [selectedStatusFilter, setSelectedStatusFilter] = useState<'ALL' | 'ACTIVE' | 'INACTIVE'>('ALL');
+  const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
 
   // Quick View Details Modal State
   const [viewingUser, setViewingUser] = useState<UserProfile | null>(null);
@@ -453,6 +456,24 @@ export const UsersPage: React.FC = () => {
             <span>
               Showing <strong>{filteredUsers.length}</strong> of <strong>{users.length}</strong> users
             </span>
+            <div className="users-view-toggle">
+              <button
+                type="button"
+                className={`users-view-btn ${viewMode === 'grid' ? 'active' : ''}`}
+                title="Grid Card View"
+                onClick={() => setViewMode('grid')}
+              >
+                <LayoutGrid size={15} />
+              </button>
+              <button
+                type="button"
+                className={`users-view-btn ${viewMode === 'table' ? 'active' : ''}`}
+                title="Table List View"
+                onClick={() => setViewMode('table')}
+              >
+                <List size={15} />
+              </button>
+            </div>
           </div>
         </Card>
       )}
@@ -465,84 +486,162 @@ export const UsersPage: React.FC = () => {
         />
       ) : users.length > 0 ? (
         filteredUsers.length > 0 ? (
-          <div className="users-grid">
-            {filteredUsers.map((user) => (
-              <Card key={user.id} className="user-card">
-                <CardBody>
-                  <div className="user-card-header">
-                    <div className="user-card-identity">
-                      <h3 className="user-card-name">
-                        {user.firstName} {user.lastName}
-                      </h3>
-                      <span className="user-card-email">{user.email}</span>
+          viewMode === 'grid' ? (
+            <div className="users-grid">
+              {filteredUsers.map((user) => (
+                <Card key={user.id} className="user-card">
+                  <CardBody>
+                    <div className="user-card-header">
+                      <div className="user-card-identity">
+                        <h3 className="user-card-name">
+                          {user.firstName} {user.lastName}
+                        </h3>
+                        <span className="user-card-email">{user.email}</span>
+                      </div>
+                      {renderStatusBadge(user.accountStatus)}
                     </div>
-                    {renderStatusBadge(user.accountStatus)}
-                  </div>
 
-                  <div className="user-card-body">
-                    {user.phone && (
-                      <div className="user-meta-item">
-                        <Phone size={14} />
-                        <span>{user.phone}</span>
-                      </div>
-                    )}
+                    <div className="user-card-body">
+                      {user.phone && (
+                        <div className="user-meta-item">
+                          <Phone size={14} />
+                          <span>{user.phone}</span>
+                        </div>
+                      )}
 
-                    {(user.facultyName || user.departmentName) && (
-                      <div className="user-meta-item">
-                        <GraduationCap size={14} />
-                        <span>{[user.departmentName, user.facultyName].filter(Boolean).join(' • ')}</span>
-                      </div>
-                    )}
+                      {(user.facultyName || user.departmentName) && (
+                        <div className="user-meta-item">
+                          <GraduationCap size={14} />
+                          <span>{[user.departmentName, user.facultyName].filter(Boolean).join(' • ')}</span>
+                        </div>
+                      )}
 
-                    {user.serviceUnitName && (
-                      <div className="user-meta-item">
-                        <Building2 size={14} />
-                        <span>{user.serviceUnitName}</span>
-                      </div>
-                    )}
+                      {user.serviceUnitName && (
+                        <div className="user-meta-item">
+                          <Building2 size={14} />
+                          <span>{user.serviceUnitName}</span>
+                        </div>
+                      )}
 
-                    {user.roles && user.roles.length > 0 && (
-                      <div className="user-roles-list">
-                        {user.roles.map((role) => renderRoleBadge(role))}
-                      </div>
-                    )}
-                  </div>
+                      {user.roles && user.roles.length > 0 && (
+                        <div className="user-roles-list">
+                          {user.roles.map((role) => renderRoleBadge(role))}
+                        </div>
+                      )}
+                    </div>
 
-                  <div className="user-card-actions">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      icon={<Eye size={15} />}
-                      onClick={() => setViewingUser(user)}
-                    >
-                      Details
-                    </Button>
-                    {canManageUsers && (
+                    <div className="user-card-actions">
                       <Button
                         variant="ghost"
                         size="sm"
-                        icon={<Edit2 size={15} />}
-                        onClick={() => openEditModal(user)}
+                        icon={<Eye size={15} />}
+                        onClick={() => setViewingUser(user)}
                       >
-                        Edit
+                        Details
                       </Button>
-                    )}
-                    {canDeleteUsers && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="btn-danger"
-                        icon={<Trash2 size={15} />}
-                        onClick={() => setDeletingUser(user)}
-                      >
-                        Delete
-                      </Button>
-                    )}
-                  </div>
-                </CardBody>
-              </Card>
-            ))}
-          </div>
+                      {canManageUsers && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          icon={<Edit2 size={15} />}
+                          onClick={() => openEditModal(user)}
+                        >
+                          Edit
+                        </Button>
+                      )}
+                      {canDeleteUsers && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="btn-danger"
+                          icon={<Trash2 size={15} />}
+                          onClick={() => setDeletingUser(user)}
+                        >
+                          Delete
+                        </Button>
+                      )}
+                    </div>
+                  </CardBody>
+                </Card>
+              ))}
+            </div>
+          ) : (
+            <div className="users-table-wrapper">
+              <table className="users-table">
+                <thead>
+                  <tr>
+                    <th>User</th>
+                    <th>Identifier</th>
+                    <th>Affiliation</th>
+                    <th>Roles</th>
+                    <th>Status</th>
+                    <th style={{ textAlign: 'right' }}>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredUsers.map((user) => (
+                    <tr key={user.id}>
+                      <td>
+                        <div style={{ display: 'flex', flexDirection: 'column' }}>
+                          <span style={{ fontWeight: 600 }}>
+                            {user.firstName} {user.lastName}
+                          </span>
+                          <span style={{ fontSize: '0.75rem', color: 'var(--color-neutral)' }}>{user.email}</span>
+                        </div>
+                      </td>
+                      <td>
+                        <code style={{ fontSize: '0.75rem' }}>{user.id}</code>
+                      </td>
+                      <td>
+                        <span style={{ fontSize: '0.8125rem' }}>
+                          {[user.departmentName, user.facultyName, user.serviceUnitName].filter(Boolean).join(' • ') || 'General'}
+                        </span>
+                      </td>
+                      <td>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.25rem' }}>
+                          {user.roles && user.roles.map((r) => renderRoleBadge(r))}
+                        </div>
+                      </td>
+                      <td>{renderStatusBadge(user.accountStatus)}</td>
+                      <td>
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.375rem' }}>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            icon={<Eye size={14} />}
+                            onClick={() => setViewingUser(user)}
+                          >
+                            View
+                          </Button>
+                          {canManageUsers && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              icon={<Edit2 size={14} />}
+                              onClick={() => openEditModal(user)}
+                            >
+                              Edit
+                            </Button>
+                          )}
+                          {canDeleteUsers && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="btn-danger"
+                              icon={<Trash2 size={14} />}
+                              onClick={() => setDeletingUser(user)}
+                            >
+                              Del
+                            </Button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )
         ) : (
           <Card>
             <CardBody>
