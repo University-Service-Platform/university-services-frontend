@@ -63,6 +63,7 @@ export interface ValidationResult<T = UserValidationData> {
   success: boolean;
   data?: T;
   message?: string;
+  /** HTTP status from the backend; 0 means no response (network failure or timeout), never a synthesised 500. */
   status: number;
 }
 
@@ -123,7 +124,7 @@ function mapHttpOutcome<TTarget>(
 
   if (response.error || !response.data) {
     return {
-      failure: { success: false, status: response.status || 500, message: response.error || messages.unavailable },
+      failure: { success: false, status: response.status, message: response.error || messages.unavailable },
     };
   }
 

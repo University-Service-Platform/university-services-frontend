@@ -7,7 +7,10 @@
 export interface ApiResponse<T = unknown> {
   data?: T;
   error?: string;
+  /** Real HTTP status, or 0 when no response was received (network failure, timeout, cancellation). */
   status: number;
+  /** True when the request was aborted because it exceeded the request timeout. */
+  timedOut?: boolean;
 }
 
 export const AUTH_TOKEN_STORAGE_KEY = 'university-services.auth.token';
@@ -16,6 +19,10 @@ const BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api/v1';
 
 // Generous default so a sleeping gateway can still wake up, but a hung request never spins forever.
 const REQUEST_TIMEOUT_MS = Number(import.meta.env.VITE_API_TIMEOUT_MS) || 60000;
+
+export const NETWORK_ERROR_MESSAGE = 'Unable to reach university services. Check your connection and try again.';
+export const TIMEOUT_ERROR_MESSAGE = 'The server took too long to respond. Please try again.';
+const CANCELLED_ERROR_MESSAGE = 'The request was cancelled.';
 
 export function getStoredAuthToken(): string | null {
   if (typeof window === 'undefined') return null;
@@ -61,11 +68,16 @@ export async function apiFetch<T>(
     controller.abort();
   }, REQUEST_TIMEOUT_MS);
   const callerSignal = options.signal;
+  const abortFromCaller = () => controller.abort();
   if (callerSignal?.aborted) {
     controller.abort();
   } else {
-    callerSignal?.addEventListener('abort', () => controller.abort(), { once: true });
+    callerSignal?.addEventListener('abort', abortFromCaller, { once: true });
   }
+  const releaseTimeout = () => {
+    clearTimeout(timeoutId);
+    callerSignal?.removeEventListener('abort', abortFromCaller);
+  };
 
   let response: Response;
   try {
@@ -74,17 +86,16 @@ export async function apiFetch<T>(
       headers,
       signal: controller.signal,
     });
-  } catch (err) {
+  } catch {
+    releaseTimeout();
+    // Browser fetch errors ("Failed to fetch", "Load failed", ...) are not user-facing text.
+    if (timedOut) {
+      return { error: TIMEOUT_ERROR_MESSAGE, status: 0, timedOut: true };
+    }
     return {
-      error: timedOut
-        ? 'The server took too long to respond. Please try again.'
-        : err instanceof Error
-          ? err.message
-          : 'Network error occurred',
+      error: callerSignal?.aborted ? CANCELLED_ERROR_MESSAGE : NETWORK_ERROR_MESSAGE,
       status: 0,
     };
-  } finally {
-    clearTimeout(timeoutId);
   }
 
   const status = response.status;
@@ -93,9 +104,13 @@ export async function apiFetch<T>(
     clearStoredAuthToken();
   }
 
-  if (status === 204) return { status };
+  if (status === 204) {
+    releaseTimeout();
+    return { status };
+  }
 
   // Parse JSON defensively: an empty or malformed body must not hide the real HTTP status.
+  // The timeout stays armed while the body downloads, so a stalled body also times out.
   let data: T | undefined;
   let parseError: string | undefined;
   const contentType = response.headers.get('content-type');
@@ -106,6 +121,11 @@ export async function apiFetch<T>(
     } catch {
       parseError = 'Invalid JSON response received from the server.';
     }
+  }
+  releaseTimeout();
+
+  if (timedOut) {
+    return { error: TIMEOUT_ERROR_MESSAGE, status, timedOut: true };
   }
 
   if (!response.ok) {

@@ -1,58 +1,76 @@
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   validateUserIdentity,
   validateUserRole,
   validateAccountStatus,
   validateUserAffiliation,
 } from '../validationService';
+import { jsonResponse, mockFetch } from './testUtils';
 
-function assertEqual<T>(actual: T, expected: T, testName: string): void {
-  if (actual !== expected) {
-    throw new Error(`[TEST FAILED] ${testName}: Expected ${String(expected)}, got ${String(actual)}`);
-  }
-}
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
 
 /**
- * Lightweight integration-boundary checks that do not call the backend.
+ * Lightweight integration-boundary checks; the backend is mocked at fetch level.
  */
-export async function runValidationServiceTests(): Promise<boolean> {
-  try {
-    const emptyResult = await validateUserIdentity('');
-    assertEqual(emptyResult.success, false, 'Invalid User ID - success status');
-    assertEqual(emptyResult.status, 400, 'Invalid User ID - HTTP status');
+describe('input validation (no backend call)', () => {
+  it('rejects missing or blank user IDs and empty role lists with 400', async () => {
+    const fetchMock = mockFetch();
 
-    const emptyRoleResult = await validateUserRole('', ['STUDENT']);
-    assertEqual(emptyRoleResult.success, false, 'Invalid User ID Role - success status');
-    assertEqual(emptyRoleResult.status, 400, 'Invalid User ID Role - HTTP status');
+    await expect(validateUserIdentity('')).resolves.toMatchObject({ success: false, status: 400 });
+    await expect(validateUserRole('', ['STUDENT'])).resolves.toMatchObject({ success: false, status: 400 });
+    await expect(validateUserRole('USER-1001', [])).resolves.toMatchObject({ success: false, status: 400 });
+    await expect(validateAccountStatus('')).resolves.toMatchObject({ success: false, status: 400 });
+    await expect(validateUserIdentity('   ')).resolves.toMatchObject({ success: false, status: 400 });
+    await expect(validateAccountStatus('\t ')).resolves.toMatchObject({ success: false, status: 400 });
+    await expect(validateUserRole(' ', 'STUDENT')).resolves.toMatchObject({ success: false, status: 400 });
+    await expect(validateUserAffiliation('', { departmentId: 'DEPT-1' })).resolves.toMatchObject({
+      success: false,
+      status: 400,
+    });
 
-    const emptyRolesResult = await validateUserRole('USER-1001', []);
-    assertEqual(emptyRolesResult.success, false, 'Empty role list - success status');
-    assertEqual(emptyRolesResult.status, 400, 'Empty role list - HTTP status');
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+});
 
-    const emptyStatusResult = await validateAccountStatus('');
-    assertEqual(emptyStatusResult.success, false, 'Invalid User ID Account Status - success status');
-    assertEqual(emptyStatusResult.status, 400, 'Invalid User ID Account Status - HTTP status');
+describe('gateway response handling', () => {
+  it('reports an unreachable gateway as status 0, not a synthesised 500', async () => {
+    mockFetch(new TypeError('Failed to fetch'));
 
-    const blankIdentityResult = await validateUserIdentity('   ');
-    assertEqual(blankIdentityResult.success, false, 'Whitespace User ID - success status');
-    assertEqual(blankIdentityResult.status, 400, 'Whitespace User ID - HTTP status');
+    const result = await validateUserIdentity('USER-1001');
 
-    const blankStatusResult = await validateAccountStatus('\t ');
-    assertEqual(blankStatusResult.success, false, 'Whitespace User ID Account Status - success status');
-    assertEqual(blankStatusResult.status, 400, 'Whitespace User ID Account Status - HTTP status');
+    expect(result.success).toBe(false);
+    expect(result.status).toBe(0);
+  });
 
-    const singleRoleResult = await validateUserRole(' ', 'STUDENT');
-    assertEqual(singleRoleResult.success, false, 'Single role with blank User ID - success status');
-    assertEqual(singleRoleResult.status, 400, 'Single role with blank User ID - HTTP status');
+  it('keeps the real status of an unexpected gateway error', async () => {
+    mockFetch(jsonResponse(502, undefined, 'Bad Gateway'));
 
-    const emptyAffiliationResult = await validateUserAffiliation('', { departmentId: 'DEPT-1' });
-    assertEqual(emptyAffiliationResult.success, false, 'Invalid User ID Affiliation - success status');
-    assertEqual(emptyAffiliationResult.status, 400, 'Invalid User ID Affiliation - HTTP status');
+    const result = await validateUserIdentity('USER-1001');
 
-    return true;
-  } catch (error) {
-    if (error instanceof Error) {
-      console.error(error.message);
-    }
-    return false;
-  }
-}
+    expect(result).toMatchObject({ success: false, status: 502 });
+  });
+
+  it.each([400, 401, 403, 404])('preserves HTTP %i and the backend message', async (status) => {
+    mockFetch(jsonResponse(status, { success: false, error: { code: 'ERR', message: `Backend ${status}` } }));
+
+    await expect(validateUserIdentity('USER-1001')).resolves.toMatchObject({
+      success: false,
+      status,
+      message: `Backend ${status}`,
+    });
+  });
+
+  it('shares one backend call between identical in-flight requests', async () => {
+    const fetchMock = mockFetch(jsonResponse(200, { valid: true, userId: 'USER-1001' }));
+
+    const [first, second] = await Promise.all([
+      validateUserIdentity('USER-1001'),
+      validateUserIdentity('USER-1001'),
+    ]);
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(first).toEqual(second);
+  });
+});
