@@ -10,7 +10,6 @@ export interface ProfileUpdatePayload {
   firstName: string;
   lastName: string;
   email: string;
-  phone?: string;
 }
 
 /**
@@ -63,7 +62,6 @@ export async function updateProfile(payload: ProfileUpdatePayload): Promise<Prof
     firstName: payload.firstName,
     lastName: payload.lastName,
     email: payload.email,
-    phone: payload.phone,
   };
 
   const response = await apiFetch<UserProfile>(PROFILE_API_ENDPOINT, {

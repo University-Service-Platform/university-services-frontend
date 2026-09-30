@@ -29,8 +29,7 @@ export const ProfilePage: React.FC = () => {
   const [firstName, setFirstName] = useState<string>('');
   const [lastName, setLastName] = useState<string>('');
   const [email, setEmail] = useState<string>('');
-  const [phone, setPhone] = useState<string>('');
-  const [fieldErrors, setFieldErrors] = useState<{ firstName?: string; lastName?: string; email?: string; phone?: string }>({});
+  const [fieldErrors, setFieldErrors] = useState<{ firstName?: string; lastName?: string; email?: string }>({});
 
   const handleRetry = useCallback(() => {
     setIsLoading(true);
@@ -87,7 +86,6 @@ export const ProfilePage: React.FC = () => {
       setFirstName(currentProfile.firstName || '');
       setLastName(currentProfile.lastName || '');
       setEmail(currentProfile.email || '');
-      setPhone(currentProfile.phone || '');
     }
     setFieldErrors({});
     setSaveSuccess(false);
@@ -102,7 +100,7 @@ export const ProfilePage: React.FC = () => {
   };
 
   const validateForm = (): boolean => {
-    const errors: { firstName?: string; lastName?: string; email?: string; phone?: string } = {};
+    const errors: { firstName?: string; lastName?: string; email?: string } = {};
 
     if (!firstName.trim()) {
       errors.firstName = 'First name is required.';
@@ -117,9 +115,6 @@ export const ProfilePage: React.FC = () => {
       errors.email = 'A valid email address is required.';
     }
 
-    if (phone.trim() && !/^[+()0-9\s-]{7,20}$/.test(phone.trim())) {
-      errors.phone = 'Please enter a valid phone number (e.g. +94 71 234 5678).';
-    }
 
     setFieldErrors(errors);
     return Object.keys(errors).length === 0;
@@ -141,7 +136,6 @@ export const ProfilePage: React.FC = () => {
       firstName: firstName.trim(),
       lastName: lastName.trim(),
       email: email.trim(),
-      phone: phone.trim() || undefined,
     };
 
     const result = await updateProfile(payload);
@@ -153,7 +147,6 @@ export const ProfilePage: React.FC = () => {
         firstName: result.data.firstName || payload.firstName,
         lastName: result.data.lastName || payload.lastName,
         email: result.data.email || payload.email,
-        phone: result.data.phone !== undefined ? result.data.phone : payload.phone,
       };
 
       setFetchedProfile(updatedProfile);
@@ -349,24 +342,8 @@ export const ProfilePage: React.FC = () => {
                     }
                   }}
                   error={fieldErrors.email}
-                  disabled={isSaving}
-                  required
-                />
-
-                <Input
-                  id="phone"
-                  label="Phone Number"
-                  type="tel"
-                  placeholder="+94 7X XXX XXXX"
-                  value={phone}
-                  onChange={(e) => {
-                    setPhone(e.target.value);
-                    if (fieldErrors.phone) {
-                      setFieldErrors((prev) => ({ ...prev, phone: undefined }));
-                    }
-                  }}
-                  error={fieldErrors.phone}
-                  disabled={isSaving}
+                  helperText="Your email is your sign-in ID; ask an administrator to change it."
+                  disabled
                 />
               </div>
             ) : (
@@ -384,11 +361,6 @@ export const ProfilePage: React.FC = () => {
                 <div className="profile-field-item">
                   <span className="profile-field-label">Email Address</span>
                   <span className="profile-field-value">{currentProfile.email || 'N/A'}</span>
-                </div>
-
-                <div className="profile-field-item">
-                  <span className="profile-field-label">Phone Number</span>
-                  <span className="profile-field-value">{currentProfile.phone || 'Not provided'}</span>
                 </div>
               </div>
             )}

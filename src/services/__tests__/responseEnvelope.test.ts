@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { unwrapData, unwrapList } from '../apiClient';
-import { getDepartments } from '../departmentService';
+import { createDepartment, getDepartments } from '../departmentService';
 import { getFaculties } from '../facultyService';
 import { getProfile } from '../profileService';
 import { getServiceUnits } from '../serviceUnitService';
@@ -118,5 +118,16 @@ describe('password reset', () => {
 
     expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toEqual({ token: 'tok-123', new_password: 'New-Pass-456' });
     expect(result).toEqual({ success: false, message: 'This password reset link is invalid or has expired.' });
+  });
+});
+
+describe('department create sends the Directory Service fields', () => {
+  it('sends faculty_id, which the Directory requires', async () => {
+    const fetchMock = mockFetch(jsonResponse(201, { success: true, data: { id: 'dept-9', code: 'MATH', name: 'Mathematics', faculty_id: 'fac-1' } }));
+
+    const result = await createDepartment({ name: 'Mathematics', code: 'MATH', facultyId: 'fac-1', description: 'x' });
+
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toEqual({ name: 'Mathematics', code: 'MATH', faculty_id: 'fac-1' });
+    expect(result.data).toMatchObject({ id: 'dept-9', facultyId: 'fac-1' });
   });
 });
