@@ -149,7 +149,6 @@ export const ProfilePage: React.FC = () => {
     setIsSaving(false);
   };
 
-
   // 1. Loading State
   if (isLoading) {
     return (
@@ -272,10 +271,18 @@ export const ProfilePage: React.FC = () => {
               </div>
 
               <div className="profile-field-item">
-                <span className="profile-field-label">Department / Unit</span>
-                <span className="profile-field-value">
-                  {currentProfile.departmentName || currentProfile.departmentId || currentProfile.serviceUnitName || currentProfile.serviceUnitId || 'General University Services'}
-                </span>
+                <span className="profile-field-label">Faculty Affiliation</span>
+                <span className="profile-field-value">{currentProfile.facultyName || currentProfile.facultyId || 'Not assigned'}</span>
+              </div>
+
+              <div className="profile-field-item">
+                <span className="profile-field-label">Department Affiliation</span>
+                <span className="profile-field-value">{currentProfile.departmentName || currentProfile.departmentId || 'Not assigned'}</span>
+              </div>
+
+              <div className="profile-field-item">
+                <span className="profile-field-label">Service Unit Affiliation</span>
+                <span className="profile-field-value">{currentProfile.serviceUnitName || currentProfile.serviceUnitId || 'Not assigned'}</span>
               </div>
             </div>
           </CardBody>
@@ -352,7 +359,6 @@ export const ProfilePage: React.FC = () => {
                   disabled={isSaving}
                 />
               </div>
-
             ) : (
               <div className="profile-grid">
                 <div className="profile-field-item">

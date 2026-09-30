@@ -1,6 +1,21 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { Users, Plus, Edit2, Trash2, AlertCircle, CheckCircle, RefreshCw, Search, Mail, Phone, UserCheck } from 'lucide-react';
+import {
+  Users,
+  Plus,
+  Edit2,
+  Trash2,
+  AlertCircle,
+  CheckCircle,
+  RefreshCw,
+  Search,
+  Mail,
+  Phone,
+  UserCheck,
+  GraduationCap,
+  Building2,
+  Layers,
+} from 'lucide-react';
 
 import { useAuth } from '@/auth';
 import {
@@ -11,12 +26,16 @@ import {
   type UserCreatePayload,
   type UserUpdatePayload,
 } from '@/services/userService';
-import type { UserProfile, UserRole, AccountStatus } from '@/types';
+import { getFaculties } from '@/services/facultyService';
+import { getDepartments } from '@/services/departmentService';
+import { getServiceUnits } from '@/services/serviceUnitService';
+import type { UserProfile, UserRole, AccountStatus, Faculty, Department, ServiceUnit } from '@/types';
 import {
   Card,
   CardBody,
   Button,
   Input,
+  Select,
   Badge,
   Modal,
   LoadingState,
@@ -35,9 +54,15 @@ export const UsersPage: React.FC = () => {
   const canManageUsers = isAuthorized(['ADMIN']);
   const canDeleteUsers = hasRole('ADMIN');
 
+  // User list state
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
+
+  // Directory state for affiliation selection and name resolution
+  const [faculties, setFaculties] = useState<Faculty[]>([]);
+  const [departments, setDepartments] = useState<Department[]>([]);
+  const [serviceUnits, setServiceUnits] = useState<ServiceUnit[]>([]);
 
   // Search & Filter State
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -49,6 +74,12 @@ export const UsersPage: React.FC = () => {
   const [lastName, setLastName] = useState<string>('');
   const [email, setEmail] = useState<string>('');
   const [phone, setPhone] = useState<string>('');
+
+  // Affiliation Form Fields
+  const [facultyId, setFacultyId] = useState<string>('');
+  const [departmentId, setDepartmentId] = useState<string>('');
+  const [serviceUnitId, setServiceUnitId] = useState<string>('');
+
   const [isSaving, setIsSaving] = useState<boolean>(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<{ firstName?: string; lastName?: string; email?: string }>({});
@@ -60,34 +91,87 @@ export const UsersPage: React.FC = () => {
   // Status Banners
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-  const fetchUsersData = useCallback(() => {
+  // Load user records and directory lists safely
+  const fetchUsersData = useCallback(async () => {
     setIsLoading(true);
     setFetchError(null);
-    getUsers().then((result) => {
-      if (result.success && result.data && result.data.length > 0) {
-        setUsers(result.data);
-      } else {
-        setFetchError(result.message || 'Unable to connect to User Management service.');
-      }
-      setIsLoading(false);
-    });
+
+    const [usersRes, facultiesRes, deptsRes, unitsRes] = await Promise.all([
+      getUsers(),
+      getFaculties(),
+      getDepartments(),
+      getServiceUnits(),
+    ]);
+
+    if (usersRes.success && usersRes.data && usersRes.data.length > 0) {
+      setUsers(usersRes.data);
+    } else {
+      setUsers([]);
+      setFetchError(usersRes.message || 'Unable to connect to User Management service.');
+    }
+
+    if (facultiesRes.success && facultiesRes.data) {
+      setFaculties(facultiesRes.data);
+    }
+    if (deptsRes.success && deptsRes.data) {
+      setDepartments(deptsRes.data);
+    }
+    if (unitsRes.success && unitsRes.data) {
+      setServiceUnits(unitsRes.data);
+    }
+
+    setIsLoading(false);
   }, []);
 
   useEffect(() => {
-    let isMounted = true;
-    getUsers().then((result) => {
-      if (!isMounted) return;
-      if (result.success && result.data && result.data.length > 0) {
-        setUsers(result.data);
-      } else {
-        setFetchError(result.message || 'Unable to connect to User Management service.');
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    fetchUsersData();
+  }, [fetchUsersData]);
+
+  // Lookup maps for resolving affiliation names from IDs when missing from UserProfile
+  const facultyMap = useMemo(() => new Map(faculties.map((f) => [f.id, f.name])), [faculties]);
+  const departmentMap = useMemo(() => new Map(departments.map((d) => [d.id, d.name])), [departments]);
+  const serviceUnitMap = useMemo(() => new Map(serviceUnits.map((s) => [s.id, s.name])), [serviceUnits]);
+
+  // Dynamic dropdown options
+  const facultyOptions = useMemo(() => {
+    return faculties.map((f) => ({
+      value: f.id,
+      label: `${f.name} (${f.code})`,
+    }));
+  }, [faculties]);
+
+  // Cascade: Filter departments by selected Faculty ID
+  const filteredDepartmentOptions = useMemo(() => {
+    let filtered = departments;
+    if (facultyId) {
+      filtered = departments.filter((d) => d.facultyId === facultyId);
+    }
+    return filtered.map((d) => ({
+      value: d.id,
+      label: `${d.name} (${d.code})`,
+    }));
+  }, [departments, facultyId]);
+
+  const serviceUnitOptions = useMemo(() => {
+    return serviceUnits.map((s) => ({
+      value: s.id,
+      label: `${s.name} (${s.code})`,
+    }));
+  }, [serviceUnits]);
+
+  // Handle Faculty change with relationship cascade
+  const handleFacultyChange = (newFacultyId: string) => {
+    setFacultyId(newFacultyId);
+
+    // Cascade: If selected department does not belong to the new faculty, clear departmentId selection
+    if (departmentId && newFacultyId) {
+      const currentDept = departments.find((d) => d.id === departmentId);
+      if (currentDept && currentDept.facultyId !== newFacultyId) {
+        setDepartmentId('');
       }
-      setIsLoading(false);
-    });
-    return () => {
-      isMounted = false;
-    };
-  }, []);
+    }
+  };
 
   // Client-side filtering for loaded user records
   const filteredUsers = useMemo(() => {
@@ -98,7 +182,10 @@ export const UsersPage: React.FC = () => {
         user.firstName.toLowerCase().includes(query) ||
         user.lastName.toLowerCase().includes(query) ||
         user.email.toLowerCase().includes(query) ||
-        user.id.toLowerCase().includes(query)
+        user.id.toLowerCase().includes(query) ||
+        (user.facultyName && user.facultyName.toLowerCase().includes(query)) ||
+        (user.departmentName && user.departmentName.toLowerCase().includes(query)) ||
+        (user.serviceUnitName && user.serviceUnitName.toLowerCase().includes(query))
     );
   }, [users, searchQuery]);
 
@@ -108,6 +195,9 @@ export const UsersPage: React.FC = () => {
     setLastName('');
     setEmail('');
     setPhone('');
+    setFacultyId('');
+    setDepartmentId('');
+    setServiceUnitId('');
     setFieldErrors({});
     setSaveError(null);
     setSuccessMessage(null);
@@ -120,6 +210,9 @@ export const UsersPage: React.FC = () => {
     setLastName(user.lastName || '');
     setEmail(user.email || '');
     setPhone(user.phone || '');
+    setFacultyId(user.facultyId || '');
+    setDepartmentId(user.departmentId || '');
+    setServiceUnitId(user.serviceUnitId || '');
     setFieldErrors({});
     setSaveError(null);
     setSuccessMessage(null);
@@ -158,36 +251,29 @@ export const UsersPage: React.FC = () => {
 
     setIsSaving(true);
 
+    const payload: UserCreatePayload | UserUpdatePayload = {
+      firstName: firstName.trim(),
+      lastName: lastName.trim(),
+      email: email.trim(),
+      phone: phone.trim() || undefined,
+      facultyId: facultyId.trim() || undefined,
+      departmentId: departmentId.trim() || undefined,
+      serviceUnitId: serviceUnitId.trim() || undefined,
+    };
+
+    let result;
     if (editingUser) {
-      const payload: UserUpdatePayload = {
-        firstName: firstName.trim(),
-        lastName: lastName.trim(),
-        email: email.trim(),
-        phone: phone.trim() || undefined,
-      };
-      const result = await updateUser(editingUser.id, payload);
-      if (result.success) {
-        setSuccessMessage(result.message || 'User updated successfully.');
-        setIsFormModalOpen(false);
-        fetchUsersData();
-      } else {
-        setSaveError(result.message || 'Failed to update user. Unable to connect to backend.');
-      }
+      result = await updateUser(editingUser.id, payload as UserUpdatePayload);
     } else {
-      const payload: UserCreatePayload = {
-        firstName: firstName.trim(),
-        lastName: lastName.trim(),
-        email: email.trim(),
-        phone: phone.trim() || undefined,
-      };
-      const result = await createUser(payload);
-      if (result.success) {
-        setSuccessMessage(result.message || 'User created successfully.');
-        setIsFormModalOpen(false);
-        fetchUsersData();
-      } else {
-        setSaveError(result.message || 'Failed to create user. Unable to connect to backend.');
-      }
+      result = await createUser(payload as UserCreatePayload);
+    }
+
+    if (result.success) {
+      setSuccessMessage(result.message || (editingUser ? 'User updated successfully.' : 'User created successfully.'));
+      setIsFormModalOpen(false);
+      fetchUsersData();
+    } else {
+      setSaveError(result.message || 'Failed to save user account. Unable to connect to backend.');
     }
 
     setIsSaving(false);
@@ -244,7 +330,7 @@ export const UsersPage: React.FC = () => {
           <div className="users-header-text">
             <h2 className="users-title">User Account Management</h2>
             <p className="users-subtitle">
-              Manage university user accounts, credentials, and access directory.
+              Manage university user accounts, organizational affiliations, and access directory.
             </p>
           </div>
           {canManageUsers && (
@@ -263,7 +349,6 @@ export const UsersPage: React.FC = () => {
               </Button>
             </div>
           )}
-
         </div>
       </Card>
 
@@ -274,7 +359,7 @@ export const UsersPage: React.FC = () => {
             <div className="users-search-input">
               <Input
                 id="user-search-input"
-                placeholder="Search users by name, email, or ID..."
+                placeholder="Search users by name, email, ID, faculty, department, or service unit..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 leftIcon={<Search size={18} />}
@@ -288,66 +373,95 @@ export const UsersPage: React.FC = () => {
       {isLoading ? (
         <LoadingState
           title="Loading University Users..."
-          description="Retrieving user account records from the identity core."
+          description="Retrieving user account records and organizational affiliations from the identity core."
         />
       ) : users.length > 0 ? (
         <div className="users-grid">
-          {filteredUsers.map((user) => (
-            <Card key={user.id} className="user-card">
-              <CardBody>
-                <div className="user-card-header">
-                  <div className="user-card-identity">
-                    <h3 className="user-card-name">
-                      {user.firstName} {user.lastName}
-                    </h3>
-                    <span className="user-card-email">{user.email}</span>
-                  </div>
-                  {renderStatusBadge(user.accountStatus)}
-                </div>
+          {filteredUsers.map((user) => {
+            const resolvedFacultyName = user.facultyName || (user.facultyId ? facultyMap.get(user.facultyId) : undefined);
+            const resolvedDepartmentName = user.departmentName || (user.departmentId ? departmentMap.get(user.departmentId) : undefined);
+            const resolvedServiceUnitName = user.serviceUnitName || (user.serviceUnitId ? serviceUnitMap.get(user.serviceUnitId) : undefined);
 
-                <div className="user-card-body">
-                  {user.phone && (
-                    <div className="user-meta-item">
-                      <Phone size={14} />
-                      <span>{user.phone}</span>
+            return (
+              <Card key={user.id} className="user-card">
+                <CardBody>
+                  <div className="user-card-header">
+                    <div className="user-card-identity">
+                      <h3 className="user-card-name">
+                        {user.firstName} {user.lastName}
+                      </h3>
+                      <span className="user-card-email">{user.email}</span>
+                    </div>
+                    {renderStatusBadge(user.accountStatus)}
+                  </div>
+
+                  <div className="user-card-body">
+                    {user.phone && (
+                      <div className="user-meta-item">
+                        <Phone size={14} />
+                        <span>{user.phone}</span>
+                      </div>
+                    )}
+
+                    {(resolvedFacultyName || resolvedDepartmentName || resolvedServiceUnitName) && (
+                      <div className="user-affiliations-list" style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem', marginTop: '0.5rem' }}>
+                        {resolvedFacultyName && (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', fontSize: '0.8125rem', color: 'var(--color-neutral)' }}>
+                            <GraduationCap size={14} style={{ color: 'var(--color-primary)', flexShrink: 0 }} />
+                            <span style={{ fontWeight: 500 }}>{resolvedFacultyName}</span>
+                          </div>
+                        )}
+                        {resolvedDepartmentName && (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', fontSize: '0.8125rem', color: 'var(--color-neutral)' }}>
+                            <Building2 size={14} style={{ color: 'var(--color-primary)', flexShrink: 0 }} />
+                            <span>{resolvedDepartmentName}</span>
+                          </div>
+                        )}
+                        {resolvedServiceUnitName && (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', fontSize: '0.8125rem', color: 'var(--color-neutral)' }}>
+                            <Layers size={14} style={{ color: 'var(--color-primary)', flexShrink: 0 }} />
+                            <span>{resolvedServiceUnitName}</span>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {user.roles && user.roles.length > 0 && (
+                      <div className="user-roles-list" style={{ marginTop: '0.75rem' }}>
+                        {user.roles.map((role) => renderRoleBadge(role))}
+                      </div>
+                    )}
+                  </div>
+
+                  {(canManageUsers || canDeleteUsers) && (
+                    <div className="user-card-actions">
+                      {canManageUsers && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          icon={<Edit2 size={16} />}
+                          onClick={() => openEditModal(user)}
+                        >
+                          Edit
+                        </Button>
+                      )}
+                      {canDeleteUsers && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="btn-danger"
+                          icon={<Trash2 size={16} />}
+                          onClick={() => setDeletingUser(user)}
+                        >
+                          Delete
+                        </Button>
+                      )}
                     </div>
                   )}
-
-                  {user.roles && user.roles.length > 0 && (
-                    <div className="user-roles-list">
-                      {user.roles.map((role) => renderRoleBadge(role))}
-                    </div>
-                  )}
-                </div>
-
-                {(canManageUsers || canDeleteUsers) && (
-                  <div className="user-card-actions">
-                    {canManageUsers && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        icon={<Edit2 size={16} />}
-                        onClick={() => openEditModal(user)}
-                      >
-                        Edit
-                      </Button>
-                    )}
-                    {canDeleteUsers && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="btn-danger"
-                        icon={<Trash2 size={16} />}
-                        onClick={() => setDeletingUser(user)}
-                      >
-                        Delete
-                      </Button>
-                    )}
-                  </div>
-                )}
-              </CardBody>
-            </Card>
-          ))}
+                </CardBody>
+              </Card>
+            );
+          })}
         </div>
       ) : (
         <EmptyState
@@ -462,6 +576,41 @@ export const UsersPage: React.FC = () => {
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
             leftIcon={<Phone size={18} />}
+            disabled={isSaving}
+          />
+
+          {/* User Affiliation Selectors */}
+          <Select
+            id="user-faculty-select"
+            label="Faculty Affiliation (Optional)"
+            options={facultyOptions}
+            placeholder="None / Select Faculty..."
+            value={facultyId}
+            onChange={(e) => handleFacultyChange(e.target.value)}
+            disabled={isSaving}
+          />
+
+          <Select
+            id="user-department-select"
+            label="Department Affiliation (Optional)"
+            options={filteredDepartmentOptions}
+            placeholder={
+              facultyId && filteredDepartmentOptions.length === 0
+                ? 'No departments in selected faculty'
+                : 'None / Select Department...'
+            }
+            value={departmentId}
+            onChange={(e) => setDepartmentId(e.target.value)}
+            disabled={isSaving}
+          />
+
+          <Select
+            id="user-service-unit-select"
+            label="Service Unit Affiliation (Optional)"
+            options={serviceUnitOptions}
+            placeholder="None / Select Service Unit..."
+            value={serviceUnitId}
+            onChange={(e) => setServiceUnitId(e.target.value)}
             disabled={isSaving}
           />
         </form>

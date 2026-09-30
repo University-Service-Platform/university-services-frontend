@@ -5,12 +5,16 @@ import type { UserProfile } from '@/types';
  * UNCONFIRMED PLACEHOLDER INTEGRATION BOUNDARY PENDING OFFICIAL BACKEND CONTRACT:
  * The official backend User Management DTO payloads are not yet documented in the repository.
  * The payload structures below represent an unconfirmed integration boundary subject to change.
+ * The affiliation fields (facultyId, departmentId, serviceUnitId) are placeholder integration fields.
  */
 export interface UserCreatePayload {
   email: string;
   firstName: string;
   lastName: string;
   phone?: string;
+  facultyId?: string;
+  departmentId?: string;
+  serviceUnitId?: string;
 }
 
 export interface UserUpdatePayload {
@@ -18,6 +22,9 @@ export interface UserUpdatePayload {
   firstName?: string;
   lastName?: string;
   phone?: string;
+  facultyId?: string;
+  departmentId?: string;
+  serviceUnitId?: string;
 }
 
 export interface UserServiceResult<T = unknown> {
