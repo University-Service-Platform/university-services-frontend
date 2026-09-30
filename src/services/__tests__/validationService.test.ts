@@ -2,6 +2,7 @@ import {
   validateUserIdentity,
   validateUserRole,
   validateAccountStatus,
+  validateUserAffiliation,
 } from '../validationService';
 
 function assertEqual<T>(actual: T, expected: T, testName: string): void {
@@ -30,6 +31,22 @@ export async function runValidationServiceTests(): Promise<boolean> {
     const emptyStatusResult = await validateAccountStatus('');
     assertEqual(emptyStatusResult.success, false, 'Invalid User ID Account Status - success status');
     assertEqual(emptyStatusResult.status, 400, 'Invalid User ID Account Status - HTTP status');
+
+    const blankIdentityResult = await validateUserIdentity('   ');
+    assertEqual(blankIdentityResult.success, false, 'Whitespace User ID - success status');
+    assertEqual(blankIdentityResult.status, 400, 'Whitespace User ID - HTTP status');
+
+    const blankStatusResult = await validateAccountStatus('\t ');
+    assertEqual(blankStatusResult.success, false, 'Whitespace User ID Account Status - success status');
+    assertEqual(blankStatusResult.status, 400, 'Whitespace User ID Account Status - HTTP status');
+
+    const singleRoleResult = await validateUserRole(' ', 'STUDENT');
+    assertEqual(singleRoleResult.success, false, 'Single role with blank User ID - success status');
+    assertEqual(singleRoleResult.status, 400, 'Single role with blank User ID - HTTP status');
+
+    const emptyAffiliationResult = await validateUserAffiliation('', { departmentId: 'DEPT-1' });
+    assertEqual(emptyAffiliationResult.success, false, 'Invalid User ID Affiliation - success status');
+    assertEqual(emptyAffiliationResult.status, 400, 'Invalid User ID Affiliation - HTTP status');
 
     return true;
   } catch (error) {
