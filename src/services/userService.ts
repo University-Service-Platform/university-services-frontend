@@ -1,20 +1,11 @@
 import { apiFetch } from './apiClient';
 import type { UserProfile } from '@/types';
 
-/**
- * UNCONFIRMED PLACEHOLDER INTEGRATION BOUNDARY PENDING OFFICIAL BACKEND CONTRACT:
- * The official backend User Management DTO payloads are not yet documented in the repository.
- * The payload structures below represent an unconfirmed integration boundary subject to change.
- * The affiliation fields (facultyId, departmentId, serviceUnitId) are placeholder integration fields.
- */
 export interface UserCreatePayload {
   email: string;
   firstName: string;
   lastName: string;
   phone?: string;
-  facultyId?: string;
-  departmentId?: string;
-  serviceUnitId?: string;
 }
 
 export interface UserUpdatePayload {
@@ -22,9 +13,6 @@ export interface UserUpdatePayload {
   firstName?: string;
   lastName?: string;
   phone?: string;
-  facultyId?: string;
-  departmentId?: string;
-  serviceUnitId?: string;
 }
 
 export interface UserServiceResult<T = unknown> {
@@ -33,12 +21,6 @@ export interface UserServiceResult<T = unknown> {
   message?: string;
 }
 
-/**
- * UNCONFIRMED PLACEHOLDER INTEGRATION BOUNDARY PENDING OFFICIAL BACKEND CONTRACT:
- * The official backend API contract for User Management endpoints is not yet documented in the repository.
- * The endpoint constant below serves as a placeholder integration boundary that will be updated
- * once the official backend OpenAPI/Swagger specification is provided by the backend team.
- */
 export const USERS_API_ENDPOINT = import.meta.env.VITE_USERS_API_ENDPOINT || '/users';
 
 export async function getUsers(): Promise<UserServiceResult<UserProfile[]>> {
@@ -49,7 +31,7 @@ export async function getUsers(): Promise<UserServiceResult<UserProfile[]>> {
   if (response.error || !Array.isArray(response.data)) {
     return {
       success: false,
-      message: response.error || 'Unable to connect to User Management service. Official backend contract is pending integration.',
+      message: response.error || 'Unable to connect to User Management service.',
     };
   }
 

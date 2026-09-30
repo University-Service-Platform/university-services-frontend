@@ -8,3 +8,4 @@ export * from './serviceUnitService';
 export * from './departmentService';
 export * from './userService';
 export * from './validationService';
+export * from './affiliationService';

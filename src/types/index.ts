@@ -34,6 +34,34 @@ export interface UserProfile {
   phone?: string;
 }
 
+export interface Affiliation {
+  id: string;
+  userId: string;
+  departmentId: string;
+  facultyId?: string;
+  departmentName?: string;
+  facultyName?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface AffiliationCreatePayload {
+  userId: string;
+  departmentId: string;
+  facultyId?: string;
+}
+
+export interface AffiliationUpdatePayload {
+  departmentId: string;
+  facultyId?: string;
+}
+
+export interface AffiliationServiceResult<T = unknown> {
+  success: boolean;
+  data?: T;
+  message?: string;
+}
+
 /**
  * UNCONFIRMED PLACEHOLDER INTEGRATION BOUNDARY PENDING OFFICIAL BACKEND DTO CONTRACT:
  * The official backend Faculty DTO schema is not yet documented in the repository.

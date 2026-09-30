@@ -1,9 +1,9 @@
 /**
- * Shared native Fetch API client.
+ * Shared Native Fetch API Client Foundation
  *
- * All frontend service calls should pass through this wrapper so base URL,
- * JSON headers, authentication, response parsing, and error handling remain consistent.
+ * Provides standard request wrapper for backend services.
  */
+
 export interface ApiResponse<T = unknown> {
   data?: T;
   error?: string;
@@ -17,13 +17,24 @@ const BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api/v1';
 // Generous default so a sleeping gateway can still wake up, but a hung request never spins forever.
 const REQUEST_TIMEOUT_MS = Number(import.meta.env.VITE_API_TIMEOUT_MS) || 60000;
 
-function getStoredAuthToken(): string | null {
+export function getStoredAuthToken(): string | null {
   if (typeof window === 'undefined') return null;
 
   try {
     return sessionStorage.getItem(AUTH_TOKEN_STORAGE_KEY);
   } catch {
     return null;
+  }
+}
+
+export function clearStoredAuthToken(): void {
+  if (typeof window === 'undefined') return;
+
+  try {
+    sessionStorage.removeItem(AUTH_TOKEN_STORAGE_KEY);
+    sessionStorage.removeItem('university-services.auth.user');
+  } catch {
+    // Session cleanup is best-effort
   }
 }
 
@@ -78,6 +89,10 @@ export async function apiFetch<T>(
 
   const status = response.status;
 
+  if (status === 401) {
+    clearStoredAuthToken();
+  }
+
   if (status === 204) return { status };
 
   // Parse JSON defensively: an empty or malformed body must not hide the real HTTP status.
@@ -94,12 +109,40 @@ export async function apiFetch<T>(
   }
 
   if (!response.ok) {
-    const errorBody = data as { message?: string; error?: string } | undefined;
+    let errorMessage: string | undefined;
+
+    if (data && typeof data === 'object') {
+      const bodyObj = data as Record<string, unknown>;
+
+      // Official backend envelope: { "success": false, "error": { "code": "...", "message": "..." } }
+      if (bodyObj.error) {
+        if (typeof bodyObj.error === 'object' && bodyObj.error !== null) {
+          const errObj = bodyObj.error as Record<string, unknown>;
+          if (typeof errObj.message === 'string' && errObj.message.trim()) {
+            errorMessage = errObj.message;
+          } else if (typeof errObj.code === 'string' && errObj.code.trim()) {
+            errorMessage = errObj.code;
+          }
+        } else if (typeof bodyObj.error === 'string' && bodyObj.error.trim()) {
+          errorMessage = bodyObj.error;
+        }
+      }
+
+      if (!errorMessage && typeof bodyObj.message === 'string' && bodyObj.message.trim()) {
+        errorMessage = bodyObj.message;
+      }
+    } else if (typeof data === 'string' && data.trim()) {
+      errorMessage = data;
+    }
+
+    if (typeof errorMessage !== 'string') {
+      errorMessage = undefined;
+    }
+
     return {
       error:
-        errorBody?.message ||
-        errorBody?.error ||
-        response.statusText ||
+        errorMessage ||
+        (response.statusText && response.statusText !== 'OK' ? response.statusText : undefined) ||
         `API request failed with status ${status}.`,
       status,
       data,
