@@ -1,16 +1,11 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { User, Lock, Eye, EyeOff, ArrowRight, GraduationCap, AlertCircle } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { User, Lock, Eye, EyeOff, ArrowRight, AlertCircle } from 'lucide-react';
 import { Button, Input } from '@/components/ui';
 import { loginUser } from '@/services/authService';
 import { useAuth } from '@/auth';
-import './LoginPage.css';
+import { AuthLayout } from './AuthLayout';
 
-/**
- * UNCONFIRMED PLACEHOLDER INTEGRATION BOUNDARY PENDING OFFICIAL BACKEND CONTRACT:
- * The official backend Login API contract is not yet documented in the repository.
- * The login form connects to the authentication service integration boundary and handles real backend responses.
- */
 export const LoginPage: React.FC = () => {
   const navigate = useNavigate();
   const { setAuthUser } = useAuth();
@@ -62,7 +57,7 @@ export const LoginPage: React.FC = () => {
         if (result.user) {
           setAuthUser(result.user);
         }
-        setFormError(result.message || 'Your account is currently inactive. Please contact the IT Support Helpdesk for assistance.');
+        setFormError(result.message || 'Your account is currently inactive. Please contact a platform administrator.');
       } else {
         setFormError(result.message || 'Authentication failed. Please check your credentials.');
       }
@@ -74,35 +69,10 @@ export const LoginPage: React.FC = () => {
   };
 
   return (
-    <div className="login-page-container">
-      {/* Left Column: Visual & University Branding */}
-      <section className="auth-brand-panel" aria-label="University Branding">
-        <div className="brand-panel-content">
-          <div className="brand-emblem-badge" aria-hidden="true">
-            <GraduationCap size={36} color="#FFFFFF" />
-          </div>
-          <h1 className="brand-title">University of Kelaniya</h1>
-          <p className="brand-tagline">One Platform. Many Possibilities.</p>
-        </div>
-
-        <footer className="brand-panel-footer">
-          © 2026 University of Kelaniya • Learn • Belong • Thrive
-        </footer>
-      </section>
-
-      {/* Right Column: Authentication Form Panel */}
-      <section className="auth-form-panel" aria-label="Authentication Form">
-        <div className="auth-form-card">
-          <header className="auth-header">
-            <div className="auth-badge">
-              <span className="auth-badge-dot" aria-hidden="true" />
-              <span>University Services Platform</span>
-            </div>
-            <h2 className="auth-heading">Sign in</h2>
-            <p className="auth-subheading">
-              Use your university ID or email to access events, announcements, facilities and service requests.
-            </p>
-          </header>
+    <AuthLayout
+      heading="Sign in"
+      subheading="Use your university ID or email to access events, announcements, facilities and service requests."
+    >
 
           {/* Form Alert Message */}
           {formError && (
@@ -162,16 +132,9 @@ export const LoginPage: React.FC = () => {
             />
 
             <div className="auth-options">
-              <a
-                href="#forgot-password"
-                className="forgot-link"
-                onClick={(e) => {
-                  e.preventDefault();
-                  setFormError('Ask a platform administrator to reset your password; they can set a new one for you.');
-                }}
-              >
+              <Link to="/forgot-password" className="forgot-link">
                 Forgot password?
-              </a>
+              </Link>
             </div>
 
             <Button
@@ -190,8 +153,6 @@ export const LoginPage: React.FC = () => {
           <footer className="auth-footer">
             <p>Need help signing in? Ask your platform administrator.</p>
           </footer>
-        </div>
-      </section>
-    </div>
+    </AuthLayout>
   );
 };

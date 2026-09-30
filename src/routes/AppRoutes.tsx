@@ -1,7 +1,7 @@
 import React from 'react';
 import { Routes, Route } from 'react-router-dom';
 import { AppShell } from '@/components/layout';
-import { HomePage, LoginPage, NotFoundPage, ProfilePage, RolesPage, FacultiesPage, ServiceUnitsPage, DepartmentsPage, UsersPage, AccountStatusPage } from '@/pages';
+import { HomePage, LoginPage, NotFoundPage, ForgotPasswordPage, ResetPasswordPage, ProfilePage, RolesPage, FacultiesPage, ServiceUnitsPage, DepartmentsPage, UsersPage, AccountStatusPage } from '@/pages';
 import { ProtectedRoute } from './ProtectedRoute';
 import { APP_ROUTES_CONFIG } from '@/config/navigationConfig';
 import { renderGroup8Page } from './group8RouteElements';
@@ -33,6 +33,8 @@ export const AppRoutes: React.FC = () => {
     <Routes>
       {/* Standalone Authentication Route */}
       <Route path="/auth" element={<LoginPage />} />
+      <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+      <Route path="/reset-password" element={<ResetPasswordPage />} />
 
       {/* Main Application Shell with Role-Aware Route Protection */}
       <Route
