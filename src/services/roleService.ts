@@ -50,10 +50,10 @@ export async function getRoles(): Promise<RoleServiceResult<SystemRoleDefinition
     method: 'GET',
   });
 
-  if (response.error || !response.data) {
+  if (response.error || !Array.isArray(response.data)) {
     return {
       success: false,
-      message: 'Unable to connect to role management service. Backend API contract is pending integration.',
+      message: response.error || 'Unable to connect to role management service. Backend API contract is pending integration.',
     };
   }
 

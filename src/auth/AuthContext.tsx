@@ -2,6 +2,7 @@ import React, { useState, useCallback, useMemo } from 'react';
 import type { UserProfile, UserRole, AccountStatus } from '@/types';
 import { AuthContext } from './context';
 import type { AuthState, AuthContextType } from './types';
+import { clearAuthSession, getStoredAuthSession, storeAuthSession } from '@/services/authService';
 
 const initialAuthState: AuthState = {
   isAuthenticated: false,
@@ -19,33 +20,46 @@ export interface AuthProviderProps {
   children: React.ReactNode;
 }
 
+function buildAuthenticatedState(user: UserProfile): AuthState {
+  const roles: UserRole[] = Array.isArray(user.roles) ? user.roles : [];
+  const status: AccountStatus | undefined = user.accountStatus;
+  const isConfirmedActive = status === 'ACTIVE';
+
+  return {
+    isAuthenticated: true,
+    user,
+    roles,
+    permissions: [],
+    accountStatus: status || null,
+    isAccountActive: isConfirmedActive,
+    isAccountInactive: !isConfirmedActive,
+    isLoading: false,
+    error: null,
+  };
+}
+
+// Restore the session persisted by authService so a page reload keeps the user signed in.
+function getInitialAuthState(): AuthState {
+  const storedSession = getStoredAuthSession();
+  return storedSession ? buildAuthenticatedState(storedSession.user) : initialAuthState;
+}
+
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
-  const [state, setState] = useState<AuthState>(initialAuthState);
+  const [state, setState] = useState<AuthState>(getInitialAuthState);
 
   const setAuthUser = useCallback((user: UserProfile | null) => {
     if (!user) {
+      clearAuthSession();
       setState(initialAuthState);
       return;
     }
 
-    const roles: UserRole[] = Array.isArray(user.roles) ? user.roles : [];
-    const status: AccountStatus | undefined = user.accountStatus;
-    const isConfirmedActive = status === 'ACTIVE';
-
-    setState({
-      isAuthenticated: true,
-      user,
-      roles,
-      permissions: [],
-      accountStatus: status || null,
-      isAccountActive: isConfirmedActive,
-      isAccountInactive: !isConfirmedActive,
-      isLoading: false,
-      error: null,
-    });
+    storeAuthSession(user);
+    setState(buildAuthenticatedState(user));
   }, []);
 
   const logout = useCallback(() => {
+    clearAuthSession();
     setState(initialAuthState);
   }, []);
 

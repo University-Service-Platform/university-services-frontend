@@ -19,6 +19,7 @@ import {
   Modal,
   LoadingState,
   EmptyState,
+  ErrorState,
 } from '@/components/ui';
 import './DepartmentsPage.css';
 
@@ -67,7 +68,8 @@ export const DepartmentsPage: React.FC = () => {
       getFaculties(),
     ]);
 
-    if (facultyResult.success && facultyResult.data && facultyResult.data.length > 0) {
+    // A successful empty list is a valid empty state, not a connection error.
+    if (facultyResult.success && facultyResult.data) {
       setFaculties(facultyResult.data);
       setFacultiesFetchError(null);
     } else {
@@ -77,11 +79,10 @@ export const DepartmentsPage: React.FC = () => {
       );
     }
 
-    if (deptResult.success && deptResult.data && deptResult.data.length > 0) {
+    if (deptResult.success && deptResult.data) {
       setDepartments(deptResult.data);
       setFetchError(null);
     } else {
-      setDepartments([]);
       setFetchError(deptResult.message || 'Unable to connect to Department Management service.');
     }
 
@@ -175,6 +176,7 @@ export const DepartmentsPage: React.FC = () => {
 
   const handleSaveDepartment = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSaving) return;
     if (!canManageDepartments) {
       setSaveError('Unauthorized: Administrator permissions are required to perform this action.');
       return;
@@ -215,7 +217,7 @@ export const DepartmentsPage: React.FC = () => {
   };
 
   const handleDeleteDepartment = async () => {
-    if (!deletingDepartment) return;
+    if (!deletingDepartment || isDeleting) return;
     if (!canManageDepartments) {
       setDeleteError('Unauthorized: Administrator permissions are required to perform this action.');
       return;
@@ -286,11 +288,24 @@ export const DepartmentsPage: React.FC = () => {
         </Card>
       )}
 
-      {/* Content Area: Loading / Empty / Loaded States */}
+      {fetchError && departments.length > 0 && !isLoading && (
+        <div className="departments-alert departments-alert-error" role="alert">
+          <AlertCircle size={18} />
+          <span>{fetchError}</span>
+        </div>
+      )}
+
+      {/* Content Area: Loading / Error / Empty / Loaded States */}
       {isLoading ? (
         <LoadingState
           title="Loading University Departments..."
           description="Retrieving department records and faculty affiliations from the directory."
+        />
+      ) : fetchError && departments.length === 0 ? (
+        <ErrorState
+          title="Unable to Load Departments"
+          description={fetchError}
+          onRetry={handleRetry}
         />
       ) : departments.length > 0 ? (
         <div className="departments-grid">
@@ -347,20 +362,17 @@ export const DepartmentsPage: React.FC = () => {
         </div>
       ) : (
         <EmptyState
-          title="Department Management API Integration Pending"
-          description={
-            fetchError ||
-            'The official backend Department Management API contract is not yet available in the repository. The department management interface and service layer boundary are prepared to connect to backend services.'
-          }
+          title="No Departments Found"
+          description="The Department Management service returned no records."
           icon={<Building2 className="state-icon" />}
           action={
             <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center' }}>
               <Button variant="outline" icon={<RefreshCw size={16} />} onClick={handleRetry}>
-                Retry Connection
+                Refresh
               </Button>
               {canManageDepartments && (
                 <Button variant="primary" icon={<Plus size={16} />} onClick={openCreateModal}>
-                  Open Create Modal
+                  Add Department
                 </Button>
               )}
             </div>
@@ -371,7 +383,9 @@ export const DepartmentsPage: React.FC = () => {
       {/* Create / Edit Department Modal */}
       <Modal
         isOpen={isFormModalOpen}
-        onClose={() => setIsFormModalOpen(false)}
+        onClose={() => {
+          if (!isSaving) setIsFormModalOpen(false);
+        }}
         title={editingDepartment ? 'Edit Department' : 'Add New Department'}
         footer={
           <>
@@ -470,7 +484,9 @@ export const DepartmentsPage: React.FC = () => {
       {/* Delete Confirmation Modal */}
       <Modal
         isOpen={Boolean(deletingDepartment)}
-        onClose={() => setDeletingDepartment(null)}
+        onClose={() => {
+          if (!isDeleting) setDeletingDepartment(null);
+        }}
         title="Delete Department"
         footer={
           <>

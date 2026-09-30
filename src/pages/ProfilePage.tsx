@@ -108,6 +108,7 @@ export const ProfilePage: React.FC = () => {
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSaving) return;
     setSaveError(null);
     setSaveSuccess(false);
 
@@ -193,8 +194,11 @@ export const ProfilePage: React.FC = () => {
   }
 
   const userInitials = `${currentProfile.firstName?.[0] || 'U'}${currentProfile.lastName?.[0] || ''}`;
-  const primaryRole = currentProfile.roles && currentProfile.roles.length > 0 ? currentProfile.roles[0] : 'GUEST';
-  const statusVariant = currentProfile.accountStatus === 'ACTIVE' ? 'success' : 'danger';
+  // Only display role/status values actually returned by the backend; never assume defaults.
+  const primaryRole = currentProfile.roles && currentProfile.roles.length > 0 ? currentProfile.roles[0] : null;
+  const statusLabel = currentProfile.accountStatus || 'UNKNOWN';
+  const statusVariant =
+    currentProfile.accountStatus === 'ACTIVE' ? 'success' : currentProfile.accountStatus === 'INACTIVE' ? 'danger' : 'neutral';
 
   return (
     <div className="profile-container">
@@ -228,7 +232,7 @@ export const ProfilePage: React.FC = () => {
                 </Badge>
               ))}
               <Badge variant={statusVariant}>
-                {currentProfile.accountStatus || 'ACTIVE'}
+                {statusLabel}
               </Badge>
             </div>
           </div>
@@ -262,12 +266,12 @@ export const ProfilePage: React.FC = () => {
 
               <div className="profile-field-item">
                 <span className="profile-field-label">Primary Role</span>
-                <span className="profile-field-value">{formatRole(primaryRole)}</span>
+                <span className="profile-field-value">{primaryRole ? formatRole(primaryRole) : 'Not assigned'}</span>
               </div>
 
               <div className="profile-field-item">
                 <span className="profile-field-label">Account Status</span>
-                <span className="profile-field-value">{currentProfile.accountStatus || 'ACTIVE'}</span>
+                <span className="profile-field-value">{currentProfile.accountStatus || 'Not available'}</span>
               </div>
 
               <div className="profile-field-item">

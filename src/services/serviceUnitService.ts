@@ -37,10 +37,10 @@ export async function getServiceUnits(): Promise<ServiceUnitServiceResult<Servic
     method: 'GET',
   });
 
-  if (response.error || !response.data) {
+  if (response.error || !Array.isArray(response.data)) {
     return {
       success: false,
-      message: 'Unable to connect to Service Unit Management service. Official backend contract is pending integration.',
+      message: response.error || 'Unable to connect to Service Unit Management service. Official backend contract is pending integration.',
     };
   }
 
@@ -71,7 +71,7 @@ export async function createServiceUnit(payload: ServiceUnitCreatePayload): Prom
 }
 
 export async function updateServiceUnit(id: string, payload: ServiceUnitUpdatePayload): Promise<ServiceUnitServiceResult<ServiceUnit>> {
-  const response = await apiFetch<ServiceUnit>(`${SERVICE_UNITS_API_ENDPOINT}/${id}`, {
+  const response = await apiFetch<ServiceUnit>(`${SERVICE_UNITS_API_ENDPOINT}/${encodeURIComponent(id)}`, {
     method: 'PUT',
     body: JSON.stringify(payload),
   });
@@ -91,7 +91,7 @@ export async function updateServiceUnit(id: string, payload: ServiceUnitUpdatePa
 }
 
 export async function deleteServiceUnit(id: string): Promise<ServiceUnitServiceResult<null>> {
-  const response = await apiFetch<null>(`${SERVICE_UNITS_API_ENDPOINT}/${id}`, {
+  const response = await apiFetch<null>(`${SERVICE_UNITS_API_ENDPOINT}/${encodeURIComponent(id)}`, {
     method: 'DELETE',
   });
 

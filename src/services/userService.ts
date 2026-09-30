@@ -46,10 +46,10 @@ export async function getUsers(): Promise<UserServiceResult<UserProfile[]>> {
     method: 'GET',
   });
 
-  if (response.error || !response.data) {
+  if (response.error || !Array.isArray(response.data)) {
     return {
       success: false,
-      message: 'Unable to connect to User Management service. Official backend contract is pending integration.',
+      message: response.error || 'Unable to connect to User Management service. Official backend contract is pending integration.',
     };
   }
 
@@ -80,7 +80,7 @@ export async function createUser(payload: UserCreatePayload): Promise<UserServic
 }
 
 export async function updateUser(id: string, payload: UserUpdatePayload): Promise<UserServiceResult<UserProfile>> {
-  const response = await apiFetch<UserProfile>(`${USERS_API_ENDPOINT}/${id}`, {
+  const response = await apiFetch<UserProfile>(`${USERS_API_ENDPOINT}/${encodeURIComponent(id)}`, {
     method: 'PUT',
     body: JSON.stringify(payload),
   });
@@ -100,7 +100,7 @@ export async function updateUser(id: string, payload: UserUpdatePayload): Promis
 }
 
 export async function deleteUser(id: string): Promise<UserServiceResult<null>> {
-  const response = await apiFetch<null>(`${USERS_API_ENDPOINT}/${id}`, {
+  const response = await apiFetch<null>(`${USERS_API_ENDPOINT}/${encodeURIComponent(id)}`, {
     method: 'DELETE',
   });
 
