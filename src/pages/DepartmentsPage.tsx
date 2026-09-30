@@ -10,6 +10,8 @@ import {
   Search,
   GraduationCap,
   X,
+  LayoutGrid,
+  List,
 } from 'lucide-react';
 import {
   getDepartments,
@@ -47,6 +49,7 @@ export const DepartmentsPage: React.FC = () => {
   // Search & Filter State
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [selectedFacultyFilter, setSelectedFacultyFilter] = useState<string>('ALL');
+  const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
 
   // Form Modal State (Create / Edit)
   const [isFormModalOpen, setIsFormModalOpen] = useState<boolean>(false);
@@ -346,6 +349,30 @@ export const DepartmentsPage: React.FC = () => {
               </Button>
             )}
           </div>
+
+          <div className="departments-results-bar">
+            <span>
+              Showing <strong>{filteredDepartments.length}</strong> of <strong>{departments.length}</strong> departments
+            </span>
+            <div className="departments-view-toggle">
+              <button
+                type="button"
+                className={`departments-view-btn ${viewMode === 'grid' ? 'active' : ''}`}
+                title="Grid Card View"
+                onClick={() => setViewMode('grid')}
+              >
+                <LayoutGrid size={15} />
+              </button>
+              <button
+                type="button"
+                className={`departments-view-btn ${viewMode === 'table' ? 'active' : ''}`}
+                title="Table List View"
+                onClick={() => setViewMode('table')}
+              >
+                <List size={15} />
+              </button>
+            </div>
+          </div>
         </Card>
       )}
 
@@ -357,50 +384,112 @@ export const DepartmentsPage: React.FC = () => {
         />
       ) : departments.length > 0 ? (
         filteredDepartments.length > 0 ? (
-          <div className="departments-grid">
-            {filteredDepartments.map((dept) => (
-              <Card key={dept.id} className="department-card">
-                <CardBody>
-                  <div className="department-card-header">
-                    <div className="department-identity">
-                      <h3 className="department-name">{dept.name}</h3>
-                      <div className="department-faculty-badge">
-                        <GraduationCap size={13} />
-                        <span>{getFacultyName(dept.facultyId)}</span>
+          viewMode === 'grid' ? (
+            <div className="departments-grid">
+              {filteredDepartments.map((dept) => (
+                <Card key={dept.id} className="department-card">
+                  <CardBody>
+                    <div className="department-card-header">
+                      <div className="department-identity">
+                        <h3 className="department-name">{dept.name}</h3>
+                        <div className="department-faculty-badge">
+                          <GraduationCap size={13} />
+                          <span>{getFacultyName(dept.facultyId)}</span>
+                        </div>
                       </div>
+                      <Badge variant="neutral">{dept.code}</Badge>
                     </div>
-                    <Badge variant="neutral">{dept.code}</Badge>
-                  </div>
 
-                  <p className="department-description">
-                    {dept.description || 'No description provided for this academic department.'}
-                  </p>
+                    <p className="department-description">
+                      {dept.description || 'No description provided for this academic department.'}
+                    </p>
 
-                  {canManageDepartments && (
-                    <div className="department-card-actions">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        icon={<Edit2 size={15} />}
-                        onClick={() => openEditModal(dept)}
-                      >
-                        Edit
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="btn-danger"
-                        icon={<Trash2 size={15} />}
-                        onClick={() => setDeletingDepartment(dept)}
-                      >
-                        Delete
-                      </Button>
-                    </div>
-                  )}
-                </CardBody>
-              </Card>
-            ))}
-          </div>
+                    {canManageDepartments && (
+                      <div className="department-card-actions">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          icon={<Edit2 size={15} />}
+                          onClick={() => openEditModal(dept)}
+                        >
+                          Edit
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="btn-danger"
+                          icon={<Trash2 size={15} />}
+                          onClick={() => setDeletingDepartment(dept)}
+                        >
+                          Delete
+                        </Button>
+                      </div>
+                    )}
+                  </CardBody>
+                </Card>
+              ))}
+            </div>
+          ) : (
+            <div className="departments-table-wrapper">
+              <table className="departments-table">
+                <thead>
+                  <tr>
+                    <th>Department Name</th>
+                    <th>Code</th>
+                    <th>Parent Faculty</th>
+                    <th>Description</th>
+                    {canManageDepartments && <th style={{ textAlign: 'right' }}>Actions</th>}
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredDepartments.map((dept) => (
+                    <tr key={dept.id}>
+                      <td>
+                        <span style={{ fontWeight: 600 }}>{dept.name}</span>
+                      </td>
+                      <td>
+                        <Badge variant="neutral">{dept.code}</Badge>
+                      </td>
+                      <td>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
+                          <GraduationCap size={14} color="var(--color-primary)" />
+                          <span>{getFacultyName(dept.facultyId)}</span>
+                        </div>
+                      </td>
+                      <td>
+                        <span style={{ fontSize: '0.8125rem', color: 'var(--color-neutral)' }}>
+                          {dept.description || '—'}
+                        </span>
+                      </td>
+                      {canManageDepartments && (
+                        <td>
+                          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.375rem' }}>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              icon={<Edit2 size={14} />}
+                              onClick={() => openEditModal(dept)}
+                            >
+                              Edit
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="btn-danger"
+                              icon={<Trash2 size={14} />}
+                              onClick={() => setDeletingDepartment(dept)}
+                            >
+                              Del
+                            </Button>
+                          </div>
+                        </td>
+                      )}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )
         ) : (
           <Card>
             <CardBody>
