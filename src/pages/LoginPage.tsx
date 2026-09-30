@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { User, Lock, Eye, EyeOff, ArrowRight, GraduationCap, AlertCircle, Globe } from 'lucide-react';
+import { User, Lock, Eye, EyeOff, ArrowRight, GraduationCap, AlertCircle } from 'lucide-react';
 import { Button, Input } from '@/components/ui';
 import { loginUser } from '@/services/authService';
 import { useAuth } from '@/auth';
@@ -17,7 +17,6 @@ export const LoginPage: React.FC = () => {
 
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
-  const [rememberMe, setRememberMe] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
@@ -54,7 +53,6 @@ export const LoginPage: React.FC = () => {
       const result = await loginUser({
         identifier: identifier.trim(),
         password,
-        rememberMe,
       });
 
       if (result.success && result.user) {
@@ -164,22 +162,12 @@ export const LoginPage: React.FC = () => {
             />
 
             <div className="auth-options">
-              <label className="checkbox-label">
-                <input
-                  type="checkbox"
-                  checked={rememberMe}
-                  onChange={(e) => setRememberMe(e.target.checked)}
-                  disabled={isLoading}
-                />
-                <span>Remember me</span>
-              </label>
-
               <a
                 href="#forgot-password"
                 className="forgot-link"
                 onClick={(e) => {
                   e.preventDefault();
-                  setFormError('Password reset is managed by the University IT Support Helpdesk.');
+                  setFormError('Ask a platform administrator to reset your password; they can set a new one for you.');
                 }}
               >
                 Forgot password?
@@ -198,50 +186,9 @@ export const LoginPage: React.FC = () => {
             </Button>
           </form>
 
-          {/* Single Sign On Section */}
-          <div className="auth-divider">
-            <span>SINGLE SIGN ON</span>
-          </div>
-
-          <div className="sso-group">
-            <Button
-              variant="outline"
-              fullWidth
-              className="sso-btn"
-              onClick={() => setFormError('Single Sign-On requires external identity provider connection.')}
-              icon={<span className="sso-dot-red" aria-hidden="true" />}
-            >
-              Campus ID
-            </Button>
-
-            <Button
-              variant="outline"
-              fullWidth
-              className="sso-btn"
-              onClick={() => setFormError('Single Sign-On requires external identity provider connection.')}
-              icon={<Globe size={16} aria-hidden="true" />}
-            >
-              Google Workspace
-            </Button>
-          </div>
-
           {/* Help & Legal Footer */}
           <footer className="auth-footer">
-            <p>
-              Need help?{' '}
-              <a href="#it-support" onClick={(e) => e.preventDefault()}>
-                Contact IT Support
-              </a>
-            </p>
-            <div className="auth-legal-links">
-              <a href="#acceptable-use" onClick={(e) => e.preventDefault()}>
-                Acceptable Use
-              </a>{' '}
-              •{' '}
-              <a href="#privacy" onClick={(e) => e.preventDefault()}>
-                Privacy
-              </a>
-            </div>
+            <p>Need help signing in? Ask your platform administrator.</p>
           </footer>
         </div>
       </section>
