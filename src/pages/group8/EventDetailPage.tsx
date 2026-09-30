@@ -76,7 +76,9 @@ export const EventDetailPage: React.FC = () => {
 
     if (result.ok) {
       setRegistration(result.data);
-      setEvent({ ...event, confirmedCount: event.confirmedCount + (result.data.status === 'CONFIRMED' ? 1 : 0) });
+      if (event.confirmedCount !== undefined && result.data.status === 'CONFIRMED') {
+        setEvent({ ...event, confirmedCount: event.confirmedCount + 1 });
+      }
       setFeedback({
         tone: 'success',
         message:
@@ -173,8 +175,8 @@ export const EventDetailPage: React.FC = () => {
                 <dd>
                   {event.mode === 'ONLINE'
                     ? registration
-                      ? event.onlineLink
-                      : 'Meeting link is shared with registered participants.'
+                      ? event.onlineLink ?? 'Online - the organizer shares joining details with registered participants.'
+                      : 'Joining details are shared with registered participants.'
                     : `${event.venueName ?? event.venueResourceId} (validated with Facility Services)`}
                 </dd>
               </div>

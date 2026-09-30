@@ -2,7 +2,20 @@
  * Core Types for University Services Management Platform Foundation
  */
 
-export type UserRole = 'ADMIN' | 'STAFF' | 'STUDENT' | 'DEAN' | 'HOD' | 'GUEST';
+export type UserRole =
+  | 'ADMIN'
+  | 'STAFF'
+  | 'STUDENT'
+  | 'DEAN'
+  | 'HOD'
+  | 'GUEST'
+  // Role names issued by the Group 5 Identity Service (Identity Service API Reference, roles table)
+  | 'ACADEMIC_STAFF'
+  | 'ADMINISTRATIVE_STAFF'
+  | 'EVENT_ORGANIZER'
+  | 'SERVICE_DESK_OFFICER'
+  | 'TECHNICIAN'
+  | 'RESOURCE_MANAGER';
 export type AccountStatus = 'ACTIVE' | 'INACTIVE';
 
 export interface UserProfile {
@@ -21,6 +34,34 @@ export interface UserProfile {
   phone?: string;
 }
 
+export interface Affiliation {
+  id: string;
+  userId: string;
+  departmentId: string;
+  facultyId?: string;
+  departmentName?: string;
+  facultyName?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface AffiliationCreatePayload {
+  userId: string;
+  departmentId: string;
+  facultyId?: string;
+}
+
+export interface AffiliationUpdatePayload {
+  departmentId: string;
+  facultyId?: string;
+}
+
+export interface AffiliationServiceResult<T = unknown> {
+  success: boolean;
+  data?: T;
+  message?: string;
+}
+
 /**
  * UNCONFIRMED PLACEHOLDER INTEGRATION BOUNDARY PENDING OFFICIAL BACKEND DTO CONTRACT:
  * The official backend Faculty DTO schema is not yet documented in the repository.
@@ -30,21 +71,6 @@ export interface Faculty {
   id: string;
   name: string;
   code: string;
-  description?: string;
-  createdAt?: string;
-  updatedAt?: string;
-}
-
-/**
- * Department DTO & UI Model
- * Associated with parent Faculty
- */
-export interface Department {
-  id: string;
-  name: string;
-  code: string;
-  facultyId: string;
-  facultyName?: string;
   description?: string;
   createdAt?: string;
   updatedAt?: string;
@@ -62,6 +88,42 @@ export interface ServiceUnit {
   description?: string;
   createdAt?: string;
   updatedAt?: string;
+}
+
+/**
+ * UNCONFIRMED PLACEHOLDER INTEGRATION BOUNDARY PENDING OFFICIAL BACKEND CONTRACT:
+ * The official backend Department DTO schema is not yet documented in the repository.
+ * The fields below represent an unconfirmed placeholder UI/service boundary subject to change upon official contract.
+ */
+export interface Department {
+  id: string;
+  name: string;
+  code: string;
+  facultyId: string;
+  facultyName?: string;
+  description?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface DepartmentCreatePayload {
+  name: string;
+  code: string;
+  facultyId: string;
+  description?: string;
+}
+
+export interface DepartmentUpdatePayload {
+  name?: string;
+  code?: string;
+  facultyId?: string;
+  description?: string;
+}
+
+export interface DepartmentServiceResult<T = unknown> {
+  success: boolean;
+  data?: T;
+  message?: string;
 }
 
 export interface NavItem {

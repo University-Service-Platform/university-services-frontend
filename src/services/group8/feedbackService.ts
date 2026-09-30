@@ -1,37 +1,40 @@
+import { G8_INSIGHT_ROLES } from '@/config/group8Routes';
 import type {
   ActivityType,
   EngagementSummary,
   FeedbackActivity,
+  FeedbackAnswer,
   FeedbackForm,
+  FeedbackQuestion,
   FeedbackSubmitRequest,
   FeedbackSummary,
   UserRole,
 } from '@/types';
-import { g8Fail, g8Ok, g8Request, getG8DemoIdentity, nextDemoId, toQuery, type G8Result } from './g8Api';
+import { g8Fail, g8Ok, g8Request, g8RequestMapped, getG8DemoIdentity, nextDemoId, type G8Result } from './g8Api';
 
 /**
  * communication-feedback-service client - feedback & engagement (Group 8)
  *
- * GROUP 8 DRAFT CONTRACT - gateway paths:
- *   GET   /feedback/activities/me                         completed events / service requests of the caller
- *                                                         with eligibility decided server-side (BR8-07)
- *   GET   /feedback/forms?activityType=&activityId=       feedback form for one eligible activity
- *   POST  /feedback/responses                             submit (one response per user & activity)
- *   GET   /feedback/summaries?activityType=               aggregated results (authorized staff, US8-13)
- *   GET   /engagement/summary                             participation / reach / feedback overview
+ * Integrated with Notification-and-Feedback-Uni-Service-Management-System_Backend through the
+ * API Gateway (`/api/v1`). Feedback is collected per form: organizers open a form for a completed
+ * activity, users answer it with one rating (1-5) and an optional comment.
  *
- * Service-request eligibility uses the Group 7 completion-status contract
- * (GET /api/work-orders/by-request/{requestId} on work-order-service):
- *   RESOLVED, CLOSED -> eligible (requester must match the caller)
- *   REJECTED         -> not eligible, explained to the user
- *   anything else    -> "not yet eligible"
+ *   POST  /feedback/forms                       { activityType, activityId, title, questionsJson }
+ *   GET   /feedback/forms                       active forms (the Feedback Center lists these)
+ *   GET   /feedback/forms/{formId}
+ *   POST  /feedback/forms/{formId}/responses    { rating, comment } - eligibility checked server-side
+ *   GET   /feedback/forms/{formId}/responses    form creator only (used for summaries)
+ *   GET   /engagement-dashboard/summary         counts and average rating
+ *
+ * Service-request eligibility follows the Group 7 completion-status contract
+ * (RESOLVED/CLOSED eligible, REJECTED not) - enforced by the service when a response is submitted.
  */
 
 export const FEEDBACK_API = '/feedback';
-export const ENGAGEMENT_API = '/engagement';
+export const ENGAGEMENT_API = '/engagement-dashboard';
 
 /** Roles allowed to view feedback summaries and the engagement dashboard (US8-13). */
-export const FEEDBACK_INSIGHT_ROLES: UserRole[] = ['ADMIN', 'STAFF', 'HOD', 'DEAN'];
+export const FEEDBACK_INSIGHT_ROLES: UserRole[] = G8_INSIGHT_ROLES;
 
 /** Group 7 statuses that make a service request eligible for feedback. */
 export const G7_FEEDBACK_ELIGIBLE_STATUSES = ['RESOLVED', 'CLOSED'];
@@ -172,17 +175,102 @@ const findDemoActivity = (type: ActivityType, id: string) =>
   demoActivities.find((activity) => activity.activityType === type && activity.activityId === id);
 
 /* ------------------------------------------------------------------ */
+/* communication-feedback-service feedback shapes                     */
+/* ------------------------------------------------------------------ */
+
+interface FormResponse {
+  id: string;
+  activityType: ActivityType;
+  activityId: string;
+  createdBy: string;
+  title: string;
+  questionsJson: string;
+  active: boolean;
+  createdAt: string;
+}
+
+interface ResponseItem {
+  id: string;
+  formId: string;
+  activityId: string;
+  respondentId: string;
+  rating: number;
+  comment: string | null;
+  createdAt: string;
+}
+
+/** The service stores one rating and one comment per response, so forms have exactly these two. */
+const DEFAULT_QUESTIONS: FeedbackQuestion[] = [
+  { id: 'rating', label: 'Overall, how would you rate this?', type: 'RATING', required: true },
+  { id: 'comment', label: 'Any comments?', type: 'TEXT', required: false },
+];
+
+function parseQuestions(questionsJson: string): FeedbackQuestion[] {
+  try {
+    const parsed = JSON.parse(questionsJson) as Partial<FeedbackQuestion>[];
+    const rating = parsed.find((question) => question.type === 'RATING');
+    const text = parsed.find((question) => question.type === 'TEXT');
+    return [
+      { ...DEFAULT_QUESTIONS[0], label: rating?.label || DEFAULT_QUESTIONS[0].label },
+      { ...DEFAULT_QUESTIONS[1], label: text?.label || DEFAULT_QUESTIONS[1].label },
+    ];
+  } catch {
+    return DEFAULT_QUESTIONS;
+  }
+}
+
+function toUiForm(form: FormResponse): FeedbackForm {
+  return { id: form.id, activityType: form.activityType, title: form.title, questions: parseQuestions(form.questionsJson) };
+}
+
+/** Each open form is one activity to review; the route id is the form id. */
+function toUiActivity(form: FormResponse): FeedbackActivity {
+  return {
+    activityType: form.activityType,
+    activityId: form.id,
+    title: form.title,
+    sourceStatus: 'OPEN',
+    completedAt: form.createdAt,
+    // Eligibility (completed, took part / requested it) is decided when the response is submitted.
+    eligible: true,
+    alreadySubmitted: false,
+  };
+}
+
+function summarize(form: FormResponse, responses: ResponseItem[]): FeedbackSummary {
+  const distribution = { '1': 0, '2': 0, '3': 0, '4': 0, '5': 0 } as FeedbackSummary['ratingDistribution'];
+  responses.forEach((response) => {
+    const key = String(response.rating) as keyof FeedbackSummary['ratingDistribution'];
+    if (key in distribution) distribution[key] += 1;
+  });
+  const total = responses.reduce((sum, response) => sum + response.rating, 0);
+  return {
+    activityType: form.activityType,
+    activityId: form.activityId,
+    title: form.title,
+    responseCount: responses.length,
+    averageRating: responses.length ? Math.round((total / responses.length) * 10) / 10 : 0,
+    ratingDistribution: distribution,
+    recentComments: responses.map((response) => response.comment?.trim()).filter((comment): comment is string => Boolean(comment)).slice(0, 5),
+  };
+}
+
+function answerOf(answers: FeedbackAnswer[], type: 'RATING' | 'TEXT'): FeedbackAnswer | undefined {
+  return answers.find((answer) => (type === 'RATING' ? answer.rating !== undefined : Boolean(answer.text?.trim())));
+}
+
+/* ------------------------------------------------------------------ */
 /* Feedback                                                            */
 /* ------------------------------------------------------------------ */
 
 export function getMyFeedbackActivities(): Promise<G8Result<FeedbackActivity[]>> {
-  return g8Request<FeedbackActivity[]>(`${FEEDBACK_API}/activities/me`, {
+  return g8RequestMapped<FormResponse[], FeedbackActivity[]>(`${FEEDBACK_API}/forms`, {
     demo: () => g8Ok(demoActivities.map((activity) => ({ ...activity })), true),
-  });
+  }, (forms) => forms.filter((form) => form.active).map(toUiActivity));
 }
 
 export function getFeedbackForm(activityType: ActivityType, activityId: string): Promise<G8Result<FeedbackForm>> {
-  return g8Request<FeedbackForm>(`${FEEDBACK_API}/forms${toQuery({ activityType, activityId })}`, {
+  return g8RequestMapped<FormResponse, FeedbackForm>(`${FEEDBACK_API}/forms/${encodeURIComponent(activityId)}`, {
     demo: () => {
       const activity = findDemoActivity(activityType, activityId);
       if (!activity) return g8Fail(404, 'You have no record of this activity, so feedback is not available.', true);
@@ -190,13 +278,16 @@ export function getFeedbackForm(activityType: ActivityType, activityId: string):
       if (!activity.eligible) return g8Fail(409, activity.ineligibleReason ?? 'This activity is not completed yet.', true);
       return g8Ok(activityType === 'EVENT' ? EVENT_FORM : SERVICE_FORM, true);
     },
-  });
+  }, toUiForm);
 }
 
 export function submitFeedback(request: FeedbackSubmitRequest): Promise<G8Result<{ id: string }>> {
-  return g8Request<{ id: string }>(`${FEEDBACK_API}/responses`, {
+  return g8RequestMapped<ResponseItem, { id: string }>(`${FEEDBACK_API}/forms/${encodeURIComponent(request.activityId)}/responses`, {
     method: 'POST',
-    body: request,
+    body: {
+      rating: answerOf(request.answers, 'RATING')?.rating,
+      comment: answerOf(request.answers, 'TEXT')?.text?.trim() || null,
+    },
     demo: () => {
       const activity = findDemoActivity(request.activityType, request.activityId);
       if (!activity) return g8Fail(404, undefined, true);
@@ -216,27 +307,111 @@ export function submitFeedback(request: FeedbackSubmitRequest): Promise<G8Result
       activity.alreadySubmitted = true;
       return g8Ok({ id: nextDemoId('FBR') }, true);
     },
-  });
+  }, (response) => ({ id: response.id }));
 }
 
 export function getFeedbackSummaries(activityType?: ActivityType): Promise<G8Result<FeedbackSummary[]>> {
-  return g8Request<FeedbackSummary[]>(`${FEEDBACK_API}/summaries${toQuery({ activityType })}`, {
-    demo: () => {
-      if (!isDemoInsightUser()) return g8Fail(403, 'Only authorized staff can view feedback summaries.', true);
-      return g8Ok(
-        demoSummaries.filter((summary) => !activityType || summary.activityType === activityType).map((s) => ({ ...s })),
-        true
-      );
+  return g8RequestMapped<FormResponse[], FeedbackSummary[]>(
+    `${FEEDBACK_API}/forms`,
+    {
+      demo: () => {
+        if (!isDemoInsightUser()) return g8Fail(403, 'Only authorized staff can view feedback summaries.', true);
+        return g8Ok(
+          demoSummaries.filter((summary) => !activityType || summary.activityType === activityType).map((s) => ({ ...s })),
+          true
+        );
+      },
     },
-  });
+    async (forms) => {
+      // No summary endpoint yet: responses are readable by each form's creator, so aggregate those.
+      const relevant = forms.filter((form) => !activityType || form.activityType === activityType);
+      const results = await Promise.all(
+        relevant.map((form) => g8Request<ResponseItem[]>(`${FEEDBACK_API}/forms/${encodeURIComponent(form.id)}/responses`))
+      );
+      return relevant.flatMap((form, index) => {
+        const result = results[index];
+        return result.ok && !result.demo ? [summarize(form, result.data)] : [];
+      });
+    }
+  );
+}
+
+export interface CreateFeedbackFormInput {
+  activityType: ActivityType;
+  activityId: string;
+  title: string;
+  ratingLabel?: string;
+  commentLabel?: string;
+}
+
+/** Organizers open a form for a completed activity; users can then answer it (US8-12). */
+export function createFeedbackForm(input: CreateFeedbackFormInput): Promise<G8Result<FeedbackForm>> {
+  const questions: FeedbackQuestion[] = [
+    { ...DEFAULT_QUESTIONS[0], label: input.ratingLabel || DEFAULT_QUESTIONS[0].label },
+    { ...DEFAULT_QUESTIONS[1], label: input.commentLabel || DEFAULT_QUESTIONS[1].label },
+  ];
+  return g8RequestMapped<FormResponse, FeedbackForm>(
+    `${FEEDBACK_API}/forms`,
+    {
+      method: 'POST',
+      body: { activityType: input.activityType, activityId: input.activityId, title: input.title, questionsJson: JSON.stringify(questions) },
+      demo: () => g8Ok({ id: nextDemoId('FRM'), activityType: input.activityType, title: input.title, questions }, true),
+    },
+    toUiForm
+  );
 }
 
 /* ------------------------------------------------------------------ */
 /* Engagement                                                          */
 /* ------------------------------------------------------------------ */
 
+interface EngagementSummaryResponse {
+  publishedAnnouncementCount: number;
+  activeFeedbackFormCount: number;
+  feedbackResponseCount: number;
+  averageFeedbackRating: number | null;
+  notificationCount: number;
+  eventParticipationCount: number | null;
+  eventParticipationAvailable: boolean;
+}
+
+interface EventsOverview {
+  published: number;
+  confirmedRegistrations: number;
+}
+
+interface EventListItem {
+  id: string;
+  title: string;
+  capacity: number;
+}
+
+interface EventCapacitySummary {
+  capacity: number;
+  confirmed: number;
+}
+
+/** Event participation comes from event-service; roles without access simply get no rows. */
+async function loadEventParticipation(): Promise<{ overview?: EventsOverview; rows: EngagementSummary['eventParticipation'] }> {
+  const [overview, published] = await Promise.all([
+    g8Request<EventsOverview>('/events/summary'),
+    g8Request<EventListItem[]>('/events?status=PUBLISHED'),
+  ]);
+  const events = published.ok && !published.demo ? published.data.slice(0, 8) : [];
+  const summaries = await Promise.all(
+    events.map((event) => g8Request<EventCapacitySummary>(`/events/${encodeURIComponent(event.id)}/registrations`))
+  );
+  const rows = events.flatMap((event, index) => {
+    const summary = summaries[index];
+    return summary.ok && !summary.demo
+      ? [{ eventId: event.id, title: event.title, capacity: summary.data.capacity, confirmed: summary.data.confirmed }]
+      : [];
+  });
+  return { overview: overview.ok && !overview.demo ? overview.data : undefined, rows };
+}
+
 export function getEngagementSummary(): Promise<G8Result<EngagementSummary>> {
-  return g8Request<EngagementSummary>(`${ENGAGEMENT_API}/summary`, {
+  return g8RequestMapped<EngagementSummaryResponse, EngagementSummary>(`${ENGAGEMENT_API}/summary`, {
     demo: () => {
       if (!isDemoInsightUser()) return g8Fail(403, 'Only authorized staff can view the engagement dashboard.', true);
       const totalResponses = demoSummaries.reduce((sum, summary) => sum + summary.responseCount, 0);
@@ -267,5 +442,20 @@ export function getEngagementSummary(): Promise<G8Result<EngagementSummary>> {
         true
       );
     },
+  }, async (summary) => {
+    const participation = await loadEventParticipation();
+    return {
+      totals: {
+        publishedEvents: participation.overview?.published ?? participation.rows.length,
+        activeRegistrations:
+          participation.overview?.confirmedRegistrations ?? participation.rows.reduce((sum, row) => sum + row.confirmed, 0),
+        announcementsPublished: summary.publishedAnnouncementCount,
+        feedbackResponses: summary.feedbackResponseCount,
+        averageRating: summary.averageFeedbackRating ? Math.round(summary.averageFeedbackRating * 10) / 10 : 0,
+      },
+      eventParticipation: participation.rows,
+      announcementReachAvailable: false,
+      announcementReach: [],
+    };
   });
 }

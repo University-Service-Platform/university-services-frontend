@@ -13,11 +13,24 @@ import {
   GraduationCap,
   ShieldCheck,
   Key,
+  RefreshCw,
 } from 'lucide-react';
 import { useAuth } from '@/auth';
 import { getProfile, updateProfile } from '@/services/profileService';
-import type { UserProfile } from '@/types';
-import { Card, CardHeader, CardBody, CardFooter, Button, Input, Badge, LoadingState, EmptyState, ErrorState } from '@/components/ui';
+import { getUserAffiliations } from '@/services/affiliationService';
+import type { UserProfile, Affiliation } from '@/types';
+import {
+  Card,
+  CardHeader,
+  CardBody,
+  CardFooter,
+  Button,
+  Input,
+  Badge,
+  LoadingState,
+  EmptyState,
+  ErrorState,
+} from '@/components/ui';
 import { formatRole } from '@/utils';
 import './ProfilePage.css';
 
@@ -25,6 +38,7 @@ export const ProfilePage: React.FC = () => {
   const { user: authUser, setAuthUser } = useAuth();
 
   const [fetchedProfile, setFetchedProfile] = useState<UserProfile | null>(null);
+  const [userAffiliation, setUserAffiliation] = useState<Affiliation | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(!authUser);
   const [fetchError, setFetchError] = useState<string | null>(null);
 
@@ -78,6 +92,23 @@ export const ProfilePage: React.FC = () => {
     };
   }, [authUser]);
 
+  useEffect(() => {
+    let isMounted = true;
+
+    if (currentProfile?.id) {
+      getUserAffiliations(currentProfile.id).then((res) => {
+        if (!isMounted) return;
+        if (res.success && res.data) {
+          setUserAffiliation(res.data);
+        }
+      });
+    }
+
+    return () => {
+      isMounted = false;
+    };
+  }, [currentProfile?.id]);
+
   const copyIdToClipboard = (id: string) => {
     navigator.clipboard.writeText(id).then(() => {
       setCopiedId(true);
@@ -130,6 +161,7 @@ export const ProfilePage: React.FC = () => {
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSaving) return;
     setSaveError(null);
     setSaveSuccess(false);
 
@@ -184,7 +216,7 @@ export const ProfilePage: React.FC = () => {
     return (
       <div className="profile-container">
         <ErrorState
-          title="Failed to Load Profile"
+          title="Unable to Load Profile"
           description={fetchError}
           onRetry={handleRetry}
         />
@@ -196,17 +228,25 @@ export const ProfilePage: React.FC = () => {
     return (
       <div className="profile-container">
         <EmptyState
-          title="Profile Not Available"
-          description="No active profile record found for the current user session."
+          title="No Profile Information Available"
+          description="Your user profile details could not be found. Please connect backend services or sign in to view your profile."
           icon={<User className="state-icon" />}
+          action={
+            <Button variant="outline" icon={<RefreshCw size={16} />} onClick={handleRetry}>
+              Retry Connection
+            </Button>
+          }
         />
       </div>
     );
   }
 
-  const primaryRole = currentProfile.roles?.[0] || 'STUDENT';
-  const statusVariant = currentProfile.accountStatus === 'ACTIVE' ? 'success' : 'danger';
+  const primaryRole = currentProfile.roles && currentProfile.roles.length > 0 ? currentProfile.roles[0] : 'STUDENT';
+  const statusVariant = currentProfile.accountStatus === 'ACTIVE' ? 'success' : currentProfile.accountStatus === 'INACTIVE' ? 'danger' : 'neutral';
   const userInitials = `${(currentProfile.firstName || 'U')[0]}${(currentProfile.lastName || '')[0]}`.toUpperCase();
+
+  const facultyDisplay = userAffiliation?.facultyName || currentProfile.facultyName || currentProfile.facultyId || 'Not assigned';
+  const departmentDisplay = userAffiliation?.departmentName || currentProfile.departmentName || currentProfile.departmentId || currentProfile.serviceUnitName || 'Not assigned';
 
   return (
     <div className="profile-container">
@@ -295,10 +335,13 @@ export const ProfilePage: React.FC = () => {
               </div>
 
               <div className="profile-field-item">
-                <span className="profile-field-label">Department / Unit</span>
-                <span className="profile-field-value">
-                  {currentProfile.departmentName || currentProfile.facultyName || currentProfile.serviceUnitName || 'General University Services'}
-                </span>
+                <span className="profile-field-label">Faculty Affiliation</span>
+                <span className="profile-field-value">{facultyDisplay}</span>
+              </div>
+
+              <div className="profile-field-item">
+                <span className="profile-field-label">Department / Unit Affiliation</span>
+                <span className="profile-field-value">{departmentDisplay}</span>
               </div>
             </div>
           </CardBody>

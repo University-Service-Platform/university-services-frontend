@@ -37,7 +37,6 @@ const renderRoutePage = (path: string) => {
   }
 };
 
-
 export const AppRoutes: React.FC = () => {
   return (
     <Routes>

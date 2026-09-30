@@ -14,6 +14,7 @@ import {
   Modal,
   LoadingState,
   EmptyState,
+  ErrorState,
 } from '@/components/ui';
 import { formatRole } from '@/utils';
 import './AccountStatusPage.css';
@@ -48,7 +49,7 @@ export const AccountStatusPage: React.FC = () => {
     setIsLoading(true);
     setFetchError(null);
     getUsers().then((result) => {
-      if (result.success && result.data && result.data.length > 0) {
+      if (result.success && result.data) {
         setUsers(result.data);
       } else {
         setFetchError(result.message || 'Unable to connect to user account status service.');
@@ -61,7 +62,7 @@ export const AccountStatusPage: React.FC = () => {
     let isMounted = true;
     getUsers().then((result) => {
       if (!isMounted) return;
-      if (result.success && result.data && result.data.length > 0) {
+      if (result.success && result.data) {
         setUsers(result.data);
       } else {
         setFetchError(result.message || 'Unable to connect to user account status service.');
@@ -78,10 +79,10 @@ export const AccountStatusPage: React.FC = () => {
     return users.filter((u) => {
       const matchesSearch =
         !searchQuery.trim() ||
-        u.firstName.toLowerCase().includes(searchQuery.toLowerCase().trim()) ||
-        u.lastName.toLowerCase().includes(searchQuery.toLowerCase().trim()) ||
-        u.email.toLowerCase().includes(searchQuery.toLowerCase().trim()) ||
-        u.id.toLowerCase().includes(searchQuery.toLowerCase().trim());
+        (u.firstName || '').toLowerCase().includes(searchQuery.toLowerCase().trim()) ||
+        (u.lastName || '').toLowerCase().includes(searchQuery.toLowerCase().trim()) ||
+        (u.email || '').toLowerCase().includes(searchQuery.toLowerCase().trim()) ||
+        (u.id || '').toLowerCase().includes(searchQuery.toLowerCase().trim());
 
       const matchesStatus =
         statusFilter === 'ALL' ||
@@ -120,15 +121,15 @@ export const AccountStatusPage: React.FC = () => {
 
   // Execute Status Change API call
   const handleConfirmStatusChange = async () => {
-    if (!targetUser || !pendingStatus) return;
+    if (!targetUser || !pendingStatus || isUpdating || !canManageStatus) return;
 
     setIsUpdating(true);
     setModalError(null);
 
     const result = await updateAccountStatus(targetUser.id, pendingStatus);
 
-    if (result.success) {
-      const updatedAccountStatus = result.accountStatus || pendingStatus;
+    if (result.success && result.accountStatus) {
+      const updatedAccountStatus = result.accountStatus;
 
       // Update local state list with backend response
       setUsers((prev) =>
@@ -153,7 +154,13 @@ export const AccountStatusPage: React.FC = () => {
       setTargetUser(null);
       setPendingStatus(null);
     } else {
-      // Keep previous status, show safe error message
+      // Keep previous status unless the backend reported the actual current status.
+      const reportedStatus = result.accountStatus;
+      if (reportedStatus) {
+        setUsers((prev) =>
+          prev.map((u) => (u.id === targetUser.id ? { ...u, accountStatus: reportedStatus } : u))
+        );
+      }
       setModalError(result.message || 'Failed to update account status. Unable to connect to backend.');
       setIsUpdating(false);
     }
@@ -191,7 +198,7 @@ export const AccountStatusPage: React.FC = () => {
           <div className="account-status-header-text">
             <h2 className="account-status-title">Account Status Management</h2>
             <p className="account-status-subtitle">
-              Manage synthetic university user account activation and deactivation states with administrative control.
+              Manage university user account activation and deactivation states with administrative control.
             </p>
           </div>
 
@@ -243,11 +250,24 @@ export const AccountStatusPage: React.FC = () => {
         </Card>
       )}
 
+      {fetchError && users.length > 0 && !isLoading && (
+        <div className="account-status-alert account-status-alert-error" role="alert">
+          <AlertCircle size={18} />
+          <span>{fetchError}</span>
+        </div>
+      )}
+
       {/* Content Area */}
       {isLoading ? (
         <LoadingState
           title="Loading Account Status Records..."
           description="Retrieving user access states from identity and access control services."
+        />
+      ) : fetchError && users.length === 0 ? (
+        <ErrorState
+          title="Unable to Load Account Status Records"
+          description={fetchError}
+          onRetry={fetchUsers}
         />
       ) : users.length > 0 ? (
         <div className="account-status-grid">
@@ -317,15 +337,12 @@ export const AccountStatusPage: React.FC = () => {
         </div>
       ) : (
         <EmptyState
-          title="Account Status API Integration Pending"
-          description={
-            fetchError ||
-            'The official backend Account Status API contract is not yet available in the repository. The account status management interface and service layer boundary are prepared to connect to backend services.'
-          }
+          title="No User Accounts Found"
+          description="The User Management service returned no user accounts."
           icon={<UserCheck className="state-icon" />}
           action={
             <Button variant="outline" icon={<RefreshCw size={16} />} onClick={fetchUsers}>
-              Retry Connection
+              Refresh
             </Button>
           }
         />
