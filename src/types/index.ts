@@ -49,6 +49,42 @@ export interface ServiceUnit {
   updatedAt?: string;
 }
 
+/**
+ * UNCONFIRMED PLACEHOLDER INTEGRATION BOUNDARY PENDING OFFICIAL BACKEND CONTRACT:
+ * The official backend Department DTO schema is not yet documented in the repository.
+ * The fields below represent an unconfirmed placeholder UI/service boundary subject to change upon official contract.
+ */
+export interface Department {
+  id: string;
+  name: string;
+  code: string;
+  facultyId: string;
+  facultyName?: string;
+  description?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface DepartmentCreatePayload {
+  name: string;
+  code: string;
+  facultyId: string;
+  description?: string;
+}
+
+export interface DepartmentUpdatePayload {
+  name?: string;
+  code?: string;
+  facultyId?: string;
+  description?: string;
+}
+
+export interface DepartmentServiceResult<T = unknown> {
+  success: boolean;
+  data?: T;
+  message?: string;
+}
+
 export interface NavItem {
   label: string;
   path: string;
