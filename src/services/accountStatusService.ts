@@ -64,7 +64,8 @@ export async function updateAccountStatus(
   userId: string,
   accountStatus: AccountStatus
 ): Promise<AccountStatusResult> {
-  if (!userId) {
+  const normalizedUserId = userId?.trim();
+  if (!normalizedUserId) {
     return {
       success: false,
       message: 'User ID is required to update account status.',
@@ -72,7 +73,7 @@ export async function updateAccountStatus(
   }
 
   const response = await apiFetch<{ accountStatus?: AccountStatus }>(
-    `${ACCOUNT_STATUS_API_ENDPOINT}/${encodeURIComponent(userId)}`,
+    `${ACCOUNT_STATUS_API_ENDPOINT}/${encodeURIComponent(normalizedUserId)}`,
     {
       method: 'PATCH',
       body: JSON.stringify({ accountStatus }),
@@ -88,7 +89,7 @@ export async function updateAccountStatus(
 
   let status = response.data?.accountStatus;
   if (!isKnownAccountStatus(status)) {
-    const verified = await checkAccountStatus(userId);
+    const verified = await checkAccountStatus(normalizedUserId);
     if (!verified.success || !verified.accountStatus) {
       return {
         success: false,
