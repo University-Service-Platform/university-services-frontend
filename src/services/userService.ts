@@ -11,6 +11,10 @@ export interface UserCreatePayload {
   firstName: string;
   lastName: string;
   phone?: string;
+  roles?: string[];
+  facultyId?: string;
+  departmentId?: string;
+  serviceUnitId?: string;
 }
 
 export interface UserUpdatePayload {
@@ -18,6 +22,10 @@ export interface UserUpdatePayload {
   firstName?: string;
   lastName?: string;
   phone?: string;
+  roles?: string[];
+  facultyId?: string;
+  departmentId?: string;
+  serviceUnitId?: string;
 }
 
 export interface UserServiceResult<T = unknown> {
