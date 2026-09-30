@@ -123,7 +123,11 @@ export const AnnouncementsPage: React.FC = () => {
         <EmptyState
           icon={<Megaphone className="state-icon" />}
           title="No announcements"
-          description={view === 'FEED' ? 'There are no announcements for you right now.' : 'No announcements have been created yet.'}
+          description={
+            view === 'FEED'
+              ? 'There are no announcements for you right now.'
+              : 'You have not published any announcements yet. Saved drafts appear here once the communication service lists them.'
+          }
         />
       ) : (
         <div className="g8-announcement-list">

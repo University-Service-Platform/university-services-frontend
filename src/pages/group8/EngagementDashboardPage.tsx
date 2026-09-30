@@ -63,7 +63,9 @@ export const EngagementDashboardPage: React.FC = () => {
             <CardHeader title="Event participation" subtitle="Confirmed registrations as a share of capacity." />
             <CardBody>
               {summary.eventParticipation.length === 0 ? (
-                <p className="g8-muted">No published events yet - participation appears once events open for registration.</p>
+                <p className="g8-muted">
+                  No participation data yet - it appears for published events whose registration numbers you can see.
+                </p>
               ) : (
                 <HorizontalBars
                   ariaLabel="Event participation by event"
@@ -83,7 +85,11 @@ export const EngagementDashboardPage: React.FC = () => {
             <CardHeader title="Announcement reach" subtitle="How many targeted recipients have read each announcement." />
             {summary.announcementReach.length === 0 ? (
               <CardBody>
-                <p className="g8-muted">No announcements published yet - reach is measured once an announcement goes out.</p>
+                <p className="g8-muted">
+                  {summary.announcementReachAvailable === false
+                    ? `${summary.totals.announcementsPublished} announcements published. Read statistics are not reported by the communication service yet.`
+                    : 'No announcements published yet - reach is measured once an announcement goes out.'}
+                </p>
               </CardBody>
             ) : (
               <div className="g8-table-wrap">
