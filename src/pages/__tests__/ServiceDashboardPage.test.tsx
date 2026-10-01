@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { ServiceDashboardPage } from '../ServiceDashboardPage';
 import * as serviceRequestService from '@/services/serviceRequestService';
@@ -10,14 +10,13 @@ vi.mock('@/services/workOrderService');
 describe('ServiceDashboardPage Component', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.spyOn(workOrderService, 'getWorkOrderSummary').mockResolvedValue({
-      success: true,
-      data: { ASSIGNED: 5, RESOLVED: 15 },
-    });
   });
 
-  it('displays loading state initially', () => {
+  it('displays loading state initially', async () => {
     vi.spyOn(serviceRequestService, 'getServiceRequestSummary').mockImplementation(
+      () => new Promise(() => {})
+    );
+    vi.spyOn(workOrderService, 'getWorkOrderSummary').mockImplementation(
       () => new Promise(() => {})
     );
 
@@ -34,8 +33,14 @@ describe('ServiceDashboardPage Component', () => {
         RESOLVED: 25,
       },
     });
+    vi.spyOn(workOrderService, 'getWorkOrderSummary').mockResolvedValue({
+      success: true,
+      data: { ASSIGNED: 5, RESOLVED: 15 },
+    });
 
-    render(<ServiceDashboardPage />);
+    await act(async () => {
+      render(<ServiceDashboardPage />);
+    });
 
     await waitFor(() => {
       expect(screen.getByText('50')).toBeInTheDocument(); // total count
@@ -51,8 +56,14 @@ describe('ServiceDashboardPage Component', () => {
       success: false,
       message: 'Summary endpoint error 500',
     });
+    vi.spyOn(workOrderService, 'getWorkOrderSummary').mockResolvedValue({
+      success: true,
+      data: {},
+    });
 
-    render(<ServiceDashboardPage />);
+    await act(async () => {
+      render(<ServiceDashboardPage />);
+    });
 
     await waitFor(() => {
       expect(screen.getByText('Service Request Summary Error')).toBeInTheDocument();
@@ -68,19 +79,26 @@ describe('ServiceDashboardPage Component', () => {
         IT: 30,
       },
     });
+    vi.spyOn(workOrderService, 'getWorkOrderSummary').mockResolvedValue({
+      success: true,
+      data: {},
+    });
 
-    render(<ServiceDashboardPage />);
+    await act(async () => {
+      render(<ServiceDashboardPage />);
+    });
 
     await waitFor(() => {
       expect(serviceRequestService.getServiceRequestSummary).toHaveBeenCalledWith('status');
     });
 
     const select = screen.getByLabelText(/Service Request Aggregation GroupBy/i);
-    fireEvent.change(select, { target: { value: 'category' } });
+    await act(async () => {
+      fireEvent.change(select, { target: { value: 'category' } });
+    });
 
     await waitFor(() => {
       expect(serviceRequestService.getServiceRequestSummary).toHaveBeenCalledWith('category');
     });
   });
 });
-
