@@ -48,7 +48,6 @@ export const DepartmentsPage: React.FC = () => {
   const [name, setName] = useState<string>('');
   const [code, setCode] = useState<string>('');
   const [facultyId, setFacultyId] = useState<string>('');
-  const [description, setDescription] = useState<string>('');
   const [isSaving, setIsSaving] = useState<boolean>(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<{ name?: string; code?: string; facultyId?: string }>({});
@@ -135,7 +134,6 @@ export const DepartmentsPage: React.FC = () => {
     setName('');
     setCode('');
     setFacultyId(faculties.length > 0 ? faculties[0].id : '');
-    setDescription('');
     setFieldErrors({});
     setSaveError(null);
     setSuccessMessage(null);
@@ -148,7 +146,6 @@ export const DepartmentsPage: React.FC = () => {
     setName(department.name || '');
     setCode(department.code || '');
     setFacultyId(department.facultyId || '');
-    setDescription(department.description || '');
     setFieldErrors({});
     setSaveError(null);
     setSuccessMessage(null);
@@ -195,7 +192,6 @@ export const DepartmentsPage: React.FC = () => {
       name: name.trim(),
       code: code.trim(),
       facultyId: facultyId.trim(),
-      description: description.trim() || undefined,
     };
 
     let result;
@@ -468,15 +464,6 @@ export const DepartmentsPage: React.FC = () => {
             error={fieldErrors.facultyId || (facultiesFetchError ? facultiesFetchError : undefined)}
             disabled={isSaving || facultyOptions.length === 0}
             required
-          />
-
-          <Input
-            id="department-description-input"
-            label="Description (Optional)"
-            placeholder="Brief overview of the department..."
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            disabled={isSaving}
           />
         </form>
       </Modal>

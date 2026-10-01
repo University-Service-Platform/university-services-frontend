@@ -85,7 +85,7 @@ export function clearAuthSession(): void {
   }
 }
 
-function mapBackendUserToProfile(raw: Record<string, unknown>): UserProfile {
+export function mapBackendUserToProfile(raw: Record<string, unknown>): UserProfile {
   const id = String(raw.id || raw.user_id || raw.userId || '');
   const email = String(raw.email || '');
   const firstName = String(raw.firstName || raw.first_name || '');
@@ -115,6 +115,10 @@ function mapBackendUserToProfile(raw: Record<string, unknown>): UserProfile {
       profile.accountStatus = statusVal as AccountStatus;
     }
   }
+
+  if (raw.universityId || raw.university_id) profile.universityId = String(raw.universityId || raw.university_id);
+  const accountType = String(raw.accountType || raw.account_type || '').toUpperCase();
+  if (accountType === 'STUDENT' || accountType === 'STAFF') profile.accountType = accountType;
 
   if (raw.phone || raw.phoneNumber || raw.phone_number) {
     profile.phone = String(raw.phone || raw.phoneNumber || raw.phone_number);
@@ -177,6 +181,9 @@ export async function getCurrentUser(): Promise<AuthResult> {
 }
 
 export async function loginUser(credentials: LoginCredentials): Promise<AuthResult> {
+  // Drop any previous session first so apiFetch does not attach the old user's Bearer token to the login call.
+  clearAuthSession();
+
   const response = await apiFetch<AuthResponse>(AUTH_LOGIN_API_ENDPOINT, {
     method: 'POST',
     body: JSON.stringify({
@@ -198,14 +205,14 @@ export async function loginUser(credentials: LoginCredentials): Promise<AuthResu
     return {
       success: false,
       isInactive: true,
-      message: 'Your account is currently inactive. Please contact the IT Support Helpdesk for assistance.',
+      message: 'Your account is currently inactive. Please contact a platform administrator.',
     };
   }
 
   if (response.error || !response.data) {
     return {
       success: false,
-      message: response.error || 'Unable to connect to authentication service. Please verify system connection or contact IT Support.',
+      message: response.error || 'Unable to reach the sign-in service. Please try again in a moment.',
     };
   }
 

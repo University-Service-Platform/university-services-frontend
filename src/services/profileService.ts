@@ -1,4 +1,5 @@
-import { apiFetch } from './apiClient';
+import { apiFetch, unwrapData } from './apiClient';
+import { mapBackendUserToProfile } from './authService';
 import type { UserProfile } from '@/types';
 
 /**
@@ -9,7 +10,6 @@ export interface ProfileUpdatePayload {
   firstName: string;
   lastName: string;
   email: string;
-  phone?: string;
 }
 
 /**
@@ -42,13 +42,13 @@ export async function getProfile(): Promise<ProfileServiceResult<UserProfile>> {
   if (response.error || !response.data) {
     return {
       success: false,
-      message: response.error || 'Unable to connect to profile service. Official backend API contract is pending integration.',
+      message: response.error || 'Unable to load your profile right now. Please try again in a moment.',
     };
   }
 
   return {
     success: true,
-    data: response.data,
+    data: mapBackendUserToProfile(unwrapData<Record<string, unknown>>(response.data) ?? {}),
   };
 }
 
@@ -62,7 +62,6 @@ export async function updateProfile(payload: ProfileUpdatePayload): Promise<Prof
     firstName: payload.firstName,
     lastName: payload.lastName,
     email: payload.email,
-    phone: payload.phone,
   };
 
   const response = await apiFetch<UserProfile>(PROFILE_API_ENDPOINT, {
@@ -79,7 +78,7 @@ export async function updateProfile(payload: ProfileUpdatePayload): Promise<Prof
 
   return {
     success: true,
-    data: response.data,
+    data: mapBackendUserToProfile(unwrapData<Record<string, unknown>>(response.data) ?? {}),
     message: 'Profile updated successfully.',
   };
 }

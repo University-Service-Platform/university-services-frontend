@@ -1,22 +1,27 @@
-import { describe, it, expect } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { checkAccountStatus, updateAccountStatus } from '../accountStatusService';
+import { mockFetch } from './testUtils';
 
-describe('accountStatusService', () => {
-  it('handles invalid user id for checkAccountStatus', async () => {
-    const emptyCheck = await checkAccountStatus('');
-    expect(emptyCheck.success).toBe(false);
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
 
-    const blankCheck = await checkAccountStatus('   ');
-    expect(blankCheck.success).toBe(false);
-  });
+/**
+ * Lightweight input checks for the account status service that do not call the backend.
+ */
+describe('account status input validation', () => {
+  it('rejects empty and blank user IDs without calling the backend', async () => {
+    const fetchMock = mockFetch();
 
-  it('handles invalid user id for updateAccountStatus', async () => {
-    const emptyUpdate = await updateAccountStatus('', 'ACTIVE');
-    expect(emptyUpdate.success).toBe(false);
+    expect((await checkAccountStatus('')).success).toBe(false);
+    expect((await checkAccountStatus('   ')).success).toBe(false);
+    expect((await updateAccountStatus('', 'ACTIVE')).success).toBe(false);
 
     const blankUpdate = await updateAccountStatus('  \t', 'INACTIVE');
     expect(blankUpdate.success).toBe(false);
     expect(blankUpdate.message).toBe('User ID is required to update account status.');
+
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 });
 

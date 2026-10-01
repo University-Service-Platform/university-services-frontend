@@ -1,18 +1,27 @@
-import { apiFetch } from './apiClient';
-import type { UserProfile } from '@/types';
+import { apiFetch, unwrapData, unwrapList } from './apiClient';
+import { mapBackendUserToProfile } from './authService';
+import type { AccountType, UserProfile } from '@/types';
 
 export interface UserCreatePayload {
-  email: string;
+  universityId: string;
   firstName: string;
   lastName: string;
-  phone?: string;
+  email: string;
+  accountType: AccountType;
+  /** Without one the account can't sign in until an administrator sets a password. */
+  password?: string;
 }
 
 export interface UserUpdatePayload {
+  firstName: string;
+  lastName: string;
   email?: string;
-  firstName?: string;
-  lastName?: string;
-  phone?: string;
+  accountType?: AccountType;
+}
+
+/** The Identity Service stores one full name. */
+function fullName(firstName: string, lastName: string): string {
+  return [firstName.trim(), lastName.trim()].filter(Boolean).join(' ');
 }
 
 export interface UserServiceResult<T = unknown> {
@@ -28,23 +37,30 @@ export async function getUsers(): Promise<UserServiceResult<UserProfile[]>> {
     method: 'GET',
   });
 
-  if (response.error || !Array.isArray(response.data)) {
+  const list = unwrapList(response.data);
+  if (response.error || !list) {
     return {
       success: false,
-      message: response.error || 'Unable to connect to User Management service.',
+      message: response.error || 'Unable to load users right now. Please try again in a moment.',
     };
   }
 
   return {
     success: true,
-    data: response.data,
+    data: list.map(mapBackendUserToProfile),
   };
 }
 
 export async function createUser(payload: UserCreatePayload): Promise<UserServiceResult<UserProfile>> {
   const response = await apiFetch<UserProfile>(USERS_API_ENDPOINT, {
     method: 'POST',
-    body: JSON.stringify(payload),
+    body: JSON.stringify({
+      university_id: payload.universityId.trim(),
+      name: fullName(payload.firstName, payload.lastName),
+      email: payload.email.trim(),
+      account_type: payload.accountType,
+      password: payload.password || undefined,
+    }),
   });
 
   if (response.error || !response.data) {
@@ -56,7 +72,7 @@ export async function createUser(payload: UserCreatePayload): Promise<UserServic
 
   return {
     success: true,
-    data: response.data,
+    data: mapBackendUserToProfile(unwrapData<Record<string, unknown>>(response.data) ?? {}),
     message: 'User created successfully.',
   };
 }
@@ -64,7 +80,11 @@ export async function createUser(payload: UserCreatePayload): Promise<UserServic
 export async function updateUser(id: string, payload: UserUpdatePayload): Promise<UserServiceResult<UserProfile>> {
   const response = await apiFetch<UserProfile>(`${USERS_API_ENDPOINT}/${encodeURIComponent(id)}`, {
     method: 'PUT',
-    body: JSON.stringify(payload),
+    body: JSON.stringify({
+      name: fullName(payload.firstName, payload.lastName),
+      email: payload.email?.trim() || undefined,
+      account_type: payload.accountType,
+    }),
   });
 
   if (response.error || !response.data) {
@@ -76,7 +96,7 @@ export async function updateUser(id: string, payload: UserUpdatePayload): Promis
 
   return {
     success: true,
-    data: response.data,
+    data: mapBackendUserToProfile(unwrapData<Record<string, unknown>>(response.data) ?? {}),
     message: 'User updated successfully.',
   };
 }

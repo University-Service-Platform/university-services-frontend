@@ -1,4 +1,5 @@
-import { apiFetch } from './apiClient';
+import { apiFetch, unwrapData, unwrapList } from './apiClient';
+import { mapFaculty } from './directoryMappers';
 import type { Faculty } from '@/types';
 
 /**
@@ -37,16 +38,17 @@ export async function getFaculties(): Promise<FacultyServiceResult<Faculty[]>> {
     method: 'GET',
   });
 
-  if (response.error || !Array.isArray(response.data)) {
+  const list = unwrapList(response.data);
+  if (response.error || !list) {
     return {
       success: false,
-      message: response.error || 'Unable to connect to Faculty Management service. Official backend contract is pending integration.',
+      message: response.error || 'Unable to load faculties right now. Please try again in a moment.',
     };
   }
 
   return {
     success: true,
-    data: response.data,
+    data: list.map(mapFaculty),
   };
 }
 
@@ -65,7 +67,7 @@ export async function createFaculty(payload: FacultyCreatePayload): Promise<Facu
 
   return {
     success: true,
-    data: response.data,
+    data: mapFaculty(unwrapData<Record<string, unknown>>(response.data) ?? {}),
     message: 'Faculty created successfully.',
   };
 }
@@ -85,7 +87,7 @@ export async function updateFaculty(id: string, payload: FacultyUpdatePayload): 
 
   return {
     success: true,
-    data: response.data,
+    data: mapFaculty(unwrapData<Record<string, unknown>>(response.data) ?? {}),
     message: 'Faculty updated successfully.',
   };
 }

@@ -19,9 +19,12 @@ export type UserRole =
   | 'SERVICE';
 
 export type AccountStatus = 'ACTIVE' | 'INACTIVE';
+export type AccountType = 'STUDENT' | 'STAFF';
 
 export interface UserProfile {
   id: string;
+  universityId?: string;
+  accountType?: AccountType;
   email: string;
   firstName: string;
   lastName: string;

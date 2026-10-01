@@ -1,27 +1,7 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import {
-  GraduationCap,
-  X,
-  LayoutDashboard,
-  User,
-  Users,
-  UserCheck,
-  Shield,
-  Building2,
-  Layers,
-  FileText,
-  PlusCircle,
-  Inbox,
-  BarChart2,
-  Wrench,
-  CalendarDays,
-  Ticket,
-  Megaphone,
-  Bell,
-  MessageSquareText,
-  BarChart3,
-} from 'lucide-react';
+import { GraduationCap, X } from 'lucide-react';
+import { renderNavIcon } from './navIcons';
 import { useAuth } from '@/auth';
 import { getAuthorizedNavItems } from '@/config/navigationConfig';
 import type { NavItem } from '@/types';
@@ -34,51 +14,6 @@ export interface SidebarProps {
   onClose?: () => void;
   brandTitle?: string;
 }
-
-const renderNavIcon = (iconName?: string) => {
-  switch (iconName) {
-    case 'LayoutDashboard':
-      return <LayoutDashboard size={18} aria-hidden="true" />;
-    case 'User':
-      return <User size={18} aria-hidden="true" />;
-    case 'Users':
-      return <Users size={18} aria-hidden="true" />;
-    case 'UserCheck':
-      return <UserCheck size={18} aria-hidden="true" />;
-    case 'Shield':
-      return <Shield size={18} aria-hidden="true" />;
-    case 'GraduationCap':
-      return <GraduationCap size={18} aria-hidden="true" />;
-    case 'Building2':
-      return <Building2 size={18} aria-hidden="true" />;
-    case 'Layers':
-      return <Layers size={18} aria-hidden="true" />;
-    case 'FileText':
-      return <FileText size={18} aria-hidden="true" />;
-    case 'PlusCircle':
-      return <PlusCircle size={18} aria-hidden="true" />;
-    case 'Inbox':
-      return <Inbox size={18} aria-hidden="true" />;
-    case 'BarChart2':
-      return <BarChart2 size={18} aria-hidden="true" />;
-    case 'Wrench':
-      return <Wrench size={18} aria-hidden="true" />;
-    case 'CalendarDays':
-      return <CalendarDays size={18} aria-hidden="true" />;
-    case 'Ticket':
-      return <Ticket size={18} aria-hidden="true" />;
-    case 'Megaphone':
-      return <Megaphone size={18} aria-hidden="true" />;
-    case 'Bell':
-      return <Bell size={18} aria-hidden="true" />;
-    case 'MessageSquareText':
-      return <MessageSquareText size={18} aria-hidden="true" />;
-    case 'BarChart3':
-      return <BarChart3 size={18} aria-hidden="true" />;
-    default:
-      return <GraduationCap size={18} aria-hidden="true" />;
-  }
-};
 
 export const Sidebar: React.FC<SidebarProps> = ({
   navItems: propNavItems,

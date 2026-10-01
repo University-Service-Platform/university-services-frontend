@@ -1,4 +1,5 @@
-import { apiFetch } from './apiClient';
+import { apiFetch, unwrapData, unwrapList } from './apiClient';
+import { mapDepartment } from './directoryMappers';
 import type {
   Department,
   DepartmentCreatePayload,
@@ -12,6 +13,15 @@ import type {
  * The endpoint constant below serves as a placeholder integration boundary that will be updated
  * once the official backend OpenAPI/Swagger specification is provided by the backend team.
  */
+/** The Directory Service takes snake_case (faculty_id) and has no department description. */
+function toDirectoryDepartment(payload: DepartmentCreatePayload | DepartmentUpdatePayload) {
+  return {
+    name: payload.name,
+    code: payload.code,
+    faculty_id: payload.facultyId || undefined,
+  };
+}
+
 export const DEPARTMENTS_API_ENDPOINT = import.meta.env.VITE_DEPARTMENTS_API_ENDPOINT || '/departments';
 
 export async function getDepartments(): Promise<DepartmentServiceResult<Department[]>> {
@@ -19,23 +29,24 @@ export async function getDepartments(): Promise<DepartmentServiceResult<Departme
     method: 'GET',
   });
 
-  if (response.error || !Array.isArray(response.data)) {
+  const list = unwrapList(response.data);
+  if (response.error || !list) {
     return {
       success: false,
-      message: response.error || 'Unable to connect to Department Management service. Official backend contract is pending integration.',
+      message: response.error || 'Unable to load departments right now. Please try again in a moment.',
     };
   }
 
   return {
     success: true,
-    data: response.data,
+    data: list.map(mapDepartment),
   };
 }
 
 export async function createDepartment(payload: DepartmentCreatePayload): Promise<DepartmentServiceResult<Department>> {
   const response = await apiFetch<Department>(DEPARTMENTS_API_ENDPOINT, {
     method: 'POST',
-    body: JSON.stringify(payload),
+    body: JSON.stringify(toDirectoryDepartment(payload)),
   });
 
   if (response.error || !response.data) {
@@ -47,7 +58,7 @@ export async function createDepartment(payload: DepartmentCreatePayload): Promis
 
   return {
     success: true,
-    data: response.data,
+    data: mapDepartment(unwrapData<Record<string, unknown>>(response.data) ?? {}),
     message: 'Department created successfully.',
   };
 }
@@ -55,7 +66,7 @@ export async function createDepartment(payload: DepartmentCreatePayload): Promis
 export async function updateDepartment(id: string, payload: DepartmentUpdatePayload): Promise<DepartmentServiceResult<Department>> {
   const response = await apiFetch<Department>(`${DEPARTMENTS_API_ENDPOINT}/${encodeURIComponent(id)}`, {
     method: 'PUT',
-    body: JSON.stringify(payload),
+    body: JSON.stringify(toDirectoryDepartment(payload)),
   });
 
   if (response.error || !response.data) {
@@ -67,7 +78,7 @@ export async function updateDepartment(id: string, payload: DepartmentUpdatePayl
 
   return {
     success: true,
-    data: response.data,
+    data: mapDepartment(unwrapData<Record<string, unknown>>(response.data) ?? {}),
     message: 'Department updated successfully.',
   };
 }

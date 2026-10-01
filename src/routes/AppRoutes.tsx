@@ -4,6 +4,9 @@ import { AppShell } from '@/components/layout';
 import {
   HomePage,
   LoginPage,
+  NotFoundPage,
+  ForgotPasswordPage,
+  ResetPasswordPage,
   ProfilePage,
   RolesPage,
   FacultiesPage,
@@ -57,7 +60,7 @@ const renderRoutePage = (path: string) => {
     case '/technician':
       return <TechnicianPage />;
     default:
-      return renderGroup8Page(path) ?? <HomePage />;
+      return renderGroup8Page(path) ?? (path === '/' ? <HomePage /> : <NotFoundPage />);
   }
 };
 
@@ -66,6 +69,8 @@ export const AppRoutes: React.FC = () => {
     <Routes>
       {/* Standalone Authentication Route */}
       <Route path="/auth" element={<LoginPage />} />
+      <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+      <Route path="/reset-password" element={<ResetPasswordPage />} />
 
       {/* Main Application Shell with Role-Aware Route Protection */}
       <Route
@@ -168,7 +173,7 @@ export const AppRoutes: React.FC = () => {
                   </ProtectedRoute>
                 }
               />
-              <Route path="*" element={<HomePage />} />
+              <Route path="*" element={<NotFoundPage />} />
             </Routes>
           </AppShell>
         }
