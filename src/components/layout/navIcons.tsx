@@ -13,6 +13,10 @@ import {
   Bell,
   MessageSquareText,
   BarChart3,
+  CalendarCheck,
+  CalendarPlus,
+  ClipboardCheck,
+  Settings,
 } from 'lucide-react';
 
 /** The icon for a navigation entry's iconName; used by the sidebar and the dashboard cards. */
@@ -46,6 +50,14 @@ export const renderNavIcon = (iconName?: string, size = 18) => {
       return <MessageSquareText size={size} aria-hidden="true" />;
     case 'BarChart3':
       return <BarChart3 size={size} aria-hidden="true" />;
+    case 'CalendarCheck':
+      return <CalendarCheck size={size} aria-hidden="true" />;
+    case 'CalendarPlus':
+      return <CalendarPlus size={size} aria-hidden="true" />;
+    case 'ClipboardCheck':
+      return <ClipboardCheck size={size} aria-hidden="true" />;
+    case 'Settings':
+      return <Settings size={size} aria-hidden="true" />;
     default:
       return <GraduationCap size={size} aria-hidden="true" />;
   }
