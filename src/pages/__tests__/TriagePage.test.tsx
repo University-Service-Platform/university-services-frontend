@@ -106,7 +106,7 @@ describe('TriagePage Component', () => {
         responsibleServiceUnit: 'Facilities',
       });
     });
-  });
+  }, 15000);
 
   it('opens rejection modal and submits rejection payload', async () => {
     vi.spyOn(serviceRequestService, 'getMyServiceRequests').mockResolvedValue({

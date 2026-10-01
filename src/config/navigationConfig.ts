@@ -1,4 +1,5 @@
 import type { UserRole, NavItem } from '@/types';
+import { GROUP6_ROUTES_CONFIG } from './group6Routes';
 import { GROUP8_ROUTES_CONFIG } from './group8Routes';
 
 export interface RouteNavigationConfig {
@@ -13,7 +14,7 @@ export interface RouteNavigationConfig {
 }
 
 /**
- * Group 5 Centralized Route & Navigation Configuration
+ * Centralized Route & Navigation Configuration
  * 
  * Single source of truth driving both:
  * 1. Sidebar navigation visibility
@@ -140,6 +141,8 @@ export const APP_ROUTES_CONFIG: RouteNavigationConfig[] = [
     requiredRoles: ['TECHNICIAN'],
     showInNav: true,
   },
+  // Group 6 - Facilities & Reservations
+  ...GROUP6_ROUTES_CONFIG,
   // Group 8 - Events, Communications & Feedback
   ...GROUP8_ROUTES_CONFIG,
 ];
