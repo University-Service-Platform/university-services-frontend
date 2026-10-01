@@ -74,3 +74,23 @@ describe('gateway response handling', () => {
     expect(first).toEqual(second);
   });
 });
+
+export async function runValidationServiceTests(): Promise<boolean> {
+  try {
+    const emptyResult = await validateUserIdentity('');
+    if (emptyResult.success !== false || emptyResult.status !== 400) return false;
+
+    const emptyRoleResult = await validateUserRole('', ['STUDENT']);
+    if (emptyRoleResult.success !== false || emptyRoleResult.status !== 400) return false;
+
+    const emptyStatusResult = await validateAccountStatus('');
+    if (emptyStatusResult.success !== false || emptyStatusResult.status !== 400) return false;
+
+    const emptyAffiliationResult = await validateUserAffiliation('', { departmentId: 'DEPT-1' });
+    if (emptyAffiliationResult.success !== false || emptyAffiliationResult.status !== 400) return false;
+
+    return true;
+  } catch {
+    return false;
+  }
+}

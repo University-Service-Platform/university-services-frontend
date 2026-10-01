@@ -9,3 +9,6 @@ export * from './departmentService';
 export * from './userService';
 export * from './validationService';
 export * from './affiliationService';
+export * from './serviceRequestService';
+export * from './workOrderService';
+export * from './group8';

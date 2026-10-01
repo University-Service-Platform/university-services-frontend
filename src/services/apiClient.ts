@@ -28,9 +28,30 @@ export function getStoredAuthToken(): string | null {
   if (typeof window === 'undefined') return null;
 
   try {
-    return sessionStorage.getItem(AUTH_TOKEN_STORAGE_KEY);
+    return (
+      sessionStorage.getItem(AUTH_TOKEN_STORAGE_KEY) ||
+      localStorage.getItem('token') ||
+      localStorage.getItem('jwt') ||
+      localStorage.getItem('auth_token') ||
+      sessionStorage.getItem('token') ||
+      sessionStorage.getItem('jwt') ||
+      null
+    );
   } catch {
     return null;
+  }
+}
+
+export function getAuthToken(): string | null {
+  return getStoredAuthToken();
+}
+
+export function setAuthToken(token: string): void {
+  try {
+    localStorage.setItem('token', token);
+    sessionStorage.setItem(AUTH_TOKEN_STORAGE_KEY, token);
+  } catch {
+    // Best-effort
   }
 }
 
@@ -40,6 +61,9 @@ export function clearStoredAuthToken(): void {
   try {
     sessionStorage.removeItem(AUTH_TOKEN_STORAGE_KEY);
     sessionStorage.removeItem('university-services.auth.user');
+    localStorage.removeItem('token');
+    localStorage.removeItem('jwt');
+    localStorage.removeItem('auth_token');
   } catch {
     // Session cleanup is best-effort
   }
@@ -59,6 +83,14 @@ export async function apiFetch<T>(
   if (token && !headers.has('Authorization')) {
     headers.set('Authorization', `Bearer ${token}`);
   }
+
+  const url = endpoint.startsWith('http')
+    ? endpoint
+    : endpoint.startsWith('/api')
+    ? endpoint
+    : endpoint.startsWith('/')
+    ? `${BASE_URL}${endpoint}`
+    : `${BASE_URL}/${endpoint}`;
 
   // Abort on timeout, and still honour an abort signal passed in by the caller.
   const controller = new AbortController();
@@ -81,7 +113,7 @@ export async function apiFetch<T>(
 
   let response: Response;
   try {
-    response = await fetch(`${BASE_URL}${endpoint}`, {
+    response = await fetch(url, {
       ...options,
       headers,
       signal: controller.signal,
@@ -157,6 +189,10 @@ export async function apiFetch<T>(
 
     if (typeof errorMessage !== 'string') {
       errorMessage = undefined;
+    }
+
+    if (status === 403 && (!errorMessage || errorMessage === 'Forbidden')) {
+      errorMessage = 'You are not authorized to perform this action.';
     }
 
     return {

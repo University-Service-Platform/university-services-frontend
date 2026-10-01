@@ -41,11 +41,13 @@ export const ROLE_LABELS: Record<UserRole, string> = {
   HOD: 'Head of Department',
   GUEST: 'Guest',
   ACADEMIC_STAFF: 'Academic staff',
+  ADMIN_STAFF: 'Administrative staff',
   ADMINISTRATIVE_STAFF: 'Administrative staff',
   EVENT_ORGANIZER: 'Event organizer',
   SERVICE_DESK_OFFICER: 'Service desk officer',
   TECHNICIAN: 'Technician',
   RESOURCE_MANAGER: 'Resource manager',
+  SERVICE: 'Service Team',
 };
 
 export function describeEligibility(event: UniversityEvent): string {

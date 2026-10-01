@@ -1,0 +1,166 @@
+/* Service Request Timeline Page Layout */
+
+.timeline-page-container {
+  max-width: 64rem;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.timeline-content {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.timeline-header-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.timeline-page-title {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--color-neutral-heading);
+}
+
+.timeline-subtitle-line {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  color: var(--color-neutral);
+}
+
+/* Timeline Card */
+.timeline-card {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background-color: var(--color-surface);
+}
+
+.timeline-vertical-list {
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  padding: 0.5rem 0.5rem 0.5rem 0.25rem;
+}
+
+.timeline-step-item {
+  display: flex;
+  align-items: flex-start;
+  position: relative;
+  padding-bottom: 2rem;
+  min-height: 4.25rem;
+}
+
+.timeline-step-item:last-child {
+  padding-bottom: 0;
+  min-height: auto;
+}
+
+/* Vertical Line Connector */
+.timeline-line {
+  position: absolute;
+  left: 0.5625rem;
+  top: 1.25rem;
+  bottom: -0.25rem;
+  width: 2px;
+  background-color: var(--color-border);
+  z-index: 1;
+}
+
+.timeline-line.completed {
+  background-color: var(--color-primary);
+}
+
+/* Dot Markers */
+.timeline-dot-wrap {
+  width: 1.25rem;
+  height: 1.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  z-index: 2;
+  margin-right: 1.25rem;
+  flex-shrink: 0;
+  margin-top: 0.125rem;
+}
+
+.timeline-dot {
+  border-radius: 50%;
+  transition: all var(--transition-fast);
+}
+
+/* Completed Step (Past) */
+.timeline-step-item.completed .timeline-dot {
+  width: 0.875rem;
+  height: 0.875rem;
+  background-color: var(--color-primary-dark);
+}
+
+.timeline-step-item.completed .step-label {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--color-neutral-heading);
+}
+
+.timeline-step-item.completed .step-timestamp-text {
+  font-size: 0.8125rem;
+  color: var(--color-neutral);
+}
+
+/* Current Step (Active) */
+.timeline-step-item.current .timeline-dot {
+  width: 0.875rem;
+  height: 0.875rem;
+  background-color: var(--color-tertiary);
+  box-shadow: 0 0 0 4px var(--color-primary-light);
+}
+
+.timeline-step-item.current .step-label {
+  font-size: 0.9375rem;
+  font-weight: 700;
+  color: var(--color-tertiary);
+}
+
+.timeline-step-item.current .step-timestamp-text {
+  font-size: 0.8125rem;
+  color: var(--color-tertiary);
+  font-weight: 500;
+}
+
+/* Pending Step (Future) */
+.timeline-step-item.pending .timeline-dot {
+  width: 0.875rem;
+  height: 0.875rem;
+  background-color: var(--color-surface);
+  border: 2px solid var(--color-border-strong);
+}
+
+.timeline-step-item.pending .step-label {
+  font-size: 0.9375rem;
+  font-weight: 500;
+  color: var(--color-neutral-muted);
+}
+
+.step-pending-text {
+  font-size: 0.8125rem;
+  color: var(--color-neutral-muted);
+}
+
+/* Content wrapper */
+.timeline-step-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+
+@media (max-width: 640px) {
+  .timeline-step-item {
+    padding-bottom: 1.75rem;
+  }
+}

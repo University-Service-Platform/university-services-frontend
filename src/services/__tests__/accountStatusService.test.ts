@@ -24,3 +24,23 @@ describe('account status input validation', () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 });
+
+export async function runAccountStatusServiceTests(): Promise<boolean> {
+  try {
+    const emptyCheck = await checkAccountStatus('');
+    if (emptyCheck.success !== false) return false;
+
+    const blankCheck = await checkAccountStatus('   ');
+    if (blankCheck.success !== false) return false;
+
+    const emptyUpdate = await updateAccountStatus('', 'ACTIVE');
+    if (emptyUpdate.success !== false) return false;
+
+    const blankUpdate = await updateAccountStatus('  \t', 'INACTIVE');
+    if (blankUpdate.success !== false) return false;
+
+    return true;
+  } catch {
+    return false;
+  }
+}
