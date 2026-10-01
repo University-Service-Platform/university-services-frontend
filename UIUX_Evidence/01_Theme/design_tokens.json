@@ -1,0 +1,99 @@
+{
+  "name": "Group 6 University Services Design System",
+  "version": "1.0.0",
+  "tokens": {
+    "color": {
+      "brand": {
+        "primary": {
+          "50": "#eff6ff",
+          "100": "#dbeafe",
+          "200": "#bfdbfe",
+          "500": "#3b82f6",
+          "600": "#2563eb",
+          "700": "#1d4ed8",
+          "800": "#1e40af",
+          "900": "#1e3a8a"
+        },
+        "secondary": {
+          "50": "#f0fdfa",
+          "100": "#ccfbf1",
+          "500": "#14b8a6",
+          "700": "#0f766e",
+          "800": "#115e59"
+        },
+        "tertiary": {
+          "500": "#3b82f6",
+          "600": "#2563eb"
+        },
+        "neutral": {
+          "50": "#f8fafc",
+          "100": "#f1f5f9",
+          "200": "#e2e8f0",
+          "300": "#cbd5e1",
+          "400": "#94a3b8",
+          "500": "#64748b",
+          "600": "#475569",
+          "700": "#334155",
+          "800": "#1e293b",
+          "900": "#0f172a"
+        }
+      },
+      "feedback": {
+        "success": {
+          "bg": "#f0fdf4",
+          "border": "#dcfce7",
+          "text": "#15803d",
+          "solid": "#22c55e"
+        },
+        "warning": {
+          "bg": "#fffbeb",
+          "border": "#fef3c7",
+          "text": "#b45309",
+          "solid": "#f59e0b"
+        },
+        "danger": {
+          "bg": "#fef2f2",
+          "border": "#fee2e2",
+          "text": "#b91c1c",
+          "solid": "#ef4444"
+        }
+      },
+      "surfaces": {
+        "pageBackground": "#f8fafc",
+        "cardBackground": "#ffffff",
+        "modalOverlay": "rgba(15, 23, 42, 0.65)"
+      }
+    },
+    "typography": {
+      "fontFamily": "Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+      "fontDisplay": "Plus Jakarta Sans, Inter, sans-serif",
+      "scale": {
+        "xs": "0.75rem",
+        "sm": "0.875rem",
+        "base": "1rem",
+        "lg": "1.125rem",
+        "xl": "1.25rem",
+        "2xl": "1.5rem",
+        "3xl": "1.875rem"
+      },
+      "weight": {
+        "regular": 400,
+        "medium": 500,
+        "semibold": 600,
+        "bold": 700,
+        "extrabold": 800
+      }
+    },
+    "radii": {
+      "sm": "6px",
+      "md": "10px",
+      "lg": "16px",
+      "full": "9999px"
+    },
+    "shadows": {
+      "sm": "0 1px 2px 0 rgb(0 0 0 / 0.05)",
+      "md": "0 4px 6px -1px rgb(0 0 0 / 0.07), 0 2px 4px -2px rgb(0 0 0 / 0.07)",
+      "cardHover": "0 16px 36px -4px rgba(30, 64, 175, 0.18), 0 0 26px 4px rgba(59, 130, 246, 0.45)"
+    }
+  }
+}

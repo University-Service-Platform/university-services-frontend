@@ -4,6 +4,7 @@ import { AppShell } from '@/components/layout';
 import { HomePage, LoginPage, NotFoundPage, ForgotPasswordPage, ResetPasswordPage, ProfilePage, RolesPage, FacultiesPage, ServiceUnitsPage, DepartmentsPage, UsersPage, AccountStatusPage } from '@/pages';
 import { ProtectedRoute } from './ProtectedRoute';
 import { APP_ROUTES_CONFIG } from '@/config/navigationConfig';
+import { renderGroup6Page } from './group6RouteElements';
 import { renderGroup8Page } from './group8RouteElements';
 
 const renderRoutePage = (path: string) => {
@@ -23,7 +24,7 @@ const renderRoutePage = (path: string) => {
     case '/service-units':
       return <ServiceUnitsPage />;
     default:
-      return renderGroup8Page(path) ?? (path === '/' ? <HomePage /> : <NotFoundPage />);
+      return renderGroup6Page(path) ?? renderGroup8Page(path) ?? (path === '/' ? <HomePage /> : <NotFoundPage />);
   }
 };
 

@@ -1,4 +1,5 @@
 import type { UserRole, NavItem } from '@/types';
+import { GROUP6_ROUTES_CONFIG } from './group6Routes';
 import { GROUP8_ROUTES_CONFIG } from './group8Routes';
 
 export interface RouteNavigationConfig {
@@ -84,6 +85,8 @@ export const APP_ROUTES_CONFIG: RouteNavigationConfig[] = [
     requiredRoles: ['ADMIN'],
     showInNav: true,
   },
+  // Group 6 - Facilities & Reservations
+  ...GROUP6_ROUTES_CONFIG,
   // Group 8 - Events, Communications & Feedback
   ...GROUP8_ROUTES_CONFIG,
 ];
